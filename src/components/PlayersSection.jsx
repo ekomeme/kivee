@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, getDocs, doc, deleteDoc, getDoc } from 'firebase/firestore';
 
 export default function PlayersSection({ user, academy, db, setActiveSection, setSelectedPlayer }) {
   const [players, setPlayers] = useState([]);
-  const [showTutorTooltip, setShowTutorTooltip] = useState(false);
   const [tooltipTutorData, setTooltipTutorData] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [tiers, setTiers] = useState([]);
+  const [showTutorTooltip, setShowTutorTooltip] = useState(false);
 
+  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'ascending' });
+  const [filters, setFilters] = useState({ gender: '', category: '' });
+  const [searchQuery, setSearchQuery] = useState('');
   // Fetches players and their tutors
   const fetchPlayers = async () => {
     if (!user || !academy) return;
@@ -48,9 +51,52 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
     setPlayers(playersData);
   };
 
+  const categories = useMemo(() => [...new Set(players.map(p => p.category).filter(Boolean))], [players]);
+  const genders = useMemo(() => [...new Set(players.map(p => p.gender).filter(Boolean))], [players]);
+
+  const filteredAndSortedPlayers = useMemo(() => {
+    let filteredPlayers = [...players];
+
+    // Apply search and filters
+    filteredPlayers = filteredPlayers.filter(player => {
+      const searchMatch = searchQuery
+        ? `${player.name} ${player.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
+        : true;
+      const genderMatch = filters.gender ? player.gender === filters.gender : true;
+      const categoryMatch = filters.category ? player.category === filters.category : true;
+      return searchMatch && genderMatch && categoryMatch;
+    });
+
+    // Apply sorting
+    if (sortConfig.key !== null) {
+        filteredPlayers.sort((a, b) => {
+            if (a[sortConfig.key] < b[sortConfig.key]) {
+                return sortConfig.direction === 'ascending' ? -1 : 1;
+            }
+            if (a[sortConfig.key] > b[sortConfig.key]) {
+                return sortConfig.direction === 'ascending' ? 1 : -1;
+            }
+            return 0;
+        });
+    }
+    return filteredPlayers;
+  }, [players, filters, sortConfig, searchQuery]);
+
   useEffect(() => {
     fetchPlayers();
   }, [user, academy, db]); // Add db to dependencies
+
+  const handleSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+        direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const handleFilterChange = (filterName, value) => {
+    setFilters(prevFilters => ({ ...prevFilters, [filterName]: value }));
+  };
 
   const handleAddPlayer = () => {
     setActiveSection('newPlayer'); // Navigate to the new player creation page
@@ -108,7 +154,36 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
           Agregar Nuevo Jugador
         </button>
       </div>
-      {players.length === 0 ? (
+
+      {/* Filters Section */}
+      <div className="flex space-x-4 mb-4">
+        <div>
+          <label htmlFor="searchFilter" className="block text-sm font-medium text-gray-700">Buscar Jugador</label>
+          <input
+            type="text"
+            id="searchFilter"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Nombre o apellido..."
+            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+          />
+        </div>
+        <div>
+          <label htmlFor="genderFilter" className="block text-sm font-medium text-gray-700">Filtrar por Género</label>
+          <select id="genderFilter" onChange={(e) => handleFilterChange('gender', e.target.value)} value={filters.gender} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+            <option value="">Todos</option>
+            {genders.map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="categoryFilter" className="block text-sm font-medium text-gray-700">Filtrar por Categoría</label>
+          <select id="categoryFilter" onChange={(e) => handleFilterChange('category', e.target.value)} value={filters.category} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+            <option value="">Todas</option>
+            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+      </div>
+      {filteredAndSortedPlayers.length === 0 ? (
         <p className="text-gray-600">No hay jugadores registrados aún.</p>
       ) : (
         <div className="overflow-x-auto">
@@ -116,7 +191,11 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
             <thead>
               <tr>
                 <th className="py-2 px-4 border-b text-left">Foto</th>
-                <th className="py-2 px-4 border-b text-left">Nombre</th>
+                <th className="py-2 px-4 border-b text-left">
+                  <button onClick={() => handleSort('name')} className="font-bold">
+                    Nombre {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                  </button>
+                </th>
                 <th className="py-2 px-4 border-b text-left">Género</th>
                 <th className="py-2 px-4 border-b text-left">Email Jugador</th>
                 <th className="py-2 px-4 border-b text-left">Teléfono Jugador</th>
@@ -127,7 +206,7 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
               </tr>
             </thead>
             <tbody>
-              {players.map(player => (
+              {filteredAndSortedPlayers.map(player => (
                 <tr key={player.id} className="hover:bg-gray-100 cursor-pointer" onClick={() => handleRowClick(player)}>
                   <td className="py-2 px-4 border-b">
                     {player.photoURL && <img src={player.photoURL} alt="Jugador" className="w-10 h-10 rounded-full object-cover" />}
