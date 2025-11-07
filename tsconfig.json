@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ESNext", // O la versión de ECMAScript que estés usando (ej. ES2020, ES2022)
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx", // Indica que estás usando JSX
+    "allowJs": true, // Permite que TypeScript procese archivos JavaScript (.js, .jsx)
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"], // Incluye tu carpeta de código fuente
+  //"references": [{ "path": "./tsconfig.node.json" }] // Si tienes un tsconfig para Node.js
+}
