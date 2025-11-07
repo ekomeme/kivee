@@ -3,6 +3,8 @@ import { onAuthStateChanged, signOut } from "firebase/auth"; // Import signOut
 import { auth, db } from "./firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import GoogleSignIn from "./components/GoogleSignIn.jsx";
+import PlayerDetailPage from "./components/PlayerDetailPage.jsx";
+import EditPlayerPage from "./components/EditPlayerPage.jsx";
 import PlayersSection from "./components/PlayersSection.jsx";
 import NewPlayerPage from "./components/NewPlayerPage.jsx"; // Import the new page
 import AdminSection from "./components/AdminSection.jsx";
@@ -14,7 +16,8 @@ export default function App() {
   const [creatingAcademy, setCreatingAcademy] = useState(false);
   const [error, setError] = useState(null);
   const [nameInput, setNameInput] = useState("");
-  const [activeSection, setActiveSection] = useState("players"); // Default to players section
+  const [activeSection, setActiveSection] = useState("players");
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async u => {
@@ -114,9 +117,13 @@ export default function App() {
   const renderSection = () => {
     switch (activeSection) {
       case "players":
-        return <PlayersSection user={user} academy={academy} db={db} setActiveSection={setActiveSection} />;
+        return <PlayersSection user={user} academy={academy} db={db} setActiveSection={setActiveSection} setSelectedPlayer={setSelectedPlayer} />;
       case "newPlayer":
         return <NewPlayerPage user={user} academy={academy} db={db} setActiveSection={setActiveSection} />;
+      case "playerDetail":
+        return <PlayerDetailPage player={selectedPlayer} setActiveSection={setActiveSection} setSelectedPlayer={setSelectedPlayer} />;
+      case "editPlayer":
+        return <EditPlayerPage user={user} academy={academy} db={db} playerToEdit={selectedPlayer} setActiveSection={setActiveSection} />;
       case "admin": {
         // Pasamos una función para refrescar los datos de la academia cuando se actualice
         const refreshAcademy = async () => setAcademy((await getDoc(doc(db, "academies", user.uid))).data());

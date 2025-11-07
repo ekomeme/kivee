@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, getDocs, doc, deleteDoc, getDoc } from 'firebase/firestore';
-import PlayerForm from './PlayerForm.jsx';
 
-export default function PlayersSection({ user, academy, db, setActiveSection }) { // Receive setActiveSection
+export default function PlayersSection({ user, academy, db, setActiveSection, setSelectedPlayer }) {
   const [players, setPlayers] = useState([]);
-  const [showEditModal, setShowEditModal] = useState(false); // State for edit modal
-  const [editingPlayer, setEditingPlayer] = useState(null); // Player data for editing
   const [showTutorTooltip, setShowTutorTooltip] = useState(false);
   const [tooltipTutorData, setTooltipTutorData] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -60,8 +57,8 @@ export default function PlayersSection({ user, academy, db, setActiveSection }) 
   };
 
   const handleEditPlayer = (player) => {
-    setEditingPlayer(player);
-    setShowEditModal(true); // Show modal for editing
+    setSelectedPlayer(player);
+    setActiveSection('editPlayer');
   };
 
   const handleDeletePlayer = async (playerId) => {
@@ -92,6 +89,11 @@ export default function PlayersSection({ user, academy, db, setActiveSection }) 
   const closeTutorTooltip = () => {
     setShowTutorTooltip(false);
     setTooltipTutorData(null);
+  };
+  
+  const handleRowClick = (player) => {
+    setSelectedPlayer(player);
+    setActiveSection('playerDetail');
   };
 
   return (
@@ -126,7 +128,7 @@ export default function PlayersSection({ user, academy, db, setActiveSection }) 
             </thead>
             <tbody>
               {players.map(player => (
-                <tr key={player.id} className="hover:bg-gray-50">
+                <tr key={player.id} className="hover:bg-gray-100 cursor-pointer" onClick={() => handleRowClick(player)}>
                   <td className="py-2 px-4 border-b">
                     {player.photoURL && <img src={player.photoURL} alt="Jugador" className="w-10 h-10 rounded-full object-cover" />}
                   </td>
@@ -147,8 +149,8 @@ export default function PlayersSection({ user, academy, db, setActiveSection }) 
                     ) : 'N/A'}
                   </td>
                   <td className="py-2 px-4 border-b">
-                    <button onClick={() => handleEditPlayer(player)} className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded-md text-sm mr-2">Editar</button>
-                    <button onClick={() => handleDeletePlayer(player.id)} className="bg-red-500 hover:bg-red-700 text-white py-1 px-2 rounded-md text-sm">Eliminar</button>
+                    <button onClick={(e) => { e.stopPropagation(); handleEditPlayer(player); }} className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded-md text-sm mr-2">Editar</button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeletePlayer(player.id); }} className="bg-red-500 hover:bg-red-700 text-white py-1 px-2 rounded-md text-sm">Eliminar</button>
                   </td>
                 </tr>
               ))}
@@ -173,23 +175,6 @@ export default function PlayersSection({ user, academy, db, setActiveSection }) 
           >
             Cerrar
           </button>
-        </div>
-      )}
-
-      {/* Modal for Editing Player */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-40">
-          <PlayerForm
-            user={user}
-            academy={academy}
-            db={db}
-            onComplete={() => {
-              setShowEditModal(false);
-              setEditingPlayer(null);
-              fetchPlayers(); // Refresh players after modal closes
-            }}
-            playerToEdit={editingPlayer}
-          />
         </div>
       )}
     </div>
