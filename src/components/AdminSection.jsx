@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
 import Select from 'react-select';
 
+import toast from 'react-hot-toast';
 export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
   const CURRENCIES = [
     { code: 'EUR', name: 'Euro' },
@@ -96,12 +97,12 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
         // Update existing tier
         const tierDocRef = doc(db, `academies/${user.uid}/tiers`, editingTier.id);
         await updateDoc(tierDocRef, tierData);
-        alert("Tier actualizado con éxito.");
+        toast.success("Tier actualizado con éxito.");
       } else {
         // Add new tier
         const tiersCollectionRef = collection(db, `academies/${user.uid}/tiers`);
         await addDoc(tiersCollectionRef, tierData);
-        alert("Tier agregado con éxito.");
+        toast.success("Tier agregado con éxito.");
       }
       setNewTierName('');
       setNewTierDescription('');
@@ -111,6 +112,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
     } catch (err) {
       console.error("Error al guardar tier:", err);
       setTierError("Error al guardar tier: " + err.message);
+      toast.error("Error al guardar el tier.");
     } finally {
       setLoadingTiers(false);
     }
@@ -124,18 +126,36 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
   };
 
   const handleDeleteTier = async (tierId) => {
-    if (window.confirm("¿Estás seguro de que quieres eliminar este tier?")) {
+    const deleteAction = async () => {
       try {
         await deleteDoc(doc(db, `academies/${user.uid}/tiers`, tierId));
-        fetchTiers(); // Refresh the list
-        alert("Tier eliminado con éxito.");
+        fetchTiers();
+        toast.success("Tier eliminado con éxito.");
       } catch (error) {
         console.error("Error al eliminar tier:", error);
-        alert("Error al eliminar tier.");
+        toast.error("Error al eliminar tier.");
       }
-    }
+    };
+
+    toast((t) => (
+      <div className="bg-white p-4 rounded-lg shadow-lg flex flex-col items-center">
+        <p className="text-center mb-4">¿Estás seguro de que quieres eliminar este tier?</p>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => { toast.dismiss(t.id); deleteAction(); }}
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Confirmar
+          </button>
+          <button onClick={() => toast.dismiss(t.id)} className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    ), {
+      duration: 6000,
+    });
   };
-  // --- End of Tiers Logic ---
 
   const handleUpdateAcademySettings = async (e) => {
     e.preventDefault();
@@ -152,10 +172,11 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
         currency: selectedCurrency.value,
       });
       await onAcademyUpdate(); // Llama a la función para refrescar los datos en App.jsx
-      alert("Configuración de la academia actualizada con éxito.");
+      toast.success("Configuración de la academia actualizada con éxito.");
     } catch (error) {
       console.error("Error al actualizar el nombre de la academia:", error);
       setUpdateSettingsError("Error al actualizar la configuración: " + error.message);
+      toast.error("Error al actualizar la configuración.");
     } finally {
       setIsUpdatingSettings(false);
     }

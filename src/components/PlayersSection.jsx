@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, getDocs, doc, deleteDoc, getDoc } from 'firebase/firestore';
+import toast from 'react-hot-toast';
 
 export default function PlayersSection({ user, academy, db, setActiveSection, setSelectedPlayer }) {
   const [players, setPlayers] = useState([]);
@@ -108,17 +109,35 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
   };
 
   const handleDeletePlayer = async (playerId) => {
-    // Confirmation before deleting
-    if (window.confirm("¿Estás seguro de que quieres eliminar este jugador?")) {
+    const deleteAction = async () => {
       try {
         await deleteDoc(doc(db, `academies/${user.uid}/players`, playerId));
-        fetchPlayers(); // Refresca la lista
-        alert("Jugador eliminado con éxito.");
+        fetchPlayers();
+        toast.success("Jugador eliminado con éxito.");
       } catch (error) {
         console.error("Error al eliminar jugador:", error);
-        alert("Error al eliminar jugador.");
+        toast.error("Error al eliminar jugador.");
       }
     }
+
+    toast((t) => (
+      <div className="bg-white p-4 rounded-lg shadow-lg flex flex-col items-center">
+        <p className="text-center mb-4">¿Estás seguro de que quieres eliminar este jugador?</p>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => { toast.dismiss(t.id); deleteAction(); }}
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Confirmar
+          </button>
+          <button onClick={() => toast.dismiss(t.id)} className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    ), {
+      duration: 6000,
+    });
   };
 
   const handleTutorClick = (tutor, event) => {

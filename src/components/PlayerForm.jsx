@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, doc, getDocs, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import toast from 'react-hot-toast';
 
 export default function PlayerForm({ user, academy, db, onComplete, playerToEdit }) {
   // Player Info
@@ -250,16 +251,17 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       if (playerToEdit) {
         const playerDocRef = doc(db, `academies/${user.uid}/players`, playerToEdit.id);
         await updateDoc(playerDocRef, playerData);
-        alert("Jugador actualizado con éxito.");
+        toast.success("Jugador actualizado con éxito.");
       } else {
         const playersCollectionRef = collection(db, `academies/${user.uid}/players`);
         await addDoc(playersCollectionRef, playerData);
-        alert("Jugador agregado con éxito.");
+        toast.success("Jugador agregado con éxito.");
       }
       onComplete();
     } catch (err) {
       console.error("Error al guardar jugador:", err);
       setError("Error al guardar jugador: " + err.message);
+      toast.error("Error al guardar el jugador.");
     } finally {
       setLoading(false);
     }

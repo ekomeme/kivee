@@ -8,6 +8,7 @@ import EditPlayerPage from "./components/EditPlayerPage.jsx";
 import PlayersSection from "./components/PlayersSection.jsx";
 import NewPlayerPage from "./components/NewPlayerPage.jsx"; // Import the new page
 import AdminSection from "./components/AdminSection.jsx";
+import { Toaster } from "react-hot-toast";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -136,6 +137,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-gray-100">
+      <Toaster position="top-center" reverseOrder={false} />
       {/* Sidebar */}
       <div
         className="bg-gray-800 text-white w-64 p-4 flex flex-col"
