@@ -100,12 +100,12 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
   };
 
   const handleAddPlayer = () => {
-    setActiveSection('newPlayer'); // Navigate to the new player creation page
+    setActiveSection('newStudent'); // Navigate to the new student creation page
   };
 
   const handleEditPlayer = (player) => {
     setSelectedPlayer(player);
-    setActiveSection('editPlayer');
+    setActiveSection('editStudent');
   };
 
   const handleDeletePlayer = async (playerId) => {
@@ -113,25 +113,25 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
       try {
         await deleteDoc(doc(db, `academies/${user.uid}/players`, playerId));
         fetchPlayers();
-        toast.success("Jugador eliminado con éxito.");
+        toast.success("Student deleted successfully.");
       } catch (error) {
         console.error("Error al eliminar jugador:", error);
-        toast.error("Error al eliminar jugador.");
+        toast.error("Error deleting student.");
       }
     }
 
     toast((t) => (
       <div className="bg-white p-4 rounded-lg shadow-lg flex flex-col items-center">
-        <p className="text-center mb-4">¿Estás seguro de que quieres eliminar este jugador?</p>
+        <p className="text-center mb-4">Are you sure you want to delete this student?</p>
         <div className="flex space-x-2">
           <button
             onClick={() => { toast.dismiss(t.id); deleteAction(); }}
             className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
           >
-            Confirmar
+            Confirm
           </button>
           <button onClick={() => toast.dismiss(t.id)} className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
-            Cancelar
+            Cancel
           </button>
         </div>
       </div>
@@ -158,77 +158,77 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
   
   const handleRowClick = (player) => {
     setSelectedPlayer(player);
-    setActiveSection('playerDetail');
+    setActiveSection('studentDetail');
   };
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
       {/* Header with title and Add Player button */}
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">Jugadores de {academy.name}</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Students of {academy.name}</h2>
         <button
           onClick={handleAddPlayer}
           className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md"
         >
-          Agregar Nuevo Jugador
+          Add New Student
         </button>
       </div>
 
       {/* Filters Section */}
       <div className="flex space-x-4 mb-4">
         <div>
-          <label htmlFor="searchFilter" className="block text-sm font-medium text-gray-700">Buscar Jugador</label>
+          <label htmlFor="searchFilter" className="block text-sm font-medium text-gray-700">Search Student</label>
           <input
             type="text"
             id="searchFilter"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Nombre o apellido..."
+            placeholder="First or last name..."
             className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
           />
         </div>
         <div>
-          <label htmlFor="genderFilter" className="block text-sm font-medium text-gray-700">Filtrar por Género</label>
+          <label htmlFor="genderFilter" className="block text-sm font-medium text-gray-700">Filter by Gender</label>
           <select id="genderFilter" onChange={(e) => handleFilterChange('gender', e.target.value)} value={filters.gender} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-            <option value="">Todos</option>
+            <option value="">All</option>
             {genders.map(g => <option key={g} value={g}>{g}</option>)}
           </select>
         </div>
         <div>
-          <label htmlFor="categoryFilter" className="block text-sm font-medium text-gray-700">Filtrar por Categoría</label>
+          <label htmlFor="categoryFilter" className="block text-sm font-medium text-gray-700">Filter by Category</label>
           <select id="categoryFilter" onChange={(e) => handleFilterChange('category', e.target.value)} value={filters.category} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-            <option value="">Todas</option>
+            <option value="">All</option>
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
       </div>
       {filteredAndSortedPlayers.length === 0 ? (
-        <p className="text-gray-600">No hay jugadores registrados aún.</p>
+        <p className="text-gray-600">No students registered yet.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full bg-white border border-gray-200">
             <thead>
               <tr>
-                <th className="py-2 px-4 border-b text-left">Foto</th>
+                <th className="py-2 px-4 border-b text-left">Photo</th>
                 <th className="py-2 px-4 border-b text-left">
                   <button onClick={() => handleSort('name')} className="font-bold">
-                    Nombre {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                    Name {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
                   </button>
                 </th>
-                <th className="py-2 px-4 border-b text-left">Género</th>
-                <th className="py-2 px-4 border-b text-left">Email Jugador</th>
-                <th className="py-2 px-4 border-b text-left">Teléfono Jugador</th>
-                <th className="py-2 px-4 border-b text-left">Categoría</th>
-                <th className="py-2 px-4 border-b text-left">Plan</th>
+                <th className="py-2 px-4 border-b text-left">Gender</th>
+                <th className="py-2 px-4 border-b text-left">Student Email</th>
+                <th className="py-2 px-4 border-b text-left">Student Phone</th>
+                <th className="py-2 px-4 border-b text-left">Category</th>
+                <th className="py-2 px-4 border-b text-left">Tier</th>
                 <th className="py-2 px-4 border-b text-left">Tutor</th>
-                <th className="py-2 px-4 border-b text-left">Acciones</th>
+                <th className="py-2 px-4 border-b text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredAndSortedPlayers.map(player => (
                 <tr key={player.id} className="hover:bg-gray-100 cursor-pointer" onClick={() => handleRowClick(player)}>
                   <td className="py-2 px-4 border-b">
-                    {player.photoURL && <img src={player.photoURL} alt="Jugador" className="w-10 h-10 rounded-full object-cover" />}
+                    {player.photoURL && <img src={player.photoURL} alt="Student" className="w-10 h-10 rounded-full object-cover" />}
                   </td>
                   <td className="py-2 px-4 border-b font-medium text-gray-800">{player.name} {player.lastName}</td>
                   <td className="py-2 px-4 border-b">{player.gender}</td>
@@ -247,8 +247,8 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
                     ) : 'N/A'}
                   </td>
                   <td className="py-2 px-4 border-b">
-                    <button onClick={(e) => { e.stopPropagation(); handleEditPlayer(player); }} className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded-md text-sm mr-2">Editar</button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDeletePlayer(player.id); }} className="bg-red-500 hover:bg-red-700 text-white py-1 px-2 rounded-md text-sm">Eliminar</button>
+                    <button onClick={(e) => { e.stopPropagation(); handleEditPlayer(player); }} className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded-md text-sm mr-2">Edit</button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeletePlayer(player.id); }} className="bg-red-500 hover:bg-red-700 text-white py-1 px-2 rounded-md text-sm">Delete</button>
                   </td>
                 </tr>
               ))}
@@ -263,15 +263,15 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
           className="fixed p-4 bg-gray-800 text-white rounded-lg shadow-lg z-50"
           style={{ top: `${tooltipPosition.y}px`, left: `${tooltipPosition.x}px` }}
         >
-          <h4 className="font-bold mb-2">Información del Tutor</h4>
-          <p><strong>Nombre:</strong> {tooltipTutorData.name} {tooltipTutorData.lastName}</p>
+          <h4 className="font-bold mb-2">Tutor Information</h4>
+          <p><strong>Name:</strong> {tooltipTutorData.name} {tooltipTutorData.lastName}</p>
           <p><strong>Email:</strong> {tooltipTutorData.email}</p>
-          <p><strong>Teléfono:</strong> {tooltipTutorData.contactPhone}</p>
+          <p><strong>Phone:</strong> {tooltipTutorData.contactPhone}</p>
           <button
             onClick={closeTutorTooltip}
             className="mt-3 bg-red-500 hover:bg-red-700 text-white py-1 px-2 rounded-md text-sm"
           >
-            Cerrar
+            Close
           </button>
         </div>
       )}

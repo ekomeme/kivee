@@ -154,7 +154,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       setPlayerPhotoFile(file);
       setPhotoURL(URL.createObjectURL(file)); // Preview
     } else {
-      alert("La foto debe ser menor a 5MB.");
+      toast.error("Photo must be smaller than 5MB.");
     }
   };
 
@@ -182,7 +182,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
             (error) => {
               console.error("Upload failed:", error);
               setError("Error al subir la foto: " + error.message);
-              setLoading(false);
+              toast.error("Error uploading photo.");
               reject(error);
             },
             async () => {
@@ -218,7 +218,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
         }
       } catch (err) {
         setError("Error al guardar el tutor: " + err.message);
-        setLoading(false);
+        toast.error("Error saving tutor.");
         return;
       }
     }
@@ -251,17 +251,17 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       if (playerToEdit) {
         const playerDocRef = doc(db, `academies/${user.uid}/players`, playerToEdit.id);
         await updateDoc(playerDocRef, playerData);
-        toast.success("Jugador actualizado con éxito.");
+        toast.success("Player updated successfully.");
       } else {
         const playersCollectionRef = collection(db, `academies/${user.uid}/players`);
         await addDoc(playersCollectionRef, playerData);
-        toast.success("Jugador agregado con éxito.");
+        toast.success("Player added successfully.");
       }
       onComplete();
     } catch (err) {
       console.error("Error al guardar jugador:", err);
       setError("Error al guardar jugador: " + err.message);
-      toast.error("Error al guardar el jugador.");
+      toast.error("Error saving player.");
     } finally {
       setLoading(false);
     }
@@ -272,35 +272,35 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Player Info Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">Información del Jugador</legend>
+          <legend className="text-xl font-semibold text-gray-900 px-2">Student Information</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            <div><label htmlFor="name" className="block text-sm font-medium text-gray-700">Nombre</label><input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
-            <div><label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Apellido</label><input type="text" id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
-            <div><label htmlFor="birthday" className="block text-sm font-medium text-gray-700">Fecha de Nacimiento</label><input type="date" id="birthday" value={birthday} onChange={(e) => setBirthday(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
-            <div><label htmlFor="gender" className="block text-sm font-medium text-gray-700">Género</label><select id="gender" value={gender} onChange={(e) => setGender(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500"><option value="">Selecciona</option><option value="Masculino">Masculino</option><option value="Femenino">Femenino</option><option value="Otro">Otro</option></select></div>
-            <div><label htmlFor="category" className="block text-sm font-medium text-gray-700">Categoría (Calculada)</label><input type="text" id="category" value={category} readOnly className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100" /></div>
-            <div><label htmlFor="playerEmail" className="block text-sm font-medium text-gray-700">Email (Opcional)</label><input type="email" id="playerEmail" value={playerEmail} onChange={(e) => setPlayerEmail(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
+            <div><label htmlFor="name" className="block text-sm font-medium text-gray-700">First Name</label><input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
+            <div><label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Last Name</label><input type="text" id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
+            <div><label htmlFor="birthday" className="block text-sm font-medium text-gray-700">Date of Birth</label><input type="date" id="birthday" value={birthday} onChange={(e) => setBirthday(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
+            <div><label htmlFor="gender" className="block text-sm font-medium text-gray-700">Gender</label><select id="gender" value={gender} onChange={(e) => setGender(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500"><option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></div>
+            <div><label htmlFor="category" className="block text-sm font-medium text-gray-700">Category (Calculated)</label><input type="text" id="category" value={category} readOnly className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100" /></div>
+            <div><label htmlFor="playerEmail" className="block text-sm font-medium text-gray-700">Email (Optional)</label><input type="email" id="playerEmail" value={playerEmail} onChange={(e) => setPlayerEmail(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
             <div>
-              <label htmlFor="playerContactPhone" className="block text-sm font-medium text-gray-700">Teléfono (Opcional)</label>
+              <label htmlFor="playerContactPhone" className="block text-sm font-medium text-gray-700">Phone (Optional)</label>
               <div className="mt-1 flex rounded-md shadow-sm">
                 <select value={playerPhonePrefix} onChange={(e) => setPlayerPhonePrefix(e.target.value)} className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">{COUNTRY_CODES.map(cc => <option key={cc.code} value={cc.code}>{cc.code} ({cc.country})</option>)}</select>
                 <input type="tel" id="playerContactPhone" value={playerContactPhone} onChange={(e) => setPlayerContactPhone(e.target.value)} className="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-blue-500" />
               </div>
             </div>
             <div className="md:col-span-2">
-              <label htmlFor="playerPhoto" className="block text-sm font-medium text-gray-700">Foto del Jugador (Opcional, max 5MB)</label>
+              <label htmlFor="playerPhoto" className="block text-sm font-medium text-gray-700">Student Photo (Optional, max 5MB)</label>
               <input type="file" id="playerPhoto" accept="image/*" onChange={handlePhotoFileChange} className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
               {uploadProgress > 0 && <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2"><div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div></div>}
-              {photoURL && <div className="mt-2"><img src={photoURL} alt="Foto actual" className="w-20 h-20 object-cover rounded-full" /></div>}
+              {photoURL && <div className="mt-2"><img src={photoURL} alt="Current photo" className="w-20 h-20 object-cover rounded-full" /></div>}
             </div>
           </div>
         </fieldset>
 
         {/* Tutor Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">Tutor / Responsable</legend>
+          <legend className="text-xl font-semibold text-gray-900 px-2">Tutor / Guardian</legend>
           <div className="mt-4">
-            <label htmlFor="hasTutor" className="block text-sm font-medium text-gray-700">¿Tiene tutor?</label>
+            <label htmlFor="hasTutor" className="block text-sm font-medium text-gray-700">Has tutor/guardian?</label>
             <select id="hasTutor" value={hasTutor} onChange={(e) => setHasTutor(e.target.value === 'true')} className="mt-1 block w-full md:w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500">
               <option value={false}>No</option>
               <option value={true}>Sí</option>
@@ -308,11 +308,11 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
           </div>
           {hasTutor && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-              <div><label htmlFor="tutorName" className="block text-sm font-medium text-gray-700">Nombre Tutor</label><input type="text" id="tutorName" value={tutorName} onChange={(e) => setTutorName(e.target.value)} required={hasTutor} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
-              <div><label htmlFor="tutorLastName" className="block text-sm font-medium text-gray-700">Apellido Tutor</label><input type="text" id="tutorLastName" value={tutorLastName} onChange={(e) => setTutorLastName(e.target.value)} required={hasTutor} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
-              <div><label htmlFor="tutorEmail" className="block text-sm font-medium text-gray-700">Email Tutor (Opcional)</label><input type="email" id="tutorEmail" value={tutorEmail} onChange={(e) => setTutorEmail(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
+              <div><label htmlFor="tutorName" className="block text-sm font-medium text-gray-700">Tutor First Name</label><input type="text" id="tutorName" value={tutorName} onChange={(e) => setTutorName(e.target.value)} required={hasTutor} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
+              <div><label htmlFor="tutorLastName" className="block text-sm font-medium text-gray-700">Tutor Last Name</label><input type="text" id="tutorLastName" value={tutorLastName} onChange={(e) => setTutorLastName(e.target.value)} required={hasTutor} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
+              <div><label htmlFor="tutorEmail" className="block text-sm font-medium text-gray-700">Tutor Email (Optional)</label><input type="email" id="tutorEmail" value={tutorEmail} onChange={(e) => setTutorEmail(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
               <div>
-                <label htmlFor="tutorContactPhone" className="block text-sm font-medium text-gray-700">Teléfono Tutor (Opcional)</label>
+                <label htmlFor="tutorContactPhone" className="block text-sm font-medium text-gray-700">Tutor Phone (Optional)</label>
                 <div className="mt-1 flex rounded-md shadow-sm">
                   <select value={tutorPhonePrefix} onChange={(e) => setTutorPhonePrefix(e.target.value)} className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">{COUNTRY_CODES.map(cc => <option key={cc.code} value={cc.code}>{cc.code} ({cc.country})</option>)}</select>
                   <input type="tel" id="tutorContactPhone" value={tutorContactPhone} onChange={(e) => setTutorContactPhone(e.target.value)} className="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-blue-500" />
@@ -324,18 +324,18 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
 
         {/* Payment Info Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">Información de Pago</legend>
+          <legend className="text-xl font-semibold text-gray-900 px-2">Payment Information</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            <div className="md:col-span-2"><label className="flex items-center"><input type="checkbox" className="form-checkbox h-4 w-4 text-blue-600" checked={isFreeTrial} onChange={(e) => setIsFreeTrial(e.target.checked)} /><span className="ml-2 text-sm font-medium text-gray-700">¿Periodo de prueba?</span></label></div>
+            <div className="md:col-span-2"><label className="flex items-center"><input type="checkbox" className="form-checkbox h-4 w-4 text-blue-600" checked={isFreeTrial} onChange={(e) => setIsFreeTrial(e.target.checked)} /><span className="ml-2 text-sm font-medium text-gray-700">Trial period?</span></label></div>
             {isFreeTrial && (
-              <div><label htmlFor="freeTrialEndDate" className="block text-sm font-medium text-gray-700">Fin del periodo de prueba</label><input type="date" id="freeTrialEndDate" value={freeTrialEndDate} onChange={(e) => { setFreeTrialEndDate(e.target.value); setPaidDate(e.target.value); }} required={isFreeTrial} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
+              <div><label htmlFor="freeTrialEndDate" className="block text-sm font-medium text-gray-700">End of trial period</label><input type="date" id="freeTrialEndDate" value={freeTrialEndDate} onChange={(e) => { setFreeTrialEndDate(e.target.value); setPaidDate(e.target.value); }} required={isFreeTrial} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
             )}
-            <div><label htmlFor="tier" className="block text-sm font-medium text-gray-700">Plan Asignado</label><select id="tier" value={tierId} onChange={(e) => setTierId(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="">Selecciona un Plan</option>{tiers.map(tier => (<option key={tier.id} value={tier.id}>{tier.name}</option>))}</select></div>
-            <div><label htmlFor="paymentType" className="block text-sm font-medium text-gray-700">Tipo de Pago</label><select id="paymentType" value={paymentType} onChange={(e) => setPaymentType(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="Mensual">Mensual</option><option value="Semestral">Semestral</option><option value="Anual">Anual</option></select></div>
-            <div><label htmlFor="startDate" className="block text-sm font-medium text-gray-700">Fecha de Inicio</label><input type="date" id="startDate" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
-            {!isFreeTrial && <div><label htmlFor="paidDate" className="block text-sm font-medium text-gray-700">Fecha de Pago</label><input type="date" id="paidDate" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>}
-            <div><label htmlFor="expiryDate" className="block text-sm font-medium text-gray-700">Fecha de Vencimiento (Calculada)</label><input type="text" id="expiryDate" value={expiryDate} readOnly className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100" /></div>
-            <div className="md:col-span-2"><label htmlFor="receipt" className="block text-sm font-medium text-gray-700">Recibo (Texto)</label><input type="text" id="receipt" value={receipt} onChange={(e) => setReceipt(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
+            <div><label htmlFor="tier" className="block text-sm font-medium text-gray-700">Assigned Plan</label><select id="tier" value={tierId} onChange={(e) => setTierId(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="">Select a Plan</option>{tiers.map(tier => (<option key={tier.id} value={tier.id}>{tier.name}</option>))}</select></div>
+            <div><label htmlFor="paymentType" className="block text-sm font-medium text-gray-700">Payment Type</label><select id="paymentType" value={paymentType} onChange={(e) => setPaymentType(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="Monthly">Monthly</option><option value="Semiannual">Semiannual</option><option value="Annual">Annual</option></select></div>
+            <div><label htmlFor="startDate" className="block text-sm font-medium text-gray-700">Start Date</label><input type="date" id="startDate" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
+            {!isFreeTrial && <div><label htmlFor="paidDate" className="block text-sm font-medium text-gray-700">Payment Date</label><input type="date" id="paidDate" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>}
+            <div><label htmlFor="expiryDate" className="block text-sm font-medium text-gray-700">Expiration Date (Calculated)</label><input type="text" id="expiryDate" value={expiryDate} readOnly className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100" /></div>
+            <div className="md:col-span-2"><label htmlFor="receipt" className="block text-sm font-medium text-gray-700">Receipt (Text)</label><input type="text" id="receipt" value={receipt} onChange={(e) => setReceipt(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
             <div className="md:col-span-2"><label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notas</label><textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows="3" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></textarea></div>
           </div>
         </fieldset>
@@ -344,10 +344,10 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
         {error && <p className="text-red-500 text-sm text-center">{error}</p>}
         <div className="flex justify-end space-x-4 pt-4">
           <button type="button" onClick={onComplete} className="px-6 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
-            Cancelar
+            Cancel
           </button>
           <button type="submit" disabled={loading || uploadProgress > 0} className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
-            {loading ? (uploadProgress > 0 ? `Subiendo... ${uploadProgress.toFixed(0)}%` : 'Guardando...') : (playerToEdit ? 'Actualizar Jugador' : 'Agregar Jugador')}
+            {loading ? (uploadProgress > 0 ? `Uploading... ${uploadProgress.toFixed(0)}%` : 'Saving...') : (playerToEdit ? 'Update Student' : 'Add Student')}
           </button>
         </div>
         </form>

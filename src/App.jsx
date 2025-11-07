@@ -17,7 +17,7 @@ export default function App() {
   const [creatingAcademy, setCreatingAcademy] = useState(false);
   const [error, setError] = useState(null);
   const [nameInput, setNameInput] = useState("");
-  const [activeSection, setActiveSection] = useState("players");
+  const [activeSection, setActiveSection] = useState("students");
   const [selectedPlayer, setSelectedPlayer] = useState(null);
 
   useEffect(() => {
@@ -85,11 +85,11 @@ export default function App() {
   if (user && !academy) {
     return (
       <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">Crea tu academia</h2>
+        <h2 className="text-2xl font-bold mb-4 text-gray-800">Create your academy</h2>
         <form onSubmit={createAcademy} className="space-y-4">
           <input
             type="text"
-            placeholder="Nombre de la academia"
+            placeholder="Academy name"
             value={nameInput}
             onChange={e => setNameInput(e.target.value)}
             required={true}
@@ -98,7 +98,7 @@ export default function App() {
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
           />
           <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md disabled:opacity-50 disabled:cursor-not-allowed" disabled={creatingAcademy}>
-            {creatingAcademy ? "Creando academia..." : "Crear academia"}
+            {creatingAcademy ? "Creating academy..." : "Create academy"}
           </button>
           {error && <p style={{ color: "red", marginTop: 10 }}>{error}</p>} {/* Display error message */}
         </form>
@@ -117,13 +117,13 @@ export default function App() {
 
   const renderSection = () => {
     switch (activeSection) {
-      case "players":
+      case "students":
         return <PlayersSection user={user} academy={academy} db={db} setActiveSection={setActiveSection} setSelectedPlayer={setSelectedPlayer} />;
-      case "newPlayer":
+      case "newStudent":
         return <NewPlayerPage user={user} academy={academy} db={db} setActiveSection={setActiveSection} />;
-      case "playerDetail":
+      case "studentDetail":
         return <PlayerDetailPage player={selectedPlayer} setActiveSection={setActiveSection} setSelectedPlayer={setSelectedPlayer} />;
-      case "editPlayer":
+      case "editStudent":
         return <EditPlayerPage user={user} academy={academy} db={db} playerToEdit={selectedPlayer} setActiveSection={setActiveSection} />;
       case "admin": {
         // Pasamos una función para refrescar los datos de la academia cuando se actualice
@@ -131,7 +131,7 @@ export default function App() {
         return <AdminSection user={user} academy={academy} db={db} onAcademyUpdate={refreshAcademy} />;
       }
       default:
-        return <h1 className="text-3xl font-bold text-gray-800 mb-4">Bienvenido a {academy.name}</h1>;
+        return <h1 className="text-3xl font-bold text-gray-800 mb-4">Welcome to {academy.name}</h1>;
     }
   };
 
@@ -146,10 +146,10 @@ export default function App() {
         <nav className="flex-grow">
           <ul className="space-y-2">
             <li>
-              <button onClick={() => setActiveSection("players")} className={`block w-full text-left py-2 px-4 rounded ${activeSection === "players" ? "bg-gray-700" : "hover:bg-gray-700"}`}>Jugadores</button>
+              <button onClick={() => setActiveSection("students")} className={`block w-full text-left py-2 px-4 rounded ${activeSection === "students" ? "bg-gray-700" : "hover:bg-gray-700"}`}>Students</button>
             </li>
             <li>
-              <button onClick={() => setActiveSection("admin")} className={`block w-full text-left py-2 px-4 rounded ${activeSection === "admin" ? "bg-gray-700" : "hover:bg-gray-700"}`}>Admin</button>
+              <button onClick={() => setActiveSection("admin")} className={`block w-full text-left py-2 px-4 rounded ${activeSection === "admin" ? "bg-gray-700" : "hover:bg-gray-700"}`}>My Academy</button>
             </li>
           </ul>
         </nav>
@@ -159,7 +159,7 @@ export default function App() {
             <p className="text-sm font-medium">{user.displayName || user.email}</p>
           </div>
           <button onClick={handleSignOut} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md">
-            Cerrar Sesión
+            Sign Out
           </button>
         </div>
       </div>

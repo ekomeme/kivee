@@ -97,12 +97,12 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
         // Update existing tier
         const tierDocRef = doc(db, `academies/${user.uid}/tiers`, editingTier.id);
         await updateDoc(tierDocRef, tierData);
-        toast.success("Tier actualizado con éxito.");
+        toast.success("Tier updated successfully.");
       } else {
         // Add new tier
         const tiersCollectionRef = collection(db, `academies/${user.uid}/tiers`);
         await addDoc(tiersCollectionRef, tierData);
-        toast.success("Tier agregado con éxito.");
+        toast.success("Tier added successfully.");
       }
       setNewTierName('');
       setNewTierDescription('');
@@ -112,7 +112,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
     } catch (err) {
       console.error("Error al guardar tier:", err);
       setTierError("Error al guardar tier: " + err.message);
-      toast.error("Error al guardar el tier.");
+      toast.error("Error saving tier.");
     } finally {
       setLoadingTiers(false);
     }
@@ -130,25 +130,25 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
       try {
         await deleteDoc(doc(db, `academies/${user.uid}/tiers`, tierId));
         fetchTiers();
-        toast.success("Tier eliminado con éxito.");
+        toast.success("Tier deleted successfully.");
       } catch (error) {
         console.error("Error al eliminar tier:", error);
-        toast.error("Error al eliminar tier.");
+        toast.error("Error deleting tier.");
       }
     };
 
     toast((t) => (
       <div className="bg-white p-4 rounded-lg shadow-lg flex flex-col items-center">
-        <p className="text-center mb-4">¿Estás seguro de que quieres eliminar este tier?</p>
+        <p className="text-center mb-4">Are you sure you want to delete this tier?</p>
         <div className="flex space-x-2">
           <button
             onClick={() => { toast.dismiss(t.id); deleteAction(); }}
             className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
           >
-            Confirmar
+            Confirm
           </button>
           <button onClick={() => toast.dismiss(t.id)} className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
-            Cancelar
+            Cancel
           </button>
         </div>
       </div>
@@ -172,11 +172,11 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
         currency: selectedCurrency.value,
       });
       await onAcademyUpdate(); // Llama a la función para refrescar los datos en App.jsx
-      toast.success("Configuración de la academia actualizada con éxito.");
+      toast.success("Academy settings updated successfully.");
     } catch (error) {
       console.error("Error al actualizar el nombre de la academia:", error);
       setUpdateSettingsError("Error al actualizar la configuración: " + error.message);
-      toast.error("Error al actualizar la configuración.");
+      toast.error("Error updating settings.");
     } finally {
       setIsUpdatingSettings(false);
     }
@@ -200,11 +200,11 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
     <div className="space-y-8">
       {/* Sección para cambiar el nombre de la academia */}
       <div className="p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Configuración de la Academia</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">Academy Settings</h2>
         <form onSubmit={handleUpdateAcademySettings} className="space-y-4">
           <div>
             <label htmlFor="academyName" className="block text-sm font-medium text-gray-700">
-              Nombre de la Academia
+              Academy Name
             </label>
             <input
               type="text"
@@ -219,7 +219,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
           </div>
           <div>
             <label htmlFor="academyCurrency" className="block text-sm font-medium text-gray-700">
-              Moneda
+              Currency
             </label>
             <Select
               id="academyCurrency"
@@ -227,7 +227,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
               value={selectedCurrency}
               onChange={setSelectedCurrency}
               isSearchable
-              placeholder="Busca o selecciona una moneda..."
+              placeholder="Search or select a currency..."
             />
           </div>
           {updateSettingsError && <p className="text-red-500 text-sm">{updateSettingsError}</p>}
@@ -237,7 +237,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
               disabled={isUpdatingSettings}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isUpdatingSettings ? 'Actualizando...' : 'Guardar Configuración'}
+              {isUpdatingSettings ? 'Updating...' : 'Save Settings'}
             </button>
           </div>
         </form>
@@ -245,14 +245,14 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
 
       {/* Sección de Tiers (movida aquí) */}
       <div className="p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Gestión de Tiers</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">Tier Management</h2>
 
         <form onSubmit={handleAddOrUpdateTier} className="space-y-4 mb-6 p-4 border border-gray-200 rounded-md">
           <h3 className="text-xl font-semibold text-gray-700">
-            {editingTier ? 'Editar Tier' : 'Agregar Nuevo Tier'}
+            {editingTier ? 'Edit Tier' : 'Add New Tier'}
           </h3>
           <div>
-            <label htmlFor="tierName" className="block text-sm font-medium text-gray-700">Nombre del Tier</label>
+            <label htmlFor="tierName" className="block text-sm font-medium text-gray-700">Tier Name</label>
             <input
               type="text"
               id="tierName"
@@ -263,7 +263,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
             />
           </div>
           <div>
-            <label htmlFor="tierDescription" className="block text-sm font-medium text-gray-700">Descripción</label>
+            <label htmlFor="tierDescription" className="block text-sm font-medium text-gray-700">Description</label>
             <textarea
               id="tierDescription"
               value={newTierDescription}
@@ -272,7 +272,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
             ></textarea>
           </div>
           <div>
-            <label htmlFor="tierPrice" className="block text-sm font-medium text-gray-700">Precio</label>
+            <label htmlFor="tierPrice" className="block text-sm font-medium text-gray-700">Price</label>
             <input
               type="number"
               id="tierPrice"
@@ -297,7 +297,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
                 }}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
               >
-                Cancelar Edición
+                Cancel Edit
               </button>
             )}
             <button
@@ -305,22 +305,22 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
               disabled={loadingTiers}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loadingTiers ? 'Guardando...' : (editingTier ? 'Actualizar Tier' : 'Agregar Tier')}
+              {loadingTiers ? 'Saving...' : (editingTier ? 'Update Tier' : 'Add Tier')}
             </button>
           </div>
         </form>
 
         {tiers.length === 0 ? (
-          <p className="text-gray-600">No hay tiers registrados aún.</p>
+          <p className="text-gray-600">No tiers registered yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full bg-white border border-gray-200">
               <thead>
                 <tr>
-                  <th className="py-2 px-4 border-b text-left">Nombre</th>
-                  <th className="py-2 px-4 border-b text-left">Descripción</th>
-                  <th className="py-2 px-4 border-b text-left">Precio</th>
-                  <th className="py-2 px-4 border-b text-left">Acciones</th>
+                  <th className="py-2 px-4 border-b text-left">Name</th>
+                  <th className="py-2 px-4 border-b text-left">Description</th>
+                  <th className="py-2 px-4 border-b text-left">Price</th>
+                  <th className="py-2 px-4 border-b text-left">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -330,8 +330,8 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
                     <td className="py-2 px-4 border-b">{tier.description}</td>
                     <td className="py-2 px-4 border-b">{formatCurrency(tier.price, academy.currency)}</td>
                     <td className="py-2 px-4 border-b">
-                      <button onClick={() => handleEditClick(tier)} className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded-md text-sm mr-2">Editar</button>
-                      <button onClick={() => handleDeleteTier(tier.id)} className="bg-red-500 hover:bg-red-700 text-white py-1 px-2 rounded-md text-sm">Eliminar</button>
+                      <button onClick={() => handleEditClick(tier)} className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded-md text-sm mr-2">Edit</button>
+                      <button onClick={() => handleDeleteTier(tier.id)} className="bg-red-500 hover:bg-red-700 text-white py-1 px-2 rounded-md text-sm">Delete</button>
                     </td>
                   </tr>
                 ))}
