@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { collection, query, getDocs, doc, deleteDoc, getDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
-import { PlusCircle, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Filter, ChevronRight, Check } from 'lucide-react';
+import { PlusCircle, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Filter, ChevronRight, Check, X } from 'lucide-react';
 export default function PlayersSection({ user, academy, db, setActiveSection, setSelectedPlayer }) {
   const [players, setPlayers] = useState([]);
   // Fetches players and their tutors
@@ -54,6 +54,10 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
   const [activeSubMenu, setActiveSubMenu] = useState(null);
   const categories = useMemo(() => [...new Set(players.map(p => p.category).filter(Boolean))], [players]);
   const genders = useMemo(() => [...new Set(players.map(p => p.gender).filter(Boolean))], [players]);
+  
+  const activeFilterCount = useMemo(() => {
+    return filters.gender.length + filters.category.length + filters.tier.length;
+  }, [filters]);
 
   const filteredAndSortedPlayers = useMemo(() => {
     let filteredPlayers = [...players];
@@ -96,6 +100,11 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
         direction = 'descending';
     }
     setSortConfig({ key, direction });
+  };
+
+  const handleClearFilters = () => {
+    setFilters({ gender: [], category: [], tier: [] });
+    setSearchQuery('');
   };
 
   const handleFilterToggle = (filterName, value) => {
@@ -236,10 +245,19 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
       <div className="relative" ref={menuRef}>
         <button
           onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
-          className="flex items-center px-4 py-2 border border-gray-border rounded-md bg-white hover:bg-gray-100"
+          className={`flex items-center px-4 py-2 border rounded-md ${
+            activeFilterCount > 0
+              ? 'bg-blue-100 border-blue-300 text-blue-800'
+              : 'bg-white border-gray-border hover:bg-gray-100'
+          }`}
         >
           <Filter className="h-4 w-4 mr-2" />
           <span>Filter</span>
+          {activeFilterCount > 0 && (
+            <span className="ml-2 bg-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+              {activeFilterCount}
+            </span>
+          )}
         </button>
 
         {isFilterMenuOpen && (
@@ -360,8 +378,16 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
 
       {/* Filters Section */}
       <div className="flex items-center space-x-4 mb-4 p-4 bg-gray-light rounded-lg">
-        <FilterMenu />
-        <div className="relative flex-grow">
+        <div className="flex items-center space-x-4">
+          <FilterMenu />
+          {(activeFilterCount > 0 || searchQuery) && (
+            <button onClick={handleClearFilters} className="flex items-center text-sm text-red-600 hover:underline">
+              <X className="h-4 w-4 mr-1" />
+              Clear
+            </button>
+          )}
+        </div>
+        <div className="relative flex-grow ml-auto">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-gray-400" />
           </div>
@@ -371,7 +397,7 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search Student..."
-            className="block w-full pl-10 pr-3 py-2 border-gray-300 focus:outline-none focus:ring-primary focus:border-primary rounded-md"
+            className="block w-full pl-10 pr-3 py-2 border-gray-border focus:outline-none focus:ring-primary focus:border-primary rounded-md"
           />
         </div>
       </div>
