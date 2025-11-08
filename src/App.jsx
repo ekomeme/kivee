@@ -9,7 +9,47 @@ import PlayersSection from "./components/PlayersSection.jsx";
 import NewPlayerPage from "./components/NewPlayerPage.jsx"; // Import the new page
 import AdminSection from "./components/AdminSection.jsx";
 import { Toaster } from "react-hot-toast";
-import { LogOut } from 'lucide-react';
+import { LogOut } from "lucide-react";
+import loginIllustration from "./assets/login-ilustration.svg";
+import logoKivee from "./assets/logo-kivee.svg";
+
+const UserMenu = ({ user, onSignOut }) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuRef]);
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setShowMenu(!showMenu)}
+        className="flex items-center space-x-3 p-2 rounded-full hover:bg-gray-100"
+      >
+        {user.photoURL && <img src={user.photoURL} alt="User Avatar" className="w-8 h-8 rounded-full" />}
+        <span className="font-medium truncate hidden md:block">{user.displayName || user.email}</span>
+      </button>
+      {showMenu && (
+        <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10 p-4">
+          <p className="text-sm font-bold truncate">{user.displayName}</p>
+          <p className="text-xs text-gray-500 truncate mb-3">{user.email}</p>
+          <hr className="my-2" />
+          <button onClick={onSignOut} className="w-full text-left text-red-600 hover:bg-red-50 rounded-md px-3 py-2 flex items-center">
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -19,8 +59,8 @@ export default function App() {
   const [error, setError] = useState(null);
   const [nameInput, setNameInput] = useState("");
   const [activeSection, setActiveSection] = useState("students");
-  const [showUserMenu, setShowUserMenu] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const nameInputRef = useRef(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async u => {
@@ -53,6 +93,13 @@ export default function App() {
   }, []);
          // La lógica de carga de la academia se maneja dentro del listener.
 
+  useEffect(() => {
+    // Si estamos en la pantalla de creación de academia, enfoca el input.
+    if (user && !academy && nameInputRef.current) {
+      nameInputRef.current.focus();
+    }
+  }, [user, academy]); // Se ejecuta cuando user o academy cambian.
+
   const createAcademy = async e => {
     e.preventDefault();
     if (!user || creatingAcademy) return;
@@ -75,6 +122,15 @@ export default function App() {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      // After signing out, the onAuthStateChanged listener will update the user state
+    } catch (error) {
+      setError("Failed to sign out: " + error.message);
+    }
+  };
+
   // Conditional rendering based on app state
   if (loading) {
     return <div className="flex items-center justify-center h-screen bg-gray-100 text-gray-800"><p className="text-lg font-medium">Cargando...</p></div>;
@@ -86,36 +142,46 @@ export default function App() {
 
   if (user && !academy) {
     return (
-      <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">Create your academy</h2>
-        <form onSubmit={createAcademy} className="space-y-4">
-          <input
-            type="text"
-            placeholder="Academy name"
-            value={nameInput}
-            onChange={e => setNameInput(e.target.value)}
-            required={true}
-            minLength={3}
-            maxLength={50}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
-          />
-          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md disabled:opacity-50 disabled:cursor-not-allowed" disabled={creatingAcademy}>
-            {creatingAcademy ? "Creating academy..." : "Create academy"}
-          </button>
-          {error && <p style={{ color: "red", marginTop: 10 }}>{error}</p>} {/* Display error message */}
-        </form>
+      <div className="flex h-screen w-screen font-sans">
+        {/* Left Side */}
+        <div className="w-1/2 bg-white flex flex-col justify-center items-center p-12 relative">
+          <div className="absolute top-8 left-8 right-8 flex justify-between items-center">
+            <img src={logoKivee} alt="Kivee Logo" className="h-5 w-auto" />
+            <UserMenu user={user} onSignOut={handleSignOut} />
+          </div>
+          <div className="w-full max-w-[360px]">
+            <div className="text-left">
+              <h1 className="text-[24px] font-semibold text-black">Hi, {user.displayName}</h1>
+              <h2 className="text-[24px] font-medium text-gray-dark mt-1">Let’s create your Academy</h2>
+            </div>
+            <form onSubmit={createAcademy} className="mt-12">
+              <input
+                ref={nameInputRef}
+                type="text"
+                placeholder="Give it a name"
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                required={true}
+                minLength={3}
+                maxLength={50}
+                className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-base"
+              />
+              <button type="submit" className="w-full bg-primary hover:bg-primary-hover text-white font-medium py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary mt-4 text-base" disabled={creatingAcademy || !nameInput.trim()}>
+                {creatingAcademy ? "Creating..." : "Continue"}
+              </button>
+              {error && <p className="text-red-500 mt-4 text-sm">{error}</p>}
+            </form>
+          </div>
+        </div>
+        {/* Right Side */}
+        <div className="w-1/2 bg-gray-light flex justify-center items-center p-12">
+          <div className="w-full max-w-md">
+            <img src={loginIllustration} alt="Kivee Illustration" className="w-full h-auto" />
+          </div>
+        </div>
       </div>
     );
   }
-
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-      // After signing out, the onAuthStateChanged listener will update the user state
-    } catch (error) {
-      setError("Failed to sign out: " + error.message);
-    }
-  };
 
   const renderSection = () => {
     switch (activeSection) {
@@ -156,38 +222,9 @@ export default function App() {
           </ul>
         </nav>
         <div className="mt-auto pt-4 border-t border-gray-border relative">
-          {showUserMenu && (
-            <div
-              className="fixed inset-0"
-              onClick={() => setShowUserMenu(false)}
-            ></div>
-          )}
-          <button
-            onClick={() => setShowUserMenu(!showUserMenu)}
-            className="w-full text-left py-2 px-4 rounded hover:bg-gray-100 flex items-center space-x-3"
-          >
-            {user.photoURL && <img src={user.photoURL} alt="User Avatar" className="w-8 h-8 rounded-full" />}
-            <span className="font-medium truncate">{user.displayName || user.email}</span>
-          </button>
-          {showUserMenu && (
-            <div className="absolute bottom-full left-0 mb-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10 p-4">
-              <div className="flex items-center space-x-3 mb-3">
-                {user.photoURL && <img src={user.photoURL} alt="User Avatar" className="w-10 h-10 rounded-full" />}
-                <div>
-                  <p className="text-sm font-bold truncate">{user.displayName}</p>
-                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                </div>
-              </div>
-              <div className="mb-3">
-                <span className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Admin</span>
-              </div>
-              <hr className="my-2" />
-              <button onClick={handleSignOut} className="w-full text-left text-red-600 hover:bg-red-50 rounded-md px-3 py-2 flex items-center">
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Sign Out</span>
-              </button>
-            </div>
-          )}
+          <div className="relative">
+            <UserMenu user={user} onSignOut={handleSignOut} />
+          </div>
         </div>
       </div>
       {/* Main Content */}

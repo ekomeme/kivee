@@ -42,7 +42,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
     { code: 'CZK', name: 'Corona checa' }
   ];
 
-  const currencyOptions = CURRENCIES.map(c => ({
+  const currencyOptions = CURRENCIES.sort((a, b) => a.code.localeCompare(b.code)).map(c => ({
     value: c.code,
     label: `${c.code} - ${c.name}`
   }));
@@ -50,9 +50,12 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
   const findCurrencyOption = (currencyCode) => currencyOptions.find(option => option.value === currencyCode);
 
   const [academyNameInput, setAcademyNameInput] = useState(academy.name);
+  const [selectedAcademyCategory, setSelectedAcademyCategory] = useState(academy.category || '');
+  const [otherCategory, setOtherCategory] = useState(academy.otherCategory || '');
   const [selectedCurrency, setSelectedCurrency] = useState(findCurrencyOption(academy.currency) || findCurrencyOption('USD'));
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
   const [updateSettingsError, setUpdateSettingsError] = useState(null);
+  const ACADEMY_CATEGORIES = ['Fútbol', 'Baloncesto', 'Tenis', 'Otro'];
 
   // --- Tiers Logic ---
   const [tiers, setTiers] = useState([]);
@@ -179,6 +182,8 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
     try {
       await updateDoc(academyRef, {
         name: academyNameInput.trim(),
+        category: selectedAcademyCategory,
+        otherCategory: selectedAcademyCategory === 'Otro' ? otherCategory : '',
         currency: selectedCurrency.value,
       });
       await onAcademyUpdate(); // Llama a la función para refrescar los datos en App.jsx
@@ -238,6 +243,30 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
           </div>
+          <div>
+            <label htmlFor="academyCategory" className="block font-medium text-gray-700">
+              Categoría de la Academia
+            </label>
+            <select
+              id="academyCategory"
+              value={selectedAcademyCategory}
+              onChange={(e) => setSelectedAcademyCategory(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+            >
+              <option value="">Selecciona una categoría</option>
+              {ACADEMY_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            </select>
+          </div>
+          {selectedAcademyCategory === 'Otro' && (
+            <div>
+              <label htmlFor="otherCategory" className="block font-medium text-gray-700">
+                Especificar deporte
+              </label>
+              <input
+                type="text" id="otherCategory" value={otherCategory} onChange={(e) => setOtherCategory(e.target.value)} required={selectedAcademyCategory === 'Otro'} placeholder="Ej: Pádel, Voleibol"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
+            </div>
+          )}
           <div>
             <label htmlFor="academyCurrency" className="block font-medium text-gray-700">
               Currency
