@@ -62,6 +62,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
   const [loadingTiers, setLoadingTiers] = useState(false);
   const [tierError, setTierError] = useState(null);
   const [editingTier, setEditingTier] = useState(null); // State for editing
+  const [showTierModal, setShowTierModal] = useState(false);
 
   const fetchTiers = async () => {
     if (!user || !academy) return;
@@ -123,6 +124,15 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
     setNewTierName(tier.name);
     setNewTierDescription(tier.description);
     setNewTierPrice(tier.price);
+  };
+
+  const handleOpenTierModal = (tier = null) => {
+    if (tier) {
+      handleEditClick(tier);
+    } else {
+      setEditingTier(null);
+    }
+    setShowTierModal(true);
   };
 
   const handleDeleteTier = async (tierId) => {
@@ -195,6 +205,17 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
     }
   };
 
+  const getCurrencySymbol = (currencyCode) => {
+    if (!currencyCode) currencyCode = 'USD';
+    try {
+      const parts = new Intl.NumberFormat(undefined, { style: 'currency', currency: currencyCode }).formatToParts(0);
+      const symbolPart = parts.find(part => part.type === 'currency');
+      return symbolPart ? symbolPart.value : '$';
+    } catch (e) {
+      return '$'; // Fallback
+    }
+  };
+
 
   return (
     <div className="space-y-8">
@@ -245,70 +266,15 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
 
       {/* Sección de Tiers (movida aquí) */}
       <div className="p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Tier Management</h2>
-
-        <form onSubmit={handleAddOrUpdateTier} className="space-y-4 mb-6 p-4 border border-gray-200 rounded-md">
-          <h3 className="text-xl font-semibold text-gray-700">
-            {editingTier ? 'Edit Tier' : 'Add New Tier'}
-          </h3>
-          <div>
-            <label htmlFor="tierName" className="block text-sm font-medium text-gray-700">Tier Name</label>
-            <input
-              type="text"
-              id="tierName"
-              value={newTierName}
-              onChange={(e) => setNewTierName(e.target.value)}
-              required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            />
-          </div>
-          <div>
-            <label htmlFor="tierDescription" className="block text-sm font-medium text-gray-700">Description</label>
-            <textarea
-              id="tierDescription"
-              value={newTierDescription}
-              onChange={(e) => setNewTierDescription(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            ></textarea>
-          </div>
-          <div>
-            <label htmlFor="tierPrice" className="block text-sm font-medium text-gray-700">Price</label>
-            <input
-              type="number"
-              id="tierPrice"
-              value={newTierPrice}
-              onChange={(e) => setNewTierPrice(e.target.value)}
-              required
-              min="0"
-              step="0.01"
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            />
-          </div>
-          {tierError && <p className="text-red-500 text-sm">{tierError}</p>}
-          <div className="flex justify-end space-x-3">
-            {editingTier && (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingTier(null);
-                  setNewTierName('');
-                  setNewTierDescription('');
-                  setNewTierPrice('');
-                }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-              >
-                Cancel Edit
-              </button>
-            )}
-            <button
-              type="submit"
-              disabled={loadingTiers}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loadingTiers ? 'Saving...' : (editingTier ? 'Update Tier' : 'Add Tier')}
-            </button>
-          </div>
-        </form>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-gray-800">Tier Management</h2>
+          <button
+            onClick={() => handleOpenTierModal()}
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md"
+          >
+            Add New Tier
+          </button>
+        </div>
 
         {tiers.length === 0 ? (
           <p className="text-gray-600">No tiers registered yet.</p>
@@ -330,7 +296,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
                     <td className="py-2 px-4 border-b">{tier.description}</td>
                     <td className="py-2 px-4 border-b">{formatCurrency(tier.price, academy.currency)}</td>
                     <td className="py-2 px-4 border-b">
-                      <button onClick={() => handleEditClick(tier)} className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded-md text-sm mr-2">Edit</button>
+                      <button onClick={() => handleOpenTierModal(tier)} className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded-md text-sm mr-2">Edit</button>
                       <button onClick={() => handleDeleteTier(tier.id)} className="bg-red-500 hover:bg-red-700 text-white py-1 px-2 rounded-md text-sm">Delete</button>
                     </td>
                   </tr>
@@ -340,6 +306,70 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
           </div>
         )}
       </div>
+
+      {/* Tier Form Modal */}
+      {showTierModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-40" onClick={() => setShowTierModal(false)}>
+          <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md mx-auto" onClick={e => e.stopPropagation()}>
+            <form onSubmit={handleAddOrUpdateTier} className="space-y-4">
+              <h3 className="text-xl font-semibold text-gray-700">
+                {editingTier ? 'Edit Tier' : 'Add New Tier'}
+              </h3>
+              <div>
+                <label htmlFor="tierName" className="block text-sm font-medium text-gray-700">Tier Name</label>
+                <input
+                  type="text"
+                  id="tierName"
+                  value={newTierName}
+                  onChange={(e) => setNewTierName(e.target.value)}
+                  required
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="tierDescription" className="block text-sm font-medium text-gray-700">Description</label>
+                <textarea
+                  id="tierDescription"
+                  value={newTierDescription}
+                  onChange={(e) => setNewTierDescription(e.target.value)}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                ></textarea>
+              </div>
+              <div>
+                <label htmlFor="tierPrice" className="block text-sm font-medium text-gray-700">Price</label>
+                <input
+                  type="number"
+                  id="tierPrice"
+                  value={newTierPrice}
+                  onChange={(e) => setNewTierPrice(e.target.value)}
+                  placeholder={`${getCurrencySymbol(academy.currency)}10.00`}
+                  required
+                  min="0"
+                  step="0.01"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+              </div>
+              {tierError && <p className="text-red-500 text-sm">{tierError}</p>}
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowTierModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loadingTiers}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loadingTiers ? 'Saving...' : (editingTier ? 'Update Tier' : 'Add Tier')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

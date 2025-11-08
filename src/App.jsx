@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth"; // Import signOut
 import { auth, db } from "./firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -18,6 +18,7 @@ export default function App() {
   const [error, setError] = useState(null);
   const [nameInput, setNameInput] = useState("");
   const [activeSection, setActiveSection] = useState("students");
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
 
   useEffect(() => {
@@ -140,27 +141,51 @@ export default function App() {
       <Toaster position="top-center" reverseOrder={false} />
       {/* Sidebar */}
       <div
-        className="bg-gray-800 text-white w-64 p-4 flex flex-col"
+        className="bg-white text-gray-800 w-64 p-4 flex flex-col border-r border-gray-200"
       >
         <h2 className="text-2xl font-semibold mb-4">{academy.name}</h2>
         <nav className="flex-grow">
           <ul className="space-y-2">
             <li>
-              <button onClick={() => setActiveSection("students")} className={`block w-full text-left py-2 px-4 rounded ${activeSection === "students" ? "bg-gray-700" : "hover:bg-gray-700"}`}>Students</button>
+              <button onClick={() => setActiveSection("students")} className={`block w-full text-left py-2 px-4 rounded ${activeSection === "students" ? "bg-gray-100" : "hover:bg-gray-100"}`}>Students</button>
             </li>
             <li>
-              <button onClick={() => setActiveSection("admin")} className={`block w-full text-left py-2 px-4 rounded ${activeSection === "admin" ? "bg-gray-700" : "hover:bg-gray-700"}`}>My Academy</button>
+              <button onClick={() => setActiveSection("admin")} className={`block w-full text-left py-2 px-4 rounded ${activeSection === "admin" ? "bg-gray-100" : "hover:bg-gray-100"}`}>My Academy</button>
             </li>
           </ul>
         </nav>
-        <div className="mt-auto pt-4 border-t border-gray-700">
-          <div className="flex items-center space-x-3 mb-2">
+        <div className="mt-auto pt-4 border-t border-gray-200 relative">
+          {showUserMenu && (
+            <div
+              className="fixed inset-0"
+              onClick={() => setShowUserMenu(false)}
+            ></div>
+          )}
+          <button
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            className="w-full text-left py-2 px-4 rounded hover:bg-gray-100 flex items-center space-x-3"
+          >
             {user.photoURL && <img src={user.photoURL} alt="User Avatar" className="w-8 h-8 rounded-full" />}
-            <p className="text-sm font-medium">{user.displayName || user.email}</p>
-          </div>
-          <button onClick={handleSignOut} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md">
-            Sign Out
+            <span className="text-sm font-medium truncate">{user.displayName || user.email}</span>
           </button>
+          {showUserMenu && (
+            <div className="absolute bottom-full left-0 mb-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10 p-4">
+              <div className="flex items-center space-x-3 mb-3">
+                {user.photoURL && <img src={user.photoURL} alt="User Avatar" className="w-10 h-10 rounded-full" />}
+                <div>
+                  <p className="text-sm font-bold truncate">{user.displayName}</p>
+                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                </div>
+              </div>
+              <div className="mb-3">
+                <span className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Admin</span>
+              </div>
+              <hr className="my-2" />
+              <button onClick={handleSignOut} className="w-full text-left text-sm text-red-600 hover:bg-red-50 rounded-md px-3 py-2">
+                Sign Out
+              </button>
+            </div>
+          )}
         </div>
       </div>
       {/* Main Content */}
