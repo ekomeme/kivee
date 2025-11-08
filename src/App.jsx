@@ -9,6 +9,7 @@ import PlayersSection from "./components/PlayersSection.jsx";
 import NewPlayerPage from "./components/NewPlayerPage.jsx"; // Import the new page
 import AdminSection from "./components/AdminSection.jsx";
 import { Toaster } from "react-hot-toast";
+import { LogOut } from 'lucide-react';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -137,11 +138,11 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-light font-sans">
       <Toaster position="top-center" reverseOrder={false} />
       {/* Sidebar */}
       <div
-        className="bg-white text-gray-800 w-64 p-4 flex flex-col border-r border-gray-200"
+        className="bg-white text-gray-800 w-64 p-4 flex flex-col border-r border-gray-border"
       >
         <h2 className="text-2xl font-semibold mb-4">{academy.name}</h2>
         <nav className="flex-grow">
@@ -154,7 +155,7 @@ export default function App() {
             </li>
           </ul>
         </nav>
-        <div className="mt-auto pt-4 border-t border-gray-200 relative">
+        <div className="mt-auto pt-4 border-t border-gray-border relative">
           {showUserMenu && (
             <div
               className="fixed inset-0"
@@ -181,8 +182,9 @@ export default function App() {
                 <span className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Admin</span>
               </div>
               <hr className="my-2" />
-              <button onClick={handleSignOut} className="w-full text-left text-sm text-red-600 hover:bg-red-50 rounded-md px-3 py-2">
-                Sign Out
+              <button onClick={handleSignOut} className="w-full text-left text-sm text-red-600 hover:bg-red-50 rounded-md px-3 py-2 flex items-center">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sign Out</span>
               </button>
             </div>
           )}

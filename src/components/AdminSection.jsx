@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
 import Select from 'react-select';
-
+import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
   const CURRENCIES = [
@@ -256,7 +256,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
             <button
               type="submit"
               disabled={isUpdatingSettings}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isUpdatingSettings ? 'Updating...' : 'Save Settings'}
             </button>
@@ -270,9 +270,10 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
           <h2 className="text-2xl font-bold text-gray-800">Tier Management</h2>
           <button
             onClick={() => handleOpenTierModal()}
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md"
+            className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center"
           >
-            Add New Tier
+            <PlusCircle className="mr-2 h-5 w-5" />
+            <span>Add New Tier</span>
           </button>
         </div>
 
@@ -296,8 +297,8 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
                     <td className="py-2 px-4 border-b">{tier.description}</td>
                     <td className="py-2 px-4 border-b">{formatCurrency(tier.price, academy.currency)}</td>
                     <td className="py-2 px-4 border-b">
-                      <button onClick={() => handleOpenTierModal(tier)} className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded-md text-sm mr-2">Edit</button>
-                      <button onClick={() => handleDeleteTier(tier.id)} className="bg-red-500 hover:bg-red-700 text-white py-1 px-2 rounded-md text-sm">Delete</button>
+                      <button onClick={() => handleOpenTierModal(tier)} className="text-gray-500 hover:text-blue-600 p-1 rounded-full mr-2"><Edit className="h-5 w-5" /></button>
+                      <button onClick={() => handleDeleteTier(tier.id)} className="text-gray-500 hover:text-red-600 p-1 rounded-full"><Trash2 className="h-5 w-5" /></button>
                     </td>
                   </tr>
                 ))}
@@ -361,7 +362,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
                 <button
                   type="submit"
                   disabled={loadingTiers}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loadingTiers ? 'Saving...' : (editingTier ? 'Update Tier' : 'Add Tier')}
                 </button>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { collection, query, getDocs, doc, deleteDoc, getDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
+import { PlusCircle, ArrowUp, ArrowDown, Edit, Trash2, Search } from 'lucide-react';
 export default function PlayersSection({ user, academy, db, setActiveSection, setSelectedPlayer }) {
   const [players, setPlayers] = useState([]);
   const [tooltipTutorData, setTooltipTutorData] = useState(null);
@@ -168,36 +169,39 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
         <h2 className="text-2xl font-bold text-gray-800">Students of {academy.name}</h2>
         <button
           onClick={handleAddPlayer}
-          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md"
+          className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center"
         >
-          Add New Student
+          <PlusCircle className="mr-2 h-5 w-5" />
+          <span>Add New Student</span>
         </button>
       </div>
 
       {/* Filters Section */}
-      <div className="flex space-x-4 mb-4">
-        <div>
-          <label htmlFor="searchFilter" className="block text-sm font-medium text-gray-700">Search Student</label>
+      <div className="flex space-x-4 mb-4 p-4 bg-gray-light rounded-lg">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-gray-400" />
+          </div>
           <input
             type="text"
             id="searchFilter"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="First or last name..."
-            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+            placeholder="Search Student..."
+            className="block w-full pl-10 pr-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
           />
         </div>
         <div>
-          <label htmlFor="genderFilter" className="block text-sm font-medium text-gray-700">Filter by Gender</label>
-          <select id="genderFilter" onChange={(e) => handleFilterChange('gender', e.target.value)} value={filters.gender} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-            <option value="">All</option>
+          <select id="genderFilter" onChange={(e) => handleFilterChange('gender', e.target.value)} value={filters.gender} className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md">
+            <option value="" disabled>Filter by Gender</option>
+            <option value="">All Genders</option>
             {genders.map(g => <option key={g} value={g}>{g}</option>)}
           </select>
         </div>
         <div>
-          <label htmlFor="categoryFilter" className="block text-sm font-medium text-gray-700">Filter by Category</label>
-          <select id="categoryFilter" onChange={(e) => handleFilterChange('category', e.target.value)} value={filters.category} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
-            <option value="">All</option>
+          <select id="categoryFilter" onChange={(e) => handleFilterChange('category', e.target.value)} value={filters.category} className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md">
+            <option value="" disabled>Filter by Category</option>
+            <option value="">All Categories</option>
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
@@ -211,8 +215,8 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
               <tr>
                 <th className="py-2 px-4 border-b text-left">Photo</th>
                 <th className="py-2 px-4 border-b text-left">
-                  <button onClick={() => handleSort('name')} className="font-bold">
-                    Name {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                  <button onClick={() => handleSort('name')} className="font-bold flex items-center">
+                    Name {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />)}
                   </button>
                 </th>
                 <th className="py-2 px-4 border-b text-left">Gender</th>
@@ -247,8 +251,8 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
                     ) : 'N/A'}
                   </td>
                   <td className="py-2 px-4 border-b">
-                    <button onClick={(e) => { e.stopPropagation(); handleEditPlayer(player); }} className="bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded-md text-sm mr-2">Edit</button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDeletePlayer(player.id); }} className="bg-red-500 hover:bg-red-700 text-white py-1 px-2 rounded-md text-sm">Delete</button>
+                    <button onClick={(e) => { e.stopPropagation(); handleEditPlayer(player); }} className="text-gray-500 hover:text-blue-600 p-1 rounded-full mr-2"><Edit className="h-5 w-5" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeletePlayer(player.id); }} className="text-gray-500 hover:text-red-600 p-1 rounded-full"><Trash2 className="h-5 w-5" /></button>
                   </td>
                 </tr>
               ))}
