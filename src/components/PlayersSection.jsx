@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { collection, query, getDocs, doc, deleteDoc, getDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
-import { PlusCircle, ArrowUp, ArrowDown, Edit, Trash2, Search } from 'lucide-react';
+import { PlusCircle, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy } from 'lucide-react';
 export default function PlayersSection({ user, academy, db, setActiveSection, setSelectedPlayer }) {
   const [players, setPlayers] = useState([]);
   const [tooltipTutorData, setTooltipTutorData] = useState(null);
@@ -162,6 +162,59 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
     setActiveSection('studentDetail');
   };
 
+  // Component for contact icons with a hover-based popover
+  const ContactIcon = ({ value, icon: Icon }) => {
+    const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+    const timeoutRef = useRef(null);
+
+    const handleCopy = (e) => {
+      e.stopPropagation(); // Prevent row click
+      navigator.clipboard.writeText(value);
+      toast.success('Copied to clipboard!');
+      setIsPopoverOpen(false);
+    };
+
+    if (!value) return null;
+
+    return (
+      <div
+        className="relative flex items-center"        onMouseEnter={() => {
+          clearTimeout(timeoutRef.current);
+          setIsPopoverOpen(true);
+        }}
+        onMouseLeave={() => {
+          timeoutRef.current = setTimeout(() => setIsPopoverOpen(false), 100);
+        }}
+      >
+        <Icon className="h-5 w-5 text-gray-500 cursor-pointer" />
+        {isPopoverOpen && (
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs bg-gray-dark text-white rounded-md py-1.5 px-3 z-20 shadow-lg">
+            <div className="flex items-center space-x-2">
+              <span className="truncate">{value}</span>
+              <button onClick={handleCopy} className="text-gray-300 hover:text-white"><Copy className="h-4 w-4" /></button>
+            </div>
+            <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-8 border-x-transparent border-t-8 border-t-gray-dark"></div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const Avatar = ({ player }) => {
+    if (player.photoURL) {
+      return <img src={player.photoURL} alt="Student" className="w-10 h-10 rounded-full object-cover" />;
+    }
+
+    const initial = player.name ? player.name.charAt(0).toUpperCase() : '?';
+
+    return (
+      <div className="w-10 h-10 rounded-full bg-gray-light flex items-center justify-center">
+        <span className="text-lg font-bold text-gray-dark">{initial}</span>
+      </div>
+    );
+  };
+
+
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
       {/* Header with title and Add Player button */}
@@ -188,18 +241,18 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search Student..."
-            className="block w-full pl-10 pr-3 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
+            className="block w-full pl-10 pr-3 py-2 border-gray-300 focus:outline-none focus:ring-primary focus:border-primary rounded-md"
           />
         </div>
         <div>
-          <select id="genderFilter" onChange={(e) => handleFilterChange('gender', e.target.value)} value={filters.gender} className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md">
+          <select id="genderFilter" onChange={(e) => handleFilterChange('gender', e.target.value)} value={filters.gender} className="block w-full pl-3 pr-10 py-2 border-gray-300 focus:outline-none focus:ring-primary focus:border-primary rounded-md">
             <option value="" disabled>Filter by Gender</option>
             <option value="">All Genders</option>
             {genders.map(g => <option key={g} value={g}>{g}</option>)}
           </select>
         </div>
         <div>
-          <select id="categoryFilter" onChange={(e) => handleFilterChange('category', e.target.value)} value={filters.category} className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md">
+          <select id="categoryFilter" onChange={(e) => handleFilterChange('category', e.target.value)} value={filters.category} className="block w-full pl-3 pr-10 py-2 border-gray-300 focus:outline-none focus:ring-primary focus:border-primary rounded-md">
             <option value="" disabled>Filter by Category</option>
             <option value="">All Categories</option>
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
@@ -213,15 +266,13 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
           <table className="min-w-full bg-white border border-gray-200">
             <thead>
               <tr>
-                <th className="py-2 px-4 border-b text-left">Photo</th>
                 <th className="py-2 px-4 border-b text-left">
                   <button onClick={() => handleSort('name')} className="font-bold flex items-center">
                     Name {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />)}
                   </button>
                 </th>
+                <th className="py-2 px-4 border-b text-left">Contact</th>
                 <th className="py-2 px-4 border-b text-left">Gender</th>
-                <th className="py-2 px-4 border-b text-left">Student Email</th>
-                <th className="py-2 px-4 border-b text-left">Student Phone</th>
                 <th className="py-2 px-4 border-b text-left">Category</th>
                 <th className="py-2 px-4 border-b text-left">Tier</th>
                 <th className="py-2 px-4 border-b text-left">Tutor</th>
@@ -232,12 +283,18 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
               {filteredAndSortedPlayers.map(player => (
                 <tr key={player.id} className="hover:bg-gray-100 cursor-pointer" onClick={() => handleRowClick(player)}>
                   <td className="py-2 px-4 border-b">
-                    {player.photoURL && <img src={player.photoURL} alt="Student" className="w-10 h-10 rounded-full object-cover" />}
+                    <div className="flex items-center space-x-3">
+                      <Avatar player={player} />
+                      <span className="font-medium text-gray-800">{player.name} {player.lastName}</span>
+                    </div>
                   </td>
-                  <td className="py-2 px-4 border-b font-medium text-gray-800">{player.name} {player.lastName}</td>
+                  <td className="py-2 px-4 border-b">
+                    <div className="flex items-center space-x-3">
+                      <ContactIcon value={player.email} icon={Mail} />
+                      <ContactIcon value={player.contactPhone} icon={Phone} />
+                    </div>
+                  </td>
                   <td className="py-2 px-4 border-b">{player.gender}</td>
-                  <td className="py-2 px-4 border-b">{player.email}</td>
-                  <td className="py-2 px-4 border-b">{player.contactPhone}</td>
                   <td className="py-2 px-4 border-b">{player.category}</td>
                   <td className="py-2 px-4 border-b">{player.tierName || 'N/A'}</td>
                   <td className="py-2 px-4 border-b">

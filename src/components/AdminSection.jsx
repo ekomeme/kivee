@@ -150,7 +150,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
     toast((t) => (
       <div className="bg-white p-4 rounded-lg shadow-lg flex flex-col items-center">
         <p className="text-center mb-4">Are you sure you want to delete this tier?</p>
-        <div className="flex space-x-2">
+        <div className="flex space-x-2 text-base">
           <button
             onClick={() => { toast.dismiss(t.id); deleteAction(); }}
             className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
@@ -224,7 +224,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Academy Settings</h2>
         <form onSubmit={handleUpdateAcademySettings} className="space-y-4">
           <div>
-            <label htmlFor="academyName" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="academyName" className="block font-medium text-gray-700">
               Academy Name
             </label>
             <input
@@ -235,11 +235,11 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
               required
               minLength={3}
               maxLength={50}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
             />
           </div>
           <div>
-            <label htmlFor="academyCurrency" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="academyCurrency" className="block font-medium text-gray-700">
               Currency
             </label>
             <Select
@@ -248,7 +248,9 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
               value={selectedCurrency}
               onChange={setSelectedCurrency}
               isSearchable
-              placeholder="Search or select a currency..."
+              placeholder="Search or select a currency..." // text-base is default for Select
+              className="mt-1"
+              classNamePrefix="react-select" // Add a prefix for custom styling if needed
             />
           </div>
           {updateSettingsError && <p className="text-red-500 text-sm">{updateSettingsError}</p>}
@@ -256,7 +258,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
             <button
               type="submit"
               disabled={isUpdatingSettings}
-              className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 font-medium text-white bg-primary rounded-md hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isUpdatingSettings ? 'Updating...' : 'Save Settings'}
             </button>
@@ -284,17 +286,17 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
             <table className="min-w-full bg-white border border-gray-200">
               <thead>
                 <tr>
-                  <th className="py-2 px-4 border-b text-left">Name</th>
-                  <th className="py-2 px-4 border-b text-left">Description</th>
-                  <th className="py-2 px-4 border-b text-left">Price</th>
-                  <th className="py-2 px-4 border-b text-left">Actions</th>
+                  <th className="py-2 px-4 border-b text-left text-base">Name</th>
+                  <th className="py-2 px-4 border-b text-left text-base">Description</th>
+                  <th className="py-2 px-4 border-b text-left text-base">Price</th>
+                  <th className="py-2 px-4 border-b text-left text-base">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {tiers.map(tier => (
                   <tr key={tier.id} className="hover:bg-gray-50">
-                    <td className="py-2 px-4 border-b">{tier.name}</td>
-                    <td className="py-2 px-4 border-b">{tier.description}</td>
+                    <td className="py-2 px-4 border-b text-base">{tier.name}</td>
+                    <td className="py-2 px-4 border-b text-base">{tier.description}</td>
                     <td className="py-2 px-4 border-b">{formatCurrency(tier.price, academy.currency)}</td>
                     <td className="py-2 px-4 border-b">
                       <button onClick={() => handleOpenTierModal(tier)} className="text-gray-500 hover:text-blue-600 p-1 rounded-full mr-2"><Edit className="h-5 w-5" /></button>
@@ -317,27 +319,27 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
                 {editingTier ? 'Edit Tier' : 'Add New Tier'}
               </h3>
               <div>
-                <label htmlFor="tierName" className="block text-sm font-medium text-gray-700">Tier Name</label>
+                <label htmlFor="tierName" className="block font-medium text-gray-700">Tier Name</label>
                 <input
                   type="text"
                   id="tierName"
                   value={newTierName}
                   onChange={(e) => setNewTierName(e.target.value)}
                   required
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
                 />
               </div>
               <div>
-                <label htmlFor="tierDescription" className="block text-sm font-medium text-gray-700">Description</label>
+                <label htmlFor="tierDescription" className="block font-medium text-gray-700">Description</label>
                 <textarea
                   id="tierDescription"
                   value={newTierDescription}
                   onChange={(e) => setNewTierDescription(e.target.value)}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
                 ></textarea>
               </div>
               <div>
-                <label htmlFor="tierPrice" className="block text-sm font-medium text-gray-700">Price</label>
+                <label htmlFor="tierPrice" className="block font-medium text-gray-700">Price</label>
                 <input
                   type="number"
                   id="tierPrice"
@@ -347,7 +349,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
                   required
                   min="0"
                   step="0.01"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
                 />
               </div>
               {tierError && <p className="text-red-500 text-sm">{tierError}</p>}
@@ -355,14 +357,14 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
                 <button
                   type="button"
                   onClick={() => setShowTierModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                  className="px-4 py-2 font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loadingTiers}
-                  className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 font-medium text-white bg-primary rounded-md hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loadingTiers ? 'Saving...' : (editingTier ? 'Update Tier' : 'Add Tier')}
                 </button>

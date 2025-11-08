@@ -6,6 +6,10 @@ export default {
   ],
   theme: {
     extend: {
+      fontSize: {
+        'sm': '0.8125rem', // 13px
+        'base': '0.9375rem', // 15px
+      },
       fontFamily: {
         sans: ['Figtree', 'sans-serif'],
       },

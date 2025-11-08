@@ -167,7 +167,7 @@ export default function App() {
             className="w-full text-left py-2 px-4 rounded hover:bg-gray-100 flex items-center space-x-3"
           >
             {user.photoURL && <img src={user.photoURL} alt="User Avatar" className="w-8 h-8 rounded-full" />}
-            <span className="text-sm font-medium truncate">{user.displayName || user.email}</span>
+            <span className="font-medium truncate">{user.displayName || user.email}</span>
           </button>
           {showUserMenu && (
             <div className="absolute bottom-full left-0 mb-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10 p-4">
@@ -182,7 +182,7 @@ export default function App() {
                 <span className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Admin</span>
               </div>
               <hr className="my-2" />
-              <button onClick={handleSignOut} className="w-full text-left text-sm text-red-600 hover:bg-red-50 rounded-md px-3 py-2 flex items-center">
+              <button onClick={handleSignOut} className="w-full text-left text-red-600 hover:bg-red-50 rounded-md px-3 py-2 flex items-center">
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Sign Out</span>
               </button>
