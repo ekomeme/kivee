@@ -2,17 +2,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { collection, query, getDocs, doc, deleteDoc, getDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
-import { PlusCircle, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy } from 'lucide-react';
+import { PlusCircle, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Filter, ChevronRight, Check } from 'lucide-react';
 export default function PlayersSection({ user, academy, db, setActiveSection, setSelectedPlayer }) {
   const [players, setPlayers] = useState([]);
-  const [tooltipTutorData, setTooltipTutorData] = useState(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  const [tiers, setTiers] = useState([]);
-  const [showTutorTooltip, setShowTutorTooltip] = useState(false);
-
-  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'ascending' });
-  const [filters, setFilters] = useState({ gender: '', category: '' });
-  const [searchQuery, setSearchQuery] = useState('');
   // Fetches players and their tutors
   const fetchPlayers = async () => {
     if (!user || !academy) return;
@@ -53,20 +45,30 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
     setPlayers(playersData);
   };
 
+  const [tiers, setTiers] = useState([]);
+  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'ascending' });
+  const [filters, setFilters] = useState({ gender: [], category: [], tier: [] });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeMenu, setActiveMenu] = useState(null); // To control which row's menu is open
+  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
+  const [activeSubMenu, setActiveSubMenu] = useState(null);
   const categories = useMemo(() => [...new Set(players.map(p => p.category).filter(Boolean))], [players]);
   const genders = useMemo(() => [...new Set(players.map(p => p.gender).filter(Boolean))], [players]);
 
   const filteredAndSortedPlayers = useMemo(() => {
     let filteredPlayers = [...players];
 
-    // Apply search and filters
+    // Apply search and multi-select filters
     filteredPlayers = filteredPlayers.filter(player => {
       const searchMatch = searchQuery
         ? `${player.name} ${player.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
         : true;
-      const genderMatch = filters.gender ? player.gender === filters.gender : true;
-      const categoryMatch = filters.category ? player.category === filters.category : true;
-      return searchMatch && genderMatch && categoryMatch;
+      
+      const genderMatch = filters.gender.length > 0 ? filters.gender.includes(player.gender) : true;
+      const categoryMatch = filters.category.length > 0 ? filters.category.includes(player.category) : true;
+      const tierMatch = filters.tier.length > 0 ? filters.tier.includes(player.tierId) : true;
+
+      return searchMatch && genderMatch && categoryMatch && tierMatch;
     });
 
     // Apply sorting
@@ -96,8 +98,14 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
     setSortConfig({ key, direction });
   };
 
-  const handleFilterChange = (filterName, value) => {
-    setFilters(prevFilters => ({ ...prevFilters, [filterName]: value }));
+  const handleFilterToggle = (filterName, value) => {
+    setFilters(prevFilters => {
+      const currentValues = prevFilters[filterName];
+      const newValues = currentValues.includes(value)
+        ? currentValues.filter(v => v !== value)
+        : [...currentValues, value];
+      return { ...prevFilters, [filterName]: newValues };
+    });
   };
 
   const handleAddPlayer = () => {
@@ -141,25 +149,39 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
     });
   };
 
-  const handleTutorClick = (tutor, event) => {
-    setTooltipTutorData(tutor);
-    // Get position of the clicked element to position the tooltip relative to it
-    const rect = event.target.getBoundingClientRect();
-    setTooltipPosition({
-      x: rect.left,
-      y: rect.bottom + 5, // Position below the clicked element, with a small offset
-    });
-    setShowTutorTooltip(true);
-  };
-
-  const closeTutorTooltip = () => {
-    setShowTutorTooltip(false);
-    setTooltipTutorData(null);
-  };
-  
   const handleRowClick = (player) => {
     setSelectedPlayer(player);
     setActiveSection('studentDetail');
+  };
+
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [actionsMenuPosition, setActionsMenuPosition] = useState({ x: 0, y: 0 });
+  const [selectedPlayerForActions, setSelectedPlayerForActions] = useState(null);
+
+  const handleOpenActionsMenu = (player, event) => {
+    event.stopPropagation(); // Prevent row click
+    const rect = event.currentTarget.getBoundingClientRect();
+    setActionsMenuPosition({
+      x: rect.right + window.scrollX, // Left edge of menu aligns with right edge of button
+      y: rect.top + window.scrollY,   // Top edge of menu aligns with top edge of button
+    });
+    setSelectedPlayerForActions(player);
+    setShowActionsMenu(true);
+  };
+
+  // Custom hook to detect clicks outside a component
+  const useOutsideClick = (ref, callback) => {
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (ref.current && !ref.current.contains(event.target)) {
+          callback();
+        }
+      };
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }, [ref, callback]);
   };
 
   // Component for contact icons with a hover-based popover
@@ -200,6 +222,74 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
     );
   };
 
+  const FilterMenu = () => {
+    const menuRef = useRef(null);
+    useOutsideClick(menuRef, () => setIsFilterMenuOpen(false));
+
+    const filterOptions = [
+      { name: 'By Gender', key: 'gender', items: genders.map(g => ({ label: g, value: g })) },
+      { name: 'By Category', key: 'category', items: categories.map(c => ({ label: c, value: c })) },
+      { name: 'By Tier', key: 'tier', items: tiers.map(t => ({ label: t.name, value: t.id })) },
+    ];
+
+    return (
+      <div className="relative" ref={menuRef}>
+        <button
+          onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
+          className="flex items-center px-4 py-2 border border-gray-border rounded-md bg-white hover:bg-gray-100"
+        >
+          <Filter className="h-4 w-4 mr-2" />
+          <span>Filter</span>
+        </button>
+
+        {isFilterMenuOpen && (
+          <div
+            className="absolute left-0 mt-2 w-56 bg-white border border-gray-border rounded-md shadow-lg z-20"
+            onMouseLeave={() => setActiveSubMenu(null)}
+          >
+            <ul className="py-1">
+              {filterOptions.map(option => (
+                <li
+                  key={option.key}
+                  className="relative"
+                  onMouseEnter={() => setActiveSubMenu(option.key)}
+                >
+                  <div className="px-4 py-2 hover:bg-gray-100 flex justify-between items-center cursor-default">
+                    <span>{option.name}</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </div>
+
+                  {activeSubMenu === option.key && (
+                    <div className="absolute left-full top-0 mt-[-0.25rem] ml-1 w-56 bg-white border border-gray-border rounded-md shadow-lg">
+                      <ul className="py-1 max-h-60 overflow-y-auto">
+                        {option.items.map(item => (
+                          <li key={item.value}>
+                            <button
+                              onClick={() => handleFilterToggle(option.key, item.value)}
+                              className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center"
+                            >
+                              <div className="w-5 mr-2">
+                                {filters[option.key].includes(item.value) && (
+                                  <Check className="h-4 w-4" />
+                                )}
+                              </div>
+                              <span>{item.label}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+
   const Avatar = ({ player }) => {
     if (player.photoURL) {
       return <img src={player.photoURL} alt="Student" className="w-10 h-10 rounded-full object-cover" />;
@@ -210,6 +300,45 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
     return (
       <div className="w-10 h-10 rounded-full bg-gray-light flex items-center justify-center">
         <span className="text-lg font-bold text-gray-dark">{initial}</span>
+      </div>
+    );
+  };
+
+  const ActionsMenu = ({ player, position, onClose }) => {
+    const menuRef = useRef(null);
+    useOutsideClick(menuRef, onClose);
+
+    const style = {
+      top: `${position.y}px`,
+      left: `${position.x}px`,
+      transform: 'translateX(-100%)', // This will align the menu's right edge with the button's right edge
+    };
+
+    return (
+      <div className="fixed bg-white border border-gray-border rounded-md shadow-lg z-50" ref={menuRef} style={style}>
+        <button
+          onClick={(e) => { // This button is now inside the fixed menu, so it's not the trigger anymore
+            e.stopPropagation();
+            // No need to toggle activeMenu here, it's handled by the parent button
+          }}
+          className="hidden" // Hide the MoreVertical icon here, it's on the table row now
+        >
+          <MoreVertical className="h-5 w-5 text-gray-500" /> {/* This icon is now just a placeholder for the button */}
+        </button>
+            <ul className="py-1">
+              <li className="text-base">
+                <button onClick={(e) => { e.stopPropagation(); handleEditPlayer(player); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center">
+                  <Edit className="mr-3 h-4 w-4" />
+                  <span>Edit</span>
+                </button>
+              </li>
+              <li className="text-base">
+                <button onClick={(e) => { e.stopPropagation(); handleDeletePlayer(player.id); }} className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center">
+                  <Trash2 className="mr-3 h-4 w-4" />
+                  <span>Delete</span>
+                </button>
+              </li>
+            </ul>
       </div>
     );
   };
@@ -230,8 +359,9 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
       </div>
 
       {/* Filters Section */}
-      <div className="flex space-x-4 mb-4 p-4 bg-gray-light rounded-lg">
-        <div className="relative">
+      <div className="flex items-center space-x-4 mb-4 p-4 bg-gray-light rounded-lg">
+        <FilterMenu />
+        <div className="relative flex-grow">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-gray-400" />
           </div>
@@ -243,20 +373,6 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
             placeholder="Search Student..."
             className="block w-full pl-10 pr-3 py-2 border-gray-300 focus:outline-none focus:ring-primary focus:border-primary rounded-md"
           />
-        </div>
-        <div>
-          <select id="genderFilter" onChange={(e) => handleFilterChange('gender', e.target.value)} value={filters.gender} className="block w-full pl-3 pr-10 py-2 border-gray-300 focus:outline-none focus:ring-primary focus:border-primary rounded-md">
-            <option value="" disabled>Filter by Gender</option>
-            <option value="">All Genders</option>
-            {genders.map(g => <option key={g} value={g}>{g}</option>)}
-          </select>
-        </div>
-        <div>
-          <select id="categoryFilter" onChange={(e) => handleFilterChange('category', e.target.value)} value={filters.category} className="block w-full pl-3 pr-10 py-2 border-gray-300 focus:outline-none focus:ring-primary focus:border-primary rounded-md">
-            <option value="" disabled>Filter by Category</option>
-            <option value="">All Categories</option>
-            {categories.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
         </div>
       </div>
       {filteredAndSortedPlayers.length === 0 ? (
@@ -271,27 +387,24 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
                     Name {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />)}
                   </button>
                 </th>
-                <th className="py-2 px-4 border-b text-left">Contact</th>
                 <th className="py-2 px-4 border-b text-left">Gender</th>
                 <th className="py-2 px-4 border-b text-left">Category</th>
                 <th className="py-2 px-4 border-b text-left">Tier</th>
                 <th className="py-2 px-4 border-b text-left">Tutor</th>
-                <th className="py-2 px-4 border-b text-left">Actions</th>
+                <th className="py-2 px-4 border-b text-right"></th>
               </tr>
             </thead>
             <tbody>
               {filteredAndSortedPlayers.map(player => (
-                <tr key={player.id} className="hover:bg-gray-100 cursor-pointer" onClick={() => handleRowClick(player)}>
+                <tr key={player.id} className="group hover:bg-gray-100 cursor-pointer" onClick={() => handleRowClick(player)}>
                   <td className="py-2 px-4 border-b">
                     <div className="flex items-center space-x-3">
                       <Avatar player={player} />
-                      <span className="font-medium text-gray-800">{player.name} {player.lastName}</span>
-                    </div>
-                  </td>
-                  <td className="py-2 px-4 border-b">
-                    <div className="flex items-center space-x-3">
-                      <ContactIcon value={player.email} icon={Mail} />
-                      <ContactIcon value={player.contactPhone} icon={Phone} />
+                      <div className="flex items-center space-x-4">
+                        <span className="font-medium text-gray-800">{player.name} {player.lastName}</span>
+                        <ContactIcon value={player.email} icon={Mail} />
+                        <ContactIcon value={player.contactPhone} icon={Phone} />
+                      </div>
                     </div>
                   </td>
                   <td className="py-2 px-4 border-b">{player.gender}</td>
@@ -299,17 +412,22 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
                   <td className="py-2 px-4 border-b">{player.tierName || 'N/A'}</td>
                   <td className="py-2 px-4 border-b">
                     {player.tutor ? (
-                      <button
-                        onClick={(e) => handleTutorClick(player.tutor, e)}
-                        className="text-blue-600 hover:underline focus:outline-none text-left"
-                      >
-                        {player.tutor.name} {player.tutor.lastName}
-                      </button>
+                      <div className="flex items-center space-x-4">
+                        <span>{player.tutor.name} {player.tutor.lastName}</span>
+                        <ContactIcon value={player.tutor.email} icon={Mail} />
+                        <ContactIcon value={player.tutor.contactPhone} icon={Phone} />
+                      </div>
                     ) : 'N/A'}
                   </td>
-                  <td className="py-2 px-4 border-b">
-                    <button onClick={(e) => { e.stopPropagation(); handleEditPlayer(player); }} className="text-gray-500 hover:text-blue-600 p-1 rounded-full mr-2"><Edit className="h-5 w-5" /></button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDeletePlayer(player.id); }} className="text-gray-500 hover:text-red-600 p-1 rounded-full"><Trash2 className="h-5 w-5" /></button>
+                  <td className="py-2 px-4 border-b text-right">
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity relative">
+                      <button
+                        onClick={(e) => handleOpenActionsMenu(player, e)}
+                        className="p-1 rounded-full hover:bg-gray-200 focus:outline-none"
+                      >
+                        <MoreVertical className="h-5 w-5 text-gray-500" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -318,23 +436,12 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
         </div>
       )}
 
-      {/* Tutor Tooltip */}
-      {showTutorTooltip && tooltipTutorData && (
-        <div
-          className="fixed p-4 bg-gray-800 text-white rounded-lg shadow-lg z-50"
-          style={{ top: `${tooltipPosition.y}px`, left: `${tooltipPosition.x}px` }}
-        >
-          <h4 className="font-bold mb-2">Tutor Information</h4>
-          <p><strong>Name:</strong> {tooltipTutorData.name} {tooltipTutorData.lastName}</p>
-          <p><strong>Email:</strong> {tooltipTutorData.email}</p>
-          <p><strong>Phone:</strong> {tooltipTutorData.contactPhone}</p>
-          <button
-            onClick={closeTutorTooltip}
-            className="mt-3 bg-red-500 hover:bg-red-700 text-white py-1 px-2 rounded-md text-sm"
-          >
-            Close
-          </button>
-        </div>
+      {showActionsMenu && selectedPlayerForActions && (
+        <ActionsMenu
+          player={selectedPlayerForActions}
+          position={actionsMenuPosition}
+          onClose={() => setShowActionsMenu(false)}
+        />
       )}
     </div>
   );
