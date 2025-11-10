@@ -6,6 +6,7 @@ import GoogleSignIn from "./components/GoogleSignIn.jsx";
 import PlayerDetailPage from "./components/PlayerDetailPage.jsx";
 import EditPlayerPage from "./components/EditPlayerPage.jsx";
 import PlayersSection from "./components/PlayersSection.jsx";
+import PlansOffersSection from "./components/PlansOffersSection.jsx";
 import NewPlayerPage from "./components/NewPlayerPage.jsx"; // Import the new page
 import AdminSection from "./components/AdminSection.jsx";
 import { Toaster } from "react-hot-toast";
@@ -185,26 +186,6 @@ export default function App() {
     );
   }
 
-  const renderSection = () => {
-    switch (activeSection) {
-      case "students":
-        return <PlayersSection user={user} academy={academy} db={db} setActiveSection={setActiveSection} setSelectedPlayer={setSelectedPlayer} />;
-      case "newStudent":
-        return <NewPlayerPage user={user} academy={academy} db={db} setActiveSection={setActiveSection} />;
-      case "studentDetail":
-        return <PlayerDetailPage player={selectedPlayer} setActiveSection={setActiveSection} setSelectedPlayer={setSelectedPlayer} />;
-      case "editStudent":
-        return <EditPlayerPage user={user} academy={academy} db={db} playerToEdit={selectedPlayer} setActiveSection={setActiveSection} />;
-      case "admin": {
-        // Pasamos una función para refrescar los datos de la academia cuando se actualice
-        const refreshAcademy = async () => setAcademy((await getDoc(doc(db, "academies", user.uid))).data());
-        return <AdminSection user={user} academy={academy} db={db} onAcademyUpdate={refreshAcademy} />;
-      }
-      default:
-        return <h1 className="text-3xl font-bold text-gray-800 mb-4">Welcome to {academy.name}</h1>;
-    }
-  };
-
   return (
     <div className="flex h-screen bg-gray-light font-sans">
       <Toaster position="top-center" reverseOrder={false} />
@@ -219,10 +200,14 @@ export default function App() {
               <button onClick={() => setActiveSection("students")} className={`block w-full text-left py-2 px-4 rounded ${activeSection === "students" ? "bg-gray-100" : "hover:bg-gray-100"}`}>Students</button>
             </li>
             <li>
-              <button onClick={() => setActiveSection("admin")} className={`block w-full text-left py-2 px-4 rounded ${activeSection === "admin" ? "bg-gray-100" : "hover:bg-gray-100"}`}>My Academy</button>
+              <button onClick={() => setActiveSection("plansOffers")} className={`block w-full text-left py-2 px-4 rounded ${activeSection === "plansOffers" ? "bg-gray-100" : "hover:bg-gray-100"}`}>Plans & Offers</button>
+            </li>
+            <li>
+              <button onClick={() => setActiveSection("admin")} className={`block w-full text-left py-2 px-4 rounded ${activeSection === "admin" ? "bg-gray-100" : "hover:bg-gray-100"}`}>Account & Preferences</button>
             </li>
           </ul>
         </nav>
+
         <div className="mt-auto pt-4 border-t border-gray-border relative">
           <div className="relative">
             <UserMenu user={user} onSignOut={handleSignOut} isSidebar={true} />
@@ -231,7 +216,26 @@ export default function App() {
       </div>
       {/* Main Content */}
       <div className="flex-grow p-8 overflow-auto"> {/* Added overflow-auto for scrollable content */}
-        {renderSection()}
+        {(() => {
+          switch (activeSection) {
+            case "students":
+              return <PlayersSection user={user} academy={academy} db={db} setActiveSection={setActiveSection} setSelectedPlayer={setSelectedPlayer} />;
+            case "newStudent":
+              return <NewPlayerPage user={user} academy={academy} db={db} setActiveSection={setActiveSection} />;
+            case "studentDetail":
+              return <PlayerDetailPage player={selectedPlayer} setActiveSection={setActiveSection} setSelectedPlayer={setSelectedPlayer} />;
+            case "editStudent":
+              return <EditPlayerPage user={user} academy={academy} db={db} playerToEdit={selectedPlayer} setActiveSection={setActiveSection} />;
+            case "plansOffers":
+              return <PlansOffersSection user={user} academy={academy} db={db} />;
+            case "admin": {
+              const refreshAcademy = async () => setAcademy((await getDoc(doc(db, "academies", user.uid))).data());
+              return <AdminSection user={user} academy={academy} db={db} onAcademyUpdate={refreshAcademy} />;
+            }
+            default:
+              return <h1 className="text-3xl font-bold text-gray-800 mb-4">Welcome to {academy.name}</h1>;
+          }
+        })()}
       </div>
     </div>
   );
