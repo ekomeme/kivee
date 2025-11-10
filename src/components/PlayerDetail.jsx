@@ -44,18 +44,11 @@ export default function PlayerDetail({ player }) {
 
         {/* Payment Info Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">Payment Information</legend>
+          <legend className="text-xl font-semibold text-gray-900 px-2">Plan Information</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            <div><strong>Assigned Plan:</strong> <span className="text-gray-800">{formatValue(player.tierName)}</span></div>
-            <div><strong>Payment Type:</strong> <span className="text-gray-800">{formatValue(player.paymentType)}</span></div>
-            <div><strong>Trial Period:</strong> <span className="text-gray-800">{player.isFreeTrial ? 'Yes' : 'No'}</span></div>
-            {player.isFreeTrial && (
-              <div><strong>End of trial period:</strong> <span className="text-gray-800">{formatValue(player.freeTrialEndDate)}</span></div>
-            )}
+            <div><strong>Plan:</strong> <span className="text-gray-800">{formatValue(player.tierName)}</span></div>
+            <div><strong>Billing cycle:</strong> <span className="text-gray-800">{formatValue(player.paymentType)}</span></div>
             <div><strong>Start Date:</strong> <span className="text-gray-800">{formatValue(player.startDate)}</span></div>
-            <div><strong>Payment Date:</strong> <span className="text-gray-800">{formatValue(player.paidDate)}</span></div>
-            <div><strong>Expiration Date:</strong> <span className="text-gray-800">{formatValue(player.expiryDate)}</span></div>
-            <div className="md:col-span-2"><strong>Receipt:</strong> <p className="text-gray-800 whitespace-pre-wrap">{formatValue(player.receipt)}</p></div>
             <div className="md:col-span-2"><strong>Notes:</strong> <p className="text-gray-800 whitespace-pre-wrap">{formatValue(player.notes)}</p></div>
           </div>
         </fieldset>

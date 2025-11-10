@@ -27,14 +27,8 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
 
   // Payment Info
   const [tierId, setTierId] = useState('');
-  const [isFreeTrial, setIsFreeTrial] = useState(false);
-  const [freeTrialEndDate, setFreeTrialEndDate] = useState('');
-  const [paymentType, setPaymentType] = useState('Mensual');
-  const [startDate, setStartDate] = useState('');
-  const [paidDate, setPaidDate] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
-  const [receipt, setReceipt] = useState('');
   const [notes, setNotes] = useState('');
+  const [paymentType, setPaymentType] = useState('Mensual');
 
   // Component State
   const [tiers, setTiers] = useState([]);
@@ -73,29 +67,6 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       setCategory('');
     }
   }, [birthday]);
-
-  // Calculate expiry date
-  useEffect(() => {
-    const calculateExpiry = () => {
-      const initialDate = isFreeTrial && freeTrialEndDate ? freeTrialEndDate : paidDate;
-      if (!initialDate) {
-        setExpiryDate('');
-        return;
-      }
-
-      const date = new Date(initialDate);
-      if (paymentType === 'Mensual') {
-        date.setMonth(date.getMonth() + 1);
-      } else if (paymentType === 'Semestral') {
-        date.setMonth(date.getMonth() + 6);
-      } else if (paymentType === 'Anual') {
-        date.setFullYear(date.getFullYear() + 1);
-      }
-      setExpiryDate(date.toISOString().split('T')[0]);
-    };
-
-    calculateExpiry();
-  }, [paidDate, freeTrialEndDate, isFreeTrial, paymentType]);
 
   // Populate form if editing a player
   useEffect(() => {
@@ -137,13 +108,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
 
       // Payment Info
       setTierId(playerToEdit.tierId || '');
-      setIsFreeTrial(playerToEdit.isFreeTrial || false);
-      setFreeTrialEndDate(playerToEdit.freeTrialEndDate || '');
       setPaymentType(playerToEdit.paymentType || 'Mensual');
-      setStartDate(playerToEdit.startDate || '');
-      setPaidDate(playerToEdit.paidDate || '');
-      setExpiryDate(playerToEdit.expiryDate || '');
-      setReceipt(playerToEdit.receipt || '');
       setNotes(playerToEdit.notes || '');
     }
   }, [playerToEdit]);
@@ -234,13 +199,6 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       contactPhone: playerContactPhone ? `${playerPhonePrefix}${playerContactPhone}` : null,
       tutorId: hasTutor ? linkedTutorId : null,
       tierId,
-      isFreeTrial,
-      freeTrialEndDate: isFreeTrial && freeTrialEndDate ? freeTrialEndDate : null,
-      paymentType,
-      startDate: startDate || null,
-      paidDate: isFreeTrial && freeTrialEndDate ? freeTrialEndDate : (paidDate || null),
-      expiryDate,
-      receipt,
       notes,
       academyId: user.uid,
       createdAt: playerToEdit ? playerToEdit.createdAt : serverTimestamp(),
@@ -324,19 +282,11 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
 
         {/* Payment Info Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">Payment Information</legend>
+          <legend className="text-xl font-semibold text-gray-900 px-2">Plan Information</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            <div className="md:col-span-2"><label className="flex items-center"><input type="checkbox" className="form-checkbox h-4 w-4 text-blue-600" checked={isFreeTrial} onChange={(e) => setIsFreeTrial(e.target.checked)} /><span className="ml-2 text-sm font-medium text-gray-700">Trial period?</span></label></div>
-            {isFreeTrial && (
-              <div><label htmlFor="freeTrialEndDate" className="block text-sm font-medium text-gray-700">End of trial period</label><input type="date" id="freeTrialEndDate" value={freeTrialEndDate} onChange={(e) => { setFreeTrialEndDate(e.target.value); setPaidDate(e.target.value); }} required={isFreeTrial} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
-            )}
-            <div><label htmlFor="tier" className="block text-sm font-medium text-gray-700">Assigned Plan</label><select id="tier" value={tierId} onChange={(e) => setTierId(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="">Select a Plan</option>{tiers.map(tier => (<option key={tier.id} value={tier.id}>{tier.name}</option>))}</select></div>
-            <div><label htmlFor="paymentType" className="block text-sm font-medium text-gray-700">Payment Type</label><select id="paymentType" value={paymentType} onChange={(e) => setPaymentType(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="Monthly">Monthly</option><option value="Semiannual">Semiannual</option><option value="Annual">Annual</option></select></div>
-            <div><label htmlFor="startDate" className="block text-sm font-medium text-gray-700">Start Date</label><input type="date" id="startDate" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
-            {!isFreeTrial && <div><label htmlFor="paidDate" className="block text-sm font-medium text-gray-700">Payment Date</label><input type="date" id="paidDate" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>}
-            <div><label htmlFor="expiryDate" className="block text-sm font-medium text-gray-700">Expiration Date (Calculated)</label><input type="text" id="expiryDate" value={expiryDate} readOnly className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100" /></div>
-            <div className="md:col-span-2"><label htmlFor="receipt" className="block text-sm font-medium text-gray-700">Receipt (Text)</label><input type="text" id="receipt" value={receipt} onChange={(e) => setReceipt(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
-            <div className="md:col-span-2"><label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notas</label><textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows="3" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></textarea></div>
+            <div><label htmlFor="tier" className="block text-sm font-medium text-gray-700">Plan</label><select id="tier" value={tierId} onChange={(e) => setTierId(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="">Select a Plan</option>{tiers.map(tier => (<option key={tier.id} value={tier.id}>{tier.name}</option>))}</select></div>
+            <div><label htmlFor="paymentType" className="block text-sm font-medium text-gray-700">Billing cycle</label><select id="paymentType" value={paymentType} onChange={(e) => setPaymentType(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="Monthly">Monthly</option><option value="Semiannual">Semiannual</option><option value="Annual">Annual</option></select></div>
+            <div className="md:col-span-2"><label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes</label><textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows="3" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></textarea></div>
           </div>
         </fieldset>
 

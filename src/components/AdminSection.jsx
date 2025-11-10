@@ -297,8 +297,25 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
 
       {/* Sección de Tiers (movida aquí) */}
       <div className="p-6 bg-white rounded-lg shadow-md">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-gray-800">Tier Management</h2>
+        <div className="flex justify-between items-start mb-4 gap-4">
+          <div className="flex-grow">
+            <h2 className="text-2xl font-bold text-gray-800">Tier Management</h2>
+          </div>
+          <div className="w-full max-w-xs">
+             <label htmlFor="academyCurrency" className="block font-medium text-gray-700 text-sm mb-1">
+              Currency for Tiers
+            </label>
+            <Select
+              id="academyCurrency"
+              options={currencyOptions}
+              value={selectedCurrency}
+              onChange={setSelectedCurrency}
+              isSearchable
+              placeholder="Select a currency..."
+              className="text-base"
+              classNamePrefix="react-select"
+            />
+          </div>
           <button
             onClick={() => handleOpenTierModal()}
             className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center"
