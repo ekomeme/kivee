@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth"; // Import signOut
 import { auth, db } from "./firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -13,10 +13,10 @@ import { LogOut } from "lucide-react";
 import loginIllustration from "./assets/login-ilustration.svg";
 import logoKivee from "./assets/logo-kivee.svg";
 
-const UserMenu = ({ user, onSignOut }) => {
+const UserMenu = ({ user, onSignOut, isSidebar = false }) => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
-
+ 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -24,9 +24,11 @@ const UserMenu = ({ user, onSignOut }) => {
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, [menuRef]);
-
+ 
   return (
     <div className="relative" ref={menuRef}>
       <button
@@ -37,7 +39,7 @@ const UserMenu = ({ user, onSignOut }) => {
         <span className="font-medium truncate hidden md:block">{user.displayName || user.email}</span>
       </button>
       {showMenu && (
-        <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10 p-4">
+        <div className={`absolute ${isSidebar ? 'bottom-full left-0 mb-2' : 'top-full right-0 mt-2'} w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10 p-4`}>
           <p className="text-sm font-bold truncate">{user.displayName}</p>
           <p className="text-xs text-gray-500 truncate mb-3">{user.email}</p>
           <hr className="my-2" />
@@ -146,7 +148,7 @@ export default function App() {
         {/* Left Side */}
         <div className="w-1/2 bg-white flex flex-col justify-center items-center p-12 relative">
           <div className="absolute top-8 left-8 right-8 flex justify-between items-center">
-            <img src={logoKivee} alt="Kivee Logo" className="h-5 w-auto" />
+            <img src={logoKivee} alt="Kivee Logo" className="h-5 w-auto"  />
             <UserMenu user={user} onSignOut={handleSignOut} />
           </div>
           <div className="w-full max-w-[360px]">
@@ -223,7 +225,7 @@ export default function App() {
         </nav>
         <div className="mt-auto pt-4 border-t border-gray-border relative">
           <div className="relative">
-            <UserMenu user={user} onSignOut={handleSignOut} />
+            <UserMenu user={user} onSignOut={handleSignOut} isSidebar={true} />
           </div>
         </div>
       </div>
