@@ -40,11 +40,21 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
   const [academyNameInput, setAcademyNameInput] = useState(academy.name);
   const [selectedAcademyCategory, setSelectedAcademyCategory] = useState(academy.category || '');
   const [otherCategory, setOtherCategory] = useState(academy.otherCategory || '');
-  const [selectedCurrency, setSelectedCurrency] = useState(findCurrencyOption(academy.currency) || findCurrencyOption('USD'));
+  const [selectedCurrency, setSelectedCurrency] = useState(null);
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
   const [updateSettingsError, setUpdateSettingsError] = useState(null);
   const ACADEMY_CATEGORIES = ['Fútbol', 'Baloncesto', 'Tenis', 'Otro'];
 
+  // This effect runs when currencyOptions are loaded or academy currency changes.
+  // It ensures the correct currency is selected in the dropdown.
+  useEffect(() => {
+    if (currencyOptions.length > 0) {
+      const currencyToSet = findCurrencyOption(academy.currency) || findCurrencyOption('USD');
+      if (currencyToSet) {
+        setSelectedCurrency(currencyToSet);
+      }
+    }
+  }, [currencyOptions, academy.currency]);
 
   const handleUpdateAcademySettings = async (e) => {
     e.preventDefault();
