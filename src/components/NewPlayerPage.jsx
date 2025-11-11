@@ -1,9 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import PlayerForm from './PlayerForm.jsx';
 
-export default function NewPlayerPage({ user, academy, db, setActiveSection }) {
+export default function NewPlayerPage({ user, academy, db }) {
+  const navigate = useNavigate();
   const handlePlayerAdded = () => {
-    setActiveSection('students'); // Navigate back to the students list after adding
+    navigate('/students'); // Navigate back to the students list after adding
   };
 
   return (

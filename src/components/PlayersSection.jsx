@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { collection, query, getDocs, doc, deleteDoc, getDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
 import { Plus, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Filter, ChevronRight, Check, X } from 'lucide-react';
-export default function PlayersSection({ user, academy, db, setActiveSection, setSelectedPlayer }) {
+export default function PlayersSection({ user, academy, db }) {
   const [players, setPlayers] = useState([]);
   // Fetches players and their tutors
   const fetchPlayers = async () => {
@@ -117,13 +118,10 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
     });
   };
 
-  const handleAddPlayer = () => {
-    setActiveSection('newStudent'); // Navigate to the new student creation page
-  };
+  const navigate = useNavigate();
 
-  const handleEditPlayer = (player) => {
-    setSelectedPlayer(player);
-    setActiveSection('editStudent');
+  const handleAddPlayer = () => {
+    navigate('/students/new');
   };
 
   const handleDeletePlayer = async (playerId) => {
@@ -159,8 +157,7 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
   };
 
   const handleRowClick = (player) => {
-    setSelectedPlayer(player);
-    setActiveSection('studentDetail');
+    navigate(`/students/${player.id}`);
   };
 
   const [showActionsMenu, setShowActionsMenu] = useState(false);
@@ -345,7 +342,7 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
         </button>
             <ul className="py-1">
               <li className="text-base">
-                <button onClick={(e) => { e.stopPropagation(); handleEditPlayer(player); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center">
+                <button onClick={(e) => { e.stopPropagation(); navigate(`/students/${player.id}/edit`); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center">
                   <Edit className="mr-3 h-4 w-4" />
                   <span>Edit</span>
                 </button>

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import { Routes, Route, NavLink, useNavigate } from "react-router-dom";
 import { onAuthStateChanged, signOut } from "firebase/auth"; // Import signOut
 import { auth, db } from "./firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -69,9 +70,8 @@ export default function App() {
   const [creatingAcademy, setCreatingAcademy] = useState(false);
   const [error, setError] = useState(null);
   const [nameInput, setNameInput] = useState("");
-  const [activeSection, setActiveSection] = useState("students");
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
   const nameInputRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async u => {
@@ -135,7 +135,7 @@ export default function App() {
 
   const handleSignOut = async () => {
     try {
-      await signOut(auth);
+      await signOut(auth); // The onAuthStateChanged listener will handle navigation
       // After signing out, the onAuthStateChanged listener will update the user state
     } catch (error) {
       setError("Failed to sign out: " + error.message);
@@ -148,7 +148,11 @@ export default function App() {
   }
   // If no user, show the login component
   if (!user) {
-    return <GoogleSignIn />;
+    return (
+      <Routes>
+        <Route path="*" element={<GoogleSignIn />} />
+      </Routes>
+    );
   }
 
   if (user && !academy) {
@@ -204,46 +208,33 @@ export default function App() {
         <h2 className="text-2xl font-semibold mb-4">{academy.name}</h2>
         <nav className="flex-grow">
           <ul className="space-y-2">
-            <li>
-              <button onClick={() => setActiveSection("students")} className={`block w-full text-left py-2 px-4 rounded ${activeSection === "students" ? "bg-gray-100" : "hover:bg-gray-100"}`}>Students</button>
+            <li className="relative">
+              <NavLink to="/students" className={({ isActive }) => `block w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>Students</NavLink>
             </li>
-            <li>
-              <button onClick={() => setActiveSection("plansOffers")} className={`block w-full text-left py-2 px-4 rounded ${activeSection === "plansOffers" ? "bg-gray-100" : "hover:bg-gray-100"}`}>Plans & Offers</button>
+            <li className="relative">
+              <NavLink to="/plans" className={({ isActive }) => `block w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>Plans & Offers</NavLink>
             </li>
-            <li>
-              <button onClick={() => setActiveSection("admin")} className={`block w-full text-left py-2 px-4 rounded ${activeSection === "admin" ? "bg-gray-100" : "hover:bg-gray-100"}`}>Account & Preferences</button>
+            <li className="relative">
+              <NavLink to="/settings" className={({ isActive }) => `block w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>Account & Preferences</NavLink>
             </li>
           </ul>
         </nav>
 
         <div className="mt-auto pt-4 border-t border-gray-border relative">
-          <div className="relative">
-            <UserMenu user={user} onSignOut={handleSignOut} isSidebar={true} />
-          </div>
+          <UserMenu user={user} onSignOut={handleSignOut} isSidebar={true} />
         </div>
       </div>
       {/* Main Content */}
       <div className="flex-grow p-8 overflow-auto"> {/* Added overflow-auto for scrollable content */}
-        {(() => {
-          switch (activeSection) {
-            case "students":
-              return <PlayersSection user={user} academy={academy} db={db} setActiveSection={setActiveSection} setSelectedPlayer={setSelectedPlayer} />;
-            case "newStudent":
-              return <NewPlayerPage user={user} academy={academy} db={db} setActiveSection={setActiveSection} />;
-            case "studentDetail":
-              return <PlayerDetailPage player={selectedPlayer} setActiveSection={setActiveSection} setSelectedPlayer={setSelectedPlayer} />;
-            case "editStudent":
-              return <EditPlayerPage user={user} academy={academy} db={db} playerToEdit={selectedPlayer} setActiveSection={setActiveSection} />;
-            case "plansOffers":
-              return <PlansOffersSection user={user} academy={academy} db={db} />;
-            case "admin": {
-              const refreshAcademy = async () => setAcademy((await getDoc(doc(db, "academies", user.uid))).data());
-              return <AdminSection user={user} academy={academy} db={db} onAcademyUpdate={refreshAcademy} />;
-            }
-            default:
-              return <h1 className="text-3xl font-bold text-gray-800 mb-4">Welcome to {academy.name}</h1>;
-          }
-        })()}
+        <Routes>
+          <Route path="/students" element={<PlayersSection user={user} academy={academy} db={db} />} />
+          <Route path="/students/new" element={<NewPlayerPage user={user} academy={academy} db={db} />} />
+          <Route path="/students/:playerId" element={<PlayerDetailPage user={user} academy={academy} db={db} />} />
+          <Route path="/students/:playerId/edit" element={<EditPlayerPage user={user} academy={academy} db={db} />} />
+          <Route path="/plans" element={<PlansOffersSection user={user} academy={academy} db={db} />} />
+          <Route path="/settings" element={<AdminSection user={user} academy={academy} db={db} onAcademyUpdate={async () => setAcademy((await getDoc(doc(db, "academies", user.uid))).data())} />} />
+          <Route path="/" element={<h1 className="text-3xl font-bold text-gray-800 mb-4">Welcome to {academy.name}</h1>} />
+        </Routes>
       </div>
     </div>
   );

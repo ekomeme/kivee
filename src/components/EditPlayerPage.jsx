@@ -1,10 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import PlayerForm from '../components/PlayerForm.jsx';
 
-export default function EditPlayerPage({ user, academy, db, playerToEdit, setActiveSection }) {
+export default function EditPlayerPage({ user, academy, db, playerToEdit }) {
+  const navigate = useNavigate();
   const handleComplete = () => {
     // Vuelve a la lista de estudiantes o a la ficha del estudiante
-    setActiveSection('students');
+    navigate('/students');
   };
 
   return (

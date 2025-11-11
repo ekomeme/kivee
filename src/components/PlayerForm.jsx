@@ -200,6 +200,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       tutorId: hasTutor ? linkedTutorId : null,
       tierId,
       notes,
+      paymentType, // <--- ESTA LÍNEA ES CRUCIAL
       academyId: user.uid,
       createdAt: playerToEdit ? playerToEdit.createdAt : serverTimestamp(),
       updatedAt: serverTimestamp(),
