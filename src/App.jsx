@@ -36,7 +36,15 @@ const UserMenu = ({ user, onSignOut, isSidebar = false }) => {
         onClick={() => setShowMenu(!showMenu)}
         className="flex items-center space-x-3 p-2 rounded-full hover:bg-gray-100"
       >
-        {user.photoURL && <img src={user.photoURL} alt="User Avatar" className="w-8 h-8 rounded-full" />}
+        {user.photoURL ? (
+          <img src={user.photoURL} alt="User Avatar" className="w-8 h-8 rounded-full object-cover" />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+            <span className="text-sm font-bold text-gray-600">
+              {user.displayName ? user.displayName.charAt(0).toUpperCase() : (user.email ? user.email.charAt(0).toUpperCase() : '?')}
+            </span>
+          </div>
+        )}
         <span className="font-medium truncate hidden md:block">{user.displayName || user.email}</span>
       </button>
       {showMenu && (

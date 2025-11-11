@@ -1,4 +1,4 @@
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup, browserPopupRedirectResolver } from "firebase/auth";
 import { auth } from "../firebase";
 import toast from 'react-hot-toast';
 import loginIllustration from '../assets/login-ilustration.svg';
@@ -8,7 +8,8 @@ export default function GoogleSignIn() {
   const onClick = async () => {
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      provider.addScope('profile'); // Solicita explícitamente el perfil del usuario
+      await signInWithPopup(auth, provider, browserPopupRedirectResolver);
     } catch (err) {
       toast.error(err.message);
     }

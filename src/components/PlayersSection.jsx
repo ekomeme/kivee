@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { collection, query, getDocs, doc, deleteDoc, getDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
-import { PlusCircle, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Filter, ChevronRight, Check, X } from 'lucide-react';
+import { Plus, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Filter, ChevronRight, Check, X } from 'lucide-react';
 export default function PlayersSection({ user, academy, db, setActiveSection, setSelectedPlayer }) {
   const [players, setPlayers] = useState([]);
   // Fetches players and their tutors
@@ -371,7 +371,7 @@ export default function PlayersSection({ user, academy, db, setActiveSection, se
           onClick={handleAddPlayer}
           className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center"
         >
-          <PlusCircle className="mr-2 h-5 w-5" />
+          <Plus className="mr-2 h-5 w-5" />
           <span>Add New Student</span>
         </button>
       </div>

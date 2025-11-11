@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, LayoutGrid, List } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function PlansOffersSection({ user, academy, db }) {
@@ -12,6 +12,7 @@ export default function PlansOffersSection({ user, academy, db }) {
   const [tierError, setTierError] = useState(null);
   const [editingTier, setEditingTier] = useState(null); // State for editing
   const [showTierModal, setShowTierModal] = useState(false);
+  const [view, setView] = useState('grid'); // 'grid' or 'table'
 
   const fetchTiers = async () => {
     if (!user || !academy) return;
@@ -138,46 +139,82 @@ export default function PlansOffersSection({ user, academy, db }) {
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
       <div className="flex justify-between items-start mb-4 gap-4">
-        <div className="flex-grow">
-          <h2 className="text-2xl font-bold text-gray-800">Tier Management</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Tier Management</h2>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center p-1 bg-gray-100 rounded-lg">
+            <button
+              onClick={() => setView('grid')}
+              className={`p-2 rounded-md ${view === 'grid' ? 'bg-white shadow-sm' : 'bg-transparent text-gray-500 hover:bg-white/50'}`}
+            >
+              <LayoutGrid className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => setView('table')}
+              className={`p-2 rounded-md ${view === 'table' ? 'bg-white shadow-sm' : 'bg-transparent text-gray-500 hover:bg-white/50'}`}
+            >
+              <List className="h-5 w-5" />
+            </button>
+          </div>
+          <button
+            onClick={() => handleOpenTierModal()}
+            className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center flex-shrink-0"
+          >
+            <Plus className="mr-2 h-5 w-5" />
+            <span>Add New Tier</span>
+          </button>
         </div>
-        <button
-          onClick={() => handleOpenTierModal()}
-          className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center"
-        >
-          <PlusCircle className="mr-2 h-5 w-5" />
-          <span>Add New Tier</span>
-        </button>
       </div>
 
       {tiers.length === 0 ? (
         <p className="text-gray-600">No tiers registered yet.</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200">
-            <thead>
-              <tr>
-                <th className="py-2 px-4 border-b text-left text-base">Name</th>
-                <th className="py-2 px-4 border-b text-left text-base">Description</th>
-                <th className="py-2 px-4 border-b text-left text-base">Price</th>
-                <th className="py-2 px-4 border-b text-left text-base">Actions</th>
-              </tr>
-            </thead>
-            <tbody> 
-              {tiers.map(tier => (
-                <tr key={tier.id} className="hover:bg-gray-50">
-                  <td className="py-2 px-4 border-b text-base">{tier.name}</td>
-                  <td className="py-2 px-4 border-b text-base">{tier.description}</td>
-                  <td className="py-2 px-4 border-b">{formatCurrency(tier.price, academy.currency)}</td>
-                  <td className="py-2 px-4 border-b">
+        view === 'grid' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+          {tiers.map(tier => (
+            <div key={tier.id} className="border rounded-lg p-6 shadow-sm flex flex-col bg-white">
+              {/* Card Header with Name and Actions */}
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-xl font-bold text-gray-800 break-words">{tier.name}</h3>
+                <div className="flex space-x-1 flex-shrink-0 ml-2">
                     <button onClick={() => handleOpenTierModal(tier)} className="text-gray-500 hover:text-blue-600 p-1 rounded-full mr-2"><Edit className="h-5 w-5" /></button>
                     <button onClick={() => handleDeleteTier(tier.id)} className="text-gray-500 hover:text-red-600 p-1 rounded-full"><Trash2 className="h-5 w-5" /></button>
-                  </td>
+                </div>
+              </div>
+              {/* Card Body with Price and Description */}
+              <div className="flex-grow">
+                <p className="text-3xl font-bold text-gray-900 mb-2">{formatCurrency(tier.price, academy.currency)}</p>
+                <p className="text-gray-600 text-sm">{tier.description || 'No description provided.'}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        ) : ( // This is the start of the 'else' part for the table view
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white border border-gray-200">
+              <thead>
+                <tr>
+                  <th className="py-2 px-4 border-b text-left text-base">Name</th>
+                  <th className="py-2 px-4 border-b text-left text-base">Description</th>
+                  <th className="py-2 px-4 border-b text-left text-base">Price</th>
+                  <th className="py-2 px-4 border-b text-left text-base">Actions</th>
                 </tr>
-              ))}
-            </tbody>          </table>
+              </thead>
+              <tbody>
+                {tiers.map(tier => (
+                  <tr key={tier.id} className="hover:bg-gray-50">
+                    <td className="py-2 px-4 border-b text-base">{tier.name}</td>
+                    <td className="py-2 px-4 border-b text-base">{tier.description}</td>
+                    <td className="py-2 px-4 border-b">{formatCurrency(tier.price, academy.currency)}</td>
+                    <td className="py-2 px-4 border-b">
+                      <button onClick={() => handleOpenTierModal(tier)} className="text-gray-500 hover:text-blue-600 p-1 rounded-full mr-2"><Edit className="h-5 w-5" /></button>
+                      <button onClick={() => handleDeleteTier(tier.id)} className="text-gray-500 hover:text-red-600 p-1 rounded-full"><Trash2 className="h-5 w-5" /></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>          </table>
           </div>
-        )}
+        )
+      )}
 
       {/* Tier Form Modal */}
       {showTierModal && (
@@ -221,7 +258,7 @@ export default function PlansOffersSection({ user, academy, db }) {
                       required
                       min="0"
                       step="0.01"
-                      className="pl-7 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                      className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
                     />
                   </div>
                 </div>
