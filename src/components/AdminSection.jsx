@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import Select from 'react-select';
 // import { PlusCircle, Edit, Trash2 } from 'lucide-react'; // These are not used in AdminSection
@@ -6,46 +6,34 @@ import toast from 'react-hot-toast';
 export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
   const CURRENCIES = [
     { code: 'EUR', name: 'Euro' },
-    { code: 'JPY', name: 'Yen japonés' },
-    { code: 'GBP', name: 'Libra esterlina' },
-    { code: 'ARS', name: 'Peso argentino' },
-    { code: 'MXN', name: 'Peso mexicano' },
-    { code: 'COP', name: 'Peso colombiano' },
-    { code: 'CLP', name: 'Peso chileno' },
-    { code: 'PEN', name: 'Sol peruano' },
-    { code: 'BRL', name: 'Real brasileño' },
-    { code: 'UYU', name: 'Peso uruguayo' },
-    { code: 'VES', name: 'Bolívar soberano' },
-    { code: 'PYG', name: 'Guaraní paraguayo' },
-    { code: 'BOB', name: 'Boliviano' },
-    { code: 'CAD', name: 'Dólar canadiense' },
-    { code: 'AUD', name: 'Dólar australiano' },
-    { code: 'CHF', name: 'Franco suizo' },
-    { code: 'CNY', name: 'Yuan chino' },
-    { code: 'INR', name: 'Rupia india' },
-    { code: 'RUB', name: 'Rublo ruso' },
-    { code: 'ZAR', name: 'Rand sudafricano' },
-    { code: 'AED', name: 'Dírham de los Emiratos Árabes Unidos' },
-    { code: 'SAR', name: 'Riyal saudí' },
-    { code: 'QAR', name: 'Riyal catarí' },
-    { code: 'TRY', name: 'Lira turca' },
-    { code: 'ILS', name: 'Nuevo shéquel israelí' },
-    { code: 'KRW', name: 'Won surcoreano' },
-    { code: 'SGD', name: 'Dólar de Singapur' },
-    { code: 'NZD', name: 'Dólar neozelandés' },
-    { code: 'HKD', name: 'Dólar de Hong Kong' },
-    { code: 'NOK', name: 'Corona noruega' },
-    { code: 'SEK', name: 'Corona sueca' },
-    { code: 'DKK', name: 'Corona danesa' },
-    { code: 'PLN', name: 'Zloty polaco' },
-    { code: 'HUF', name: 'Forinto húngaro' },
-    { code: 'CZK', name: 'Corona checa' }
   ];
 
-  const currencyOptions = CURRENCIES.sort((a, b) => a.code.localeCompare(b.code)).map(c => ({
-    value: c.code,
-    label: `${c.code} - ${c.name}`
-  }));
+  const [currencyOptions, setCurrencyOptions] = useState([]);
+
+  useEffect(() => {
+    const fetchCurrencies = async () => {
+      try {
+        // Using a more comprehensive, free, and open-source currency API
+        const response = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.json');
+        const data = await response.json();
+
+        // The API returns an object like { "aed": "United Arab Emirates Dirham", ... }
+        // We convert it to the format react-select expects.
+        const currencies = Object.entries(data).map(([code, name]) => ({
+          value: code.toUpperCase(),
+          label: `${code.toUpperCase()} - ${name}`
+        }));
+
+        currencies.sort((a, b) => a.label.localeCompare(b.label)); // Sort alphabetically
+
+        setCurrencyOptions(currencies);
+      } catch (error) {
+        console.error("Error fetching currencies:", error);
+      }
+    };
+
+    fetchCurrencies();
+  }, []);
 
   const findCurrencyOption = (currencyCode) => currencyOptions.find(option => option.value === currencyCode);
 
@@ -56,6 +44,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
   const [updateSettingsError, setUpdateSettingsError] = useState(null);
   const ACADEMY_CATEGORIES = ['Fútbol', 'Baloncesto', 'Tenis', 'Otro'];
+
 
   const handleUpdateAcademySettings = async (e) => {
     e.preventDefault();
@@ -86,7 +75,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
 
 
   return (
-    <div className="space-y-8">     
+    <div className="space-y-8">
       {/* Sección para cambiar el nombre de la academia */}
       <div className="p-6 bg-white rounded-lg shadow-md">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Academy Settings</h2>
