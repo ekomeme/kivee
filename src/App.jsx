@@ -227,8 +227,8 @@ export default function App() {
       {/* Main Content */}
       <div className="flex-grow p-8 overflow-auto"> {/* Added overflow-auto for scrollable content */}
         <Routes>
-          <Route path="/students" element={<PlayersSection user={user} academy={academy} db={db} />} />
           <Route path="/students/new" element={<NewPlayerPage user={user} academy={academy} db={db} />} />
+          <Route path="/students" element={<PlayersSection user={user} academy={academy} db={db} />} />
           <Route path="/students/:playerId" element={<PlayerDetailPage user={user} academy={academy} db={db} />} />
           <Route path="/students/:playerId/edit" element={<EditPlayerPage user={user} academy={academy} db={db} />} />
           <Route path="/plans" element={<PlansOffersSection user={user} academy={academy} db={db} />} />
