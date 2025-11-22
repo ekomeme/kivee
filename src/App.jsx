@@ -9,6 +9,7 @@ import EditPlayerPage from "./components/EditPlayerPage.jsx";
 import PlayersSection from "./components/PlayersSection.jsx";
 import PlansOffersSection from "./components/PlansOffersSection.jsx";
 import NewPlayerPage from "./components/NewPlayerPage.jsx"; // Import the new page
+import GroupsAndClassesSection from "./components/GroupsAndClassesSection.jsx";
 import AdminSection from "./components/AdminSection.jsx";
 import { Toaster } from "react-hot-toast";
 import { LogOut } from "lucide-react";
@@ -215,6 +216,9 @@ export default function App() {
               <NavLink to="/plans" className={({ isActive }) => `block w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>Plans & Offers</NavLink>
             </li>
             <li className="relative">
+              <NavLink to="/groups" className={({ isActive }) => `block w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>Groups & Classes</NavLink>
+            </li>
+            <li className="relative">
               <NavLink to="/settings" className={({ isActive }) => `block w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>Account & Preferences</NavLink>
             </li>
           </ul>
@@ -232,6 +236,7 @@ export default function App() {
           <Route path="/students/:playerId" element={<PlayerDetailPage user={user} academy={academy} db={db} />} />
           <Route path="/students/:playerId/edit" element={<EditPlayerPage user={user} academy={academy} db={db} />} />
           <Route path="/plans" element={<PlansOffersSection user={user} academy={academy} db={db} />} />
+          <Route path="/groups" element={<GroupsAndClassesSection user={user} academy={academy} db={db} />} />
           <Route path="/settings" element={<AdminSection user={user} academy={academy} db={db} onAcademyUpdate={async () => setAcademy((await getDoc(doc(db, "academies", user.uid))).data())} />} />
           <Route path="/" element={<h1 className="text-3xl font-bold text-gray-800 mb-4">Welcome to {academy.name}</h1>} />
         </Routes>

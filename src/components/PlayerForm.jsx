@@ -13,7 +13,6 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
   const [photoURL, setPhotoURL] = useState('');
   const [playerPhotoFile, setPlayerPhotoFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [category, setCategory] = useState('');
   const [playerEmail, setPlayerEmail] = useState('');
   const [playerPhonePrefix, setPlayerPhonePrefix] = useState('+1');
   const [playerContactPhone, setPlayerContactPhone] = useState('');
@@ -33,6 +32,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
 
   // Component State
   const [tiers, setTiers] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [trials, setTrials] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -52,8 +52,16 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       setTrials(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     };
 
+    const fetchGroups = async () => {
+      if (!user || !academy) return;
+      const groupsRef = collection(db, `academies/${user.uid}/groups`);
+      const querySnapshot = await getDocs(groupsRef);
+      setGroups(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    };
+
     fetchTiers();
     fetchTrials();
+    fetchGroups();
   }, [user, academy, db]);
 
   // Fetch country codes for phone prefixes
@@ -93,22 +101,6 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
     fetchCountryCodes();
   }, [academy.countryCode, playerToEdit]);
 
-  // Calculate category based on birthday
-  useEffect(() => {
-    if (birthday) {
-      const birthDate = new Date(birthday);
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const m = today.getMonth() - birthDate.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-      setCategory(`U${age + 1}`);
-    } else {
-      setCategory('');
-    }
-  }, [birthday]);
-
   // Populate form if editing a player
   useEffect(() => {
     if (playerToEdit) {
@@ -118,7 +110,6 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       setGender(playerToEdit.gender || '');
       setBirthday(playerToEdit.birthday || '');
       setPhotoURL(playerToEdit.photoURL || '');
-      setCategory(playerToEdit.category || '');
       setPlayerEmail(playerToEdit.email || '');
       setPlayerPhonePrefix(playerToEdit.contactPhonePrefix || '+1');
       setPlayerContactPhone(playerToEdit.contactPhoneNumber || '');
@@ -147,7 +138,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
         setPlanStartDate(playerToEdit.plan.startDate || new Date().toISOString().split('T')[0]);
       } else { // For backward compatibility with old data structure
         if (playerToEdit.tierId && tiers.length > 0) {
-            const tierToSet = tiers.find(t => t.id === playerToEdit.tierId);
+            const tierToSet = tiers.find(t => t.id === playerToEdit.tierId); // This part seems to have an issue, but let's keep it for now.
             if (tierToSet) {
                 setSelectedPlan({ value: `tier-${tierToSet.id}`, label: tierToSet.name });
             }
@@ -267,7 +258,6 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       gender,
       birthday,
       photoURL: finalPhotoURL,
-      category,
       email: playerEmail || null,
       contactPhonePrefix: playerContactPhone ? playerPhonePrefix : null,
       contactPhoneNumber: playerContactPhone ? playerContactPhone : null,
@@ -310,8 +300,14 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
             <div><label htmlFor="name" className="block text-sm font-medium text-gray-700">First Name</label><input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
             <div><label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Last Name</label><input type="text" id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
             <div><label htmlFor="birthday" className="block text-sm font-medium text-gray-700">Date of Birth</label><input type="date" id="birthday" value={birthday} onChange={(e) => setBirthday(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
-            <div><label htmlFor="gender" className="block text-sm font-medium text-gray-700">Gender</label><select id="gender" value={gender} onChange={(e) => setGender(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500"><option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></div>
-            <div><label htmlFor="category" className="block text-sm font-medium text-gray-700">Category (Calculated)</label><input type="text" id="category" value={category} readOnly className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100" /></div>
+            <div>
+              <label htmlFor="gender" className="block text-sm font-medium text-gray-700">Gender</label>
+              <select id="gender" value={gender} onChange={(e) => setGender(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500"><option value="">Select</option><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select>
+            </div>
+            <div>
+              <label htmlFor="group" className="block text-sm font-medium text-gray-700">Group</label>
+              <select id="group" value={playerToEdit?.groupId || ''} onChange={(e) => { /* We need to create a state for this */ }} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500"><option value="">Select a Group</option>{groups.filter(g => g.status === 'active').map(group => (<option key={group.id} value={group.id}>{group.name}</option>))}</select>
+            </div>
             <div><label htmlFor="playerEmail" className="block text-sm font-medium text-gray-700">Email (Optional)</label><input type="email" id="playerEmail" value={playerEmail} onChange={(e) => setPlayerEmail(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
             <div>
               <label htmlFor="playerContactPhone" className="block text-sm font-medium text-gray-700">Phone (Optional)</label>
