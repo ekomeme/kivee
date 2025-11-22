@@ -672,15 +672,30 @@ export default function PlansOffersSection({ user, academy, db }) {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label htmlFor="monthlyPrice" className="block text-sm font-medium text-gray-700">Monthly Price</label>
-                    <input type="number" id="monthlyPrice" value={monthlyPrice} onChange={(e) => setMonthlyPrice(e.target.value)} required min="0" step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                    <div className="relative mt-1">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
+                      </div>
+                      <input type="number" id="monthlyPrice" value={monthlyPrice} onChange={(e) => setMonthlyPrice(e.target.value)} required min="0" step="0.01" className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                    </div>
                   </div>
                   <div>
                     <label htmlFor="semiAnnualPrice" className="block text-sm font-medium text-gray-700">Semi-Annual Price (Optional)</label>
-                    <input type="number" id="semiAnnualPrice" value={semiAnnualPrice} onChange={(e) => setSemiAnnualPrice(e.target.value)} min="0" step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                    <div className="relative mt-1">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
+                      </div>
+                      <input type="number" id="semiAnnualPrice" value={semiAnnualPrice} onChange={(e) => setSemiAnnualPrice(e.target.value)} min="0" step="0.01" className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                    </div>
                   </div>
                   <div>
                     <label htmlFor="annualPrice" className="block text-sm font-medium text-gray-700">Annual Price (Optional)</label>
-                    <input type="number" id="annualPrice" value={annualPrice} onChange={(e) => setAnnualPrice(e.target.value)} min="0" step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                    <div className="relative mt-1">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
+                      </div>
+                      <input type="number" id="annualPrice" value={annualPrice} onChange={(e) => setAnnualPrice(e.target.value)} min="0" step="0.01" className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                    </div>
                   </div>
                 </div>
 
@@ -751,7 +766,12 @@ export default function PlansOffersSection({ user, academy, db }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="productPrice" className="block text-sm font-medium text-gray-700">Price</label>
-                  <input type="number" id="productPrice" value={productPrice} onChange={(e) => setProductPrice(e.target.value)} required min="0" step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                  <div className="relative mt-1">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
+                    </div>
+                    <input type="number" id="productPrice" value={productPrice} onChange={(e) => setProductPrice(e.target.value)} required min="0" step="0.01" className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                  </div>
                 </div>
                 <div>
                   <label htmlFor="inventory" className="block text-sm font-medium text-gray-700">Inventory (Optional)</label>
@@ -781,6 +801,15 @@ export default function PlansOffersSection({ user, academy, db }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label htmlFor="durationInDays" className="block text-sm font-medium text-gray-700">Duration (in days)</label><input type="number" id="durationInDays" value={durationInDays} onChange={(e) => setDurationInDays(e.target.value)} required min="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
                 <div><label htmlFor="trialPrice" className="block text-sm font-medium text-gray-700">Price</label><input type="number" id="trialPrice" value={trialPrice} onChange={(e) => setTrialPrice(e.target.value)} required min="0" step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
+                <div>
+                  <label htmlFor="trialPrice" className="block text-sm font-medium text-gray-700">Price</label>
+                  <div className="relative mt-1">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
+                    </div>
+                    <input type="number" id="trialPrice" value={trialPrice} onChange={(e) => setTrialPrice(e.target.value)} required min="0" step="0.01" className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                  </div>
+                </div>
               </div>
               <div>
                 <label htmlFor="classLimit" className="block text-sm font-medium text-gray-700">Class Limit (leave empty for unlimited)</label>
