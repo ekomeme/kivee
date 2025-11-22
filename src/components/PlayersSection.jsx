@@ -17,6 +17,12 @@ export default function PlayersSection({ user, academy, db }) {
     const tiersMap = new Map(tiersData.map(tier => [tier.id, tier.name]));
     setTiers(tiersData);
 
+    // Fetch Groups
+    const groupsRef = collection(db, `academies/${user.uid}/groups`);
+    const groupsSnapshot = await getDocs(groupsRef);
+    const groupsData = groupsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const groupsMap = new Map(groupsData.map(group => [group.id, group.name]));
+    setGroups(groupsData);
     // Fetch Players
     const playersRef = collection(db, `academies/${user.uid}/players`);
     const q = query(playersRef);
@@ -38,8 +44,11 @@ export default function PlayersSection({ user, academy, db }) {
         }
         player.age = age;
       }
-      if (player.tierId) {
-        player.tierName = tiersMap.get(player.tierId) || 'N/A';
+      if (player.plan && player.plan.type === 'tier') {
+        player.tierName = tiersMap.get(player.plan.id) || 'N/A';
+      }
+      if (player.groupId) {
+        player.groupName = groupsMap.get(player.groupId) || 'N/A';
       }
       return player;
     }));
@@ -47,17 +56,17 @@ export default function PlayersSection({ user, academy, db }) {
   };
 
   const [tiers, setTiers] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'ascending' });
-  const [filters, setFilters] = useState({ gender: [], category: [], tier: [] });
+  const [filters, setFilters] = useState({ gender: [], group: [], tier: [] });
   const [searchQuery, setSearchQuery] = useState('');
   const [activeMenu, setActiveMenu] = useState(null); // To control which row's menu is open
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
   const [activeSubMenu, setActiveSubMenu] = useState(null);
-  const categories = useMemo(() => [...new Set(players.map(p => p.category).filter(Boolean))], [players]);
   const genders = useMemo(() => [...new Set(players.map(p => p.gender).filter(Boolean))], [players]);
   
   const activeFilterCount = useMemo(() => {
-    return filters.gender.length + filters.category.length + filters.tier.length;
+    return filters.gender.length + filters.group.length + filters.tier.length;
   }, [filters]);
 
   const filteredAndSortedPlayers = useMemo(() => {
@@ -70,10 +79,10 @@ export default function PlayersSection({ user, academy, db }) {
         : true;
       
       const genderMatch = filters.gender.length > 0 ? filters.gender.includes(player.gender) : true;
-      const categoryMatch = filters.category.length > 0 ? filters.category.includes(player.category) : true;
-      const tierMatch = filters.tier.length > 0 ? filters.tier.includes(player.tierId) : true;
+      const groupMatch = filters.group.length > 0 ? filters.group.includes(player.groupId) : true;
+      const tierMatch = filters.tier.length > 0 ? (player.plan?.type === 'tier' && filters.tier.includes(player.plan.id)) : true;
 
-      return searchMatch && genderMatch && categoryMatch && tierMatch;
+      return searchMatch && genderMatch && groupMatch && tierMatch;
     });
 
     // Apply sorting
@@ -104,7 +113,7 @@ export default function PlayersSection({ user, academy, db }) {
   };
 
   const handleClearFilters = () => {
-    setFilters({ gender: [], category: [], tier: [] });
+    setFilters({ gender: [], group: [], tier: [] });
     setSearchQuery('');
   };
 
@@ -234,7 +243,7 @@ export default function PlayersSection({ user, academy, db }) {
 
     const filterOptions = [
       { name: 'By Gender', key: 'gender', items: genders.map(g => ({ label: g, value: g })) },
-      { name: 'By Category', key: 'category', items: categories.map(c => ({ label: c, value: c })) },
+      { name: 'By Group', key: 'group', items: groups.map(g => ({ label: g.name, value: g.id })) },
       { name: 'By Tier', key: 'tier', items: tiers.map(t => ({ label: t.name, value: t.id })) },
     ];
 
@@ -411,7 +420,7 @@ export default function PlayersSection({ user, academy, db }) {
                   </button>
                 </th>
                 <th className="py-2 px-4 border-b text-left">Gender</th>
-                <th className="py-2 px-4 border-b text-left">Category</th>
+                <th className="py-2 px-4 border-b text-left">Group</th>
                 <th className="py-2 px-4 border-b text-left">Tier</th>
                 <th className="py-2 px-4 border-b text-left">Tutor</th>
                 <th className="py-2 px-4 border-b text-right"></th>
@@ -431,7 +440,7 @@ export default function PlayersSection({ user, academy, db }) {
                     </div>
                   </td>
                   <td className="py-2 px-4 border-b">{player.gender}</td>
-                  <td className="py-2 px-4 border-b">{player.category}</td>
+                  <td className="py-2 px-4 border-b">{player.groupName || 'N/A'}</td>
                   <td className="py-2 px-4 border-b">{player.tierName || 'N/A'}</td>
                   <td className="py-2 px-4 border-b">
                     {player.tutor ? (

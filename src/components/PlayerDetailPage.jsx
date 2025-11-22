@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, updateDoc } from 'firebase/firestore';
 import PlayerDetail from '../components/PlayerDetail.jsx';
 import { ArrowLeft, Edit } from 'lucide-react';
 
@@ -15,6 +15,24 @@ export default function PlayerDetailPage({ user, academy, db }) {
       if (!user || !db || !playerId) return;
       setLoading(true);
       try {
+        // Fetch Tiers, Trials, and Groups to create maps for names
+        const tiersRef = collection(db, `academies/${user.uid}/tiers`);
+        const tiersSnap = await getDocs(tiersRef);
+        const tiersMap = new Map(tiersSnap.docs.map(doc => [doc.id, doc.data()]));
+
+        const trialsRef = collection(db, `academies/${user.uid}/trials`);
+        const trialsSnap = await getDocs(trialsRef);
+        const trialsMap = new Map(trialsSnap.docs.map(doc => [doc.id, doc.data()]));
+
+        const productsRef = collection(db, `academies/${user.uid}/products`);
+        const productsSnap = await getDocs(productsRef);
+        const productsMap = new Map(productsSnap.docs.map(doc => [doc.id, doc.data()]));
+
+        const groupsRef = collection(db, `academies/${user.uid}/groups`);
+        const groupsSnap = await getDocs(groupsRef);
+        const groupsMap = new Map(groupsSnap.docs.map(doc => [doc.id, doc.data()]));
+
+        // Fetch the specific player
         const playerRef = doc(db, `academies/${user.uid}/players`, playerId);
         const playerSnap = await getDoc(playerRef);
 
@@ -28,11 +46,26 @@ export default function PlayerDetailPage({ user, academy, db }) {
             playerData.tutor = tutorSnap.exists() ? { id: tutorSnap.id, ...tutorSnap.data() } : null;
           }
 
-          // Fetch tier name if tierId exists
-          if (playerData.tierId) {
-            const tierRef = doc(db, `academies/${user.uid}/tiers`, playerData.tierId);
-            const tierSnap = await getDoc(tierRef);
-            playerData.tierName = tierSnap.exists() ? tierSnap.data().name : 'N/A';
+          // Get group name if groupId exists
+          if (playerData.groupId) {
+            playerData.groupName = groupsMap.get(playerData.groupId)?.name || 'N/A';
+          }
+
+          // Get plan details if a plan is assigned
+          if (playerData.plan) {
+            if (playerData.plan.type === 'tier') {
+              playerData.planDetails = tiersMap.get(playerData.plan.id);
+            } else if (playerData.plan.type === 'trial') {
+              playerData.planDetails = trialsMap.get(playerData.plan.id);
+            }
+          }
+
+          // Get one-time product details
+          if (playerData.oneTimeProducts) {
+            playerData.oneTimeProducts = playerData.oneTimeProducts.map(p => ({
+              ...p,
+              productDetails: productsMap.get(p.productId),
+            }));
           }
 
           setPlayer(playerData);
@@ -46,6 +79,41 @@ export default function PlayerDetailPage({ user, academy, db }) {
 
     fetchPlayerDetails();
   }, [user, db, playerId]);
+
+  const handleMarkAsPaid = async (productIndex, paymentMethod) => {
+    const updatedProducts = [...player.oneTimeProducts];
+    updatedProducts[productIndex] = {
+      ...updatedProducts[productIndex],
+      status: 'paid',
+      paymentMethod: paymentMethod,
+      paidAt: new Date(),
+    };
+
+    const playerRef = doc(db, `academies/${user.uid}/players`, playerId);
+    try {
+      await updateDoc(playerRef, { oneTimeProducts: updatedProducts });
+      setPlayer(prev => ({ ...prev, oneTimeProducts: updatedProducts }));
+      toast.success('Payment registered successfully!');
+    } catch (error) {
+      console.error("Error updating payment status:", error);
+      toast.error('Failed to register payment.');
+    }
+  };
+
+  const handleRemoveProduct = async (productIndex) => {
+    const productToRemove = player.oneTimeProducts[productIndex];
+    if (productToRemove.status === 'paid') {
+      toast.error("Cannot remove a paid product.");
+      return;
+    }
+
+    const updatedProducts = player.oneTimeProducts.filter((_, index) => index !== productIndex);
+    const playerRef = doc(db, `academies/${user.uid}/players`, playerId);
+
+    await updateDoc(playerRef, { oneTimeProducts: updatedProducts });
+    setPlayer(prev => ({ ...prev, oneTimeProducts: updatedProducts }));
+    toast.success('Product removed successfully!');
+  };
 
   const handleEdit = () => {
     navigate(`/students/${playerId}/edit`);
@@ -74,7 +142,7 @@ export default function PlayerDetailPage({ user, academy, db }) {
           </button>
         </div>
       </div>
-      <PlayerDetail player={player} />
+      <PlayerDetail player={player} onMarkAsPaid={handleMarkAsPaid} onRemoveProduct={handleRemoveProduct} academy={academy} />
     </div>
   );
 }

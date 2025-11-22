@@ -16,6 +16,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
   const [playerEmail, setPlayerEmail] = useState('');
   const [playerPhonePrefix, setPlayerPhonePrefix] = useState('+1');
   const [playerContactPhone, setPlayerContactPhone] = useState('');
+  const [groupId, setGroupId] = useState('');
 
   // Tutor Info
   const [hasTutor, setHasTutor] = useState(false);
@@ -28,10 +29,12 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
   // Payment Info
   const [selectedPlan, setSelectedPlan] = useState(null); // This will hold the selected plan object from react-select
   const [planStartDate, setPlanStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedProducts, setSelectedProducts] = useState([]);
   const [notes, setNotes] = useState('');
 
   // Component State
   const [tiers, setTiers] = useState([]);
+  const [oneTimeProducts, setOneTimeProducts] = useState([]);
   const [groups, setGroups] = useState([]);
   const [trials, setTrials] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -59,9 +62,17 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       setGroups(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     };
 
+    const fetchProducts = async () => {
+      if (!user || !academy) return;
+      const productsRef = collection(db, `academies/${user.uid}/products`);
+      const querySnapshot = await getDocs(productsRef);
+      setOneTimeProducts(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    };
+
     fetchTiers();
     fetchTrials();
     fetchGroups();
+    fetchProducts();
   }, [user, academy, db]);
 
   // Fetch country codes for phone prefixes
@@ -113,6 +124,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       setPlayerEmail(playerToEdit.email || '');
       setPlayerPhonePrefix(playerToEdit.contactPhonePrefix || '+1');
       setPlayerContactPhone(playerToEdit.contactPhoneNumber || '');
+      setGroupId(playerToEdit.groupId || '');
 
       // Tutor Info
       if (playerToEdit.tutorId && playerToEdit.tutor) {
@@ -143,10 +155,18 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
                 setSelectedPlan({ value: `tier-${tierToSet.id}`, label: tierToSet.name });
             }
         }
+        if (playerToEdit.oneTimeProducts && oneTimeProducts.length > 0) {
+          // When editing, we only want to manage products added *during this edit session*.
+          // The final save will merge existing and new products.
+          // So we start with an empty array for new products.
+          setSelectedProducts([]);
+        } else {
+          setSelectedProducts([]);
+        }
       }
       setNotes(playerToEdit.notes || '');
     }
-  }, [playerToEdit, tiers, trials]);
+  }, [playerToEdit, tiers, trials, oneTimeProducts, academy.currency]); // academy.currency is a dependency
 
   const handlePhotoFileChange = (e) => {
     const file = e.target.files[0];
@@ -252,6 +272,20 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       };
     }
 
+    // Combine existing products with newly added ones for this session.
+    const existingProducts = playerToEdit?.oneTimeProducts || [];
+    const newProducts = selectedProducts || [];
+    const combinedProducts = [...existingProducts, ...newProducts];
+
+    // When saving, we only need the product ID and its payment status info, not the full product details.
+    const finalProductsData = combinedProducts.map(({ productId, status, paidAt, paymentMethod }) => ({
+      productId: productId,
+      status: status,
+      paidAt: paidAt || null, // Ensure null instead of undefined
+      paymentMethod: paymentMethod || null, // Ensure null instead of undefined
+    }));
+
+
     const playerData = {
       name,
       lastName,
@@ -263,7 +297,9 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       contactPhoneNumber: playerContactPhone ? playerContactPhone : null,
       contactPhone: playerContactPhone ? `${playerPhonePrefix}${playerContactPhone}` : null,
       tutorId: hasTutor ? linkedTutorId : null,
+      groupId: groupId || null,
       plan: planData,
+      oneTimeProducts: finalProductsData,
       notes,
       academyId: user.uid,
       createdAt: playerToEdit ? playerToEdit.createdAt : serverTimestamp(),
@@ -306,7 +342,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
             </div>
             <div>
               <label htmlFor="group" className="block text-sm font-medium text-gray-700">Group</label>
-              <select id="group" value={playerToEdit?.groupId || ''} onChange={(e) => { /* We need to create a state for this */ }} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500"><option value="">Select a Group</option>{groups.filter(g => g.status === 'active').map(group => (<option key={group.id} value={group.id}>{group.name}</option>))}</select>
+              <select id="group" value={groupId} onChange={(e) => setGroupId(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500"><option value="">Select a Group</option>{groups.filter(g => g.status === 'active').map(group => (<option key={group.id} value={group.id}>{group.name}</option>))}</select>
             </div>
             <div><label htmlFor="playerEmail" className="block text-sm font-medium text-gray-700">Email (Optional)</label><input type="email" id="playerEmail" value={playerEmail} onChange={(e) => setPlayerEmail(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
             <div>
@@ -435,6 +471,54 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
               }
               return null;
             })()}
+
+            <div className="md:col-span-2 space-y-4">
+              <div>
+                <h4 className="text-sm font-medium text-gray-700">Products</h4>
+                {playerToEdit?.oneTimeProducts?.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    <p className="text-xs text-gray-500 mb-1">Existing Products (Cannot be removed here)</p>
+                    {playerToEdit.oneTimeProducts.map((p, index) => {
+                        const productDetails = oneTimeProducts.find(op => op.id === p.productId);
+                        return (
+                          <div key={`existing-${p.productId}-${index}`} className="flex justify-between items-center p-2 bg-gray-100 rounded-md">
+                            <span>{productDetails?.name || 'Product not found'} ({p.status})</span>
+                            <span className="font-mono text-sm">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(productDetails?.price || 0)}</span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+                {selectedProducts.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    <p className="text-xs text-gray-500 mb-1">Newly Added Products</p>
+                    {selectedProducts.map((p, index) => {
+                      const productDetails = oneTimeProducts.find(op => op.id === p.productId);
+                      return (
+                        <div key={`new-${p.productId}-${index}`} className="flex justify-between items-center p-2 bg-blue-50 rounded-md">
+                          <span>{productDetails?.name || 'Product not found'}</span>
+                          <span className="font-mono text-sm">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(productDetails?.price || 0)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-gray-700">Available Products</h4>
+                <div className="mt-2 space-y-2 max-h-48 overflow-y-auto border p-2 rounded-md">
+                  {oneTimeProducts.map(product => (
+                      <div key={product.id} className="flex justify-between items-center p-2 hover:bg-gray-50">
+                        <div>
+                          <p>{product.name}</p>
+                          <p className="text-sm text-gray-500">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(product.price)}</p>
+                        </div>
+                        <button type="button" onClick={() => setSelectedProducts([...selectedProducts, { productId: product.id, status: 'unpaid' }])} className="bg-blue-100 text-blue-800 text-xs font-bold py-1 px-3 rounded-md">Add</button>
+                      </div>
+                  ))}
+                </div>
+              </div>
+            </div>
 
             <div className="md:col-span-2"><label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes</label><textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows="3" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></textarea></div>
           </div>
