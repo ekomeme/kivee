@@ -27,12 +27,14 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
   const [tutorContactPhone, setTutorContactPhone] = useState('');
 
   // Payment Info
-  const [tierId, setTierId] = useState('');
+  const [selectedPlan, setSelectedPlan] = useState(null); // This will hold the selected plan object from react-select
+  const [planStartDate, setPlanStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
-  const [paymentType, setPaymentType] = useState('Mensual');
+  const [paymentType, setPaymentType] = useState('Monthly');
 
   // Component State
   const [tiers, setTiers] = useState([]);
+  const [trials, setTrials] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [countryCodes, setCountryCodes] = useState([]);
@@ -44,7 +46,15 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       setTiers(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     };
 
+    const fetchTrials = async () => {
+      if (!user || !academy) return;
+      const trialsRef = collection(db, `academies/${user.uid}/trials`);
+      const querySnapshot = await getDocs(trialsRef);
+      setTrials(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    };
+
     fetchTiers();
+    fetchTrials();
   }, [user, academy, db]);
 
   // Fetch country codes for phone prefixes
@@ -125,11 +135,30 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       }
 
       // Payment Info
-      setTierId(playerToEdit.tierId || '');
-      setPaymentType(playerToEdit.paymentType || 'Mensual');
+      if (playerToEdit.plan && (tiers.length > 0 || trials.length > 0)) {
+        const planValue = `${playerToEdit.plan.type}-${playerToEdit.plan.id}`;
+        const allOptions = [
+          ...(tiers.map(t => ({ value: `tier-${t.id}`, label: t.name }))),
+          ...(trials.map(tr => ({ value: `trial-${tr.id}`, label: tr.name })))
+        ];
+        const planToSet = allOptions.find(opt => opt.value === planValue);
+        if (planToSet) {
+          setSelectedPlan(planToSet);
+        }
+        setPlanStartDate(playerToEdit.plan.startDate || new Date().toISOString().split('T')[0]);
+        setPaymentType(playerToEdit.plan.paymentCycle || 'Monthly');
+      } else { // For backward compatibility with old data structure
+        if (playerToEdit.tierId && tiers.length > 0) {
+            const tierToSet = tiers.find(t => t.id === playerToEdit.tierId);
+            if (tierToSet) {
+                setSelectedPlan({ value: `tier-${tierToSet.id}`, label: tierToSet.name });
+                setPaymentType(playerToEdit.paymentType || 'Monthly');
+            }
+        }
+      }
       setNotes(playerToEdit.notes || '');
     }
-  }, [playerToEdit]);
+  }, [playerToEdit, tiers, trials]);
 
   const handlePhotoFileChange = (e) => {
     const file = e.target.files[0];
@@ -219,6 +248,17 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       }
     }
 
+    let planData = null;
+    if (selectedPlan) {
+      const [type, id] = selectedPlan.value.split('-');
+      planData = {
+        type,
+        id,
+        startDate: type === 'tier' ? planStartDate : new Date().toISOString().split('T')[0],
+        paymentCycle: type === 'tier' ? paymentType : null,
+      };
+    }
+
     const playerData = {
       name,
       lastName,
@@ -231,9 +271,8 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       contactPhoneNumber: playerContactPhone ? playerContactPhone : null,
       contactPhone: playerContactPhone ? `${playerPhonePrefix}${playerContactPhone}` : null,
       tutorId: hasTutor ? linkedTutorId : null,
-      tierId,
+      plan: planData,
       notes,
-      paymentType, // <--- ESTA LÍNEA ES CRUCIAL
       academyId: user.uid,
       createdAt: playerToEdit ? playerToEdit.createdAt : serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -339,9 +378,67 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
         {/* Payment Info Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
           <legend className="text-xl font-semibold text-gray-900 px-2">Plan Information</legend>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            <div><label htmlFor="tier" className="block text-sm font-medium text-gray-700">Plan</label><select id="tier" value={tierId} onChange={(e) => setTierId(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="">Select a Plan</option>{tiers.map(tier => (<option key={tier.id} value={tier.id}>{tier.name}</option>))}</select></div>
-            <div><label htmlFor="paymentType" className="block text-sm font-medium text-gray-700">Billing cycle</label><select id="paymentType" value={paymentType} onChange={(e) => setPaymentType(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="Monthly">Monthly</option><option value="Semiannual">Semiannual</option><option value="Annual">Annual</option></select></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 items-start">
+            <div>
+              <label htmlFor="planType" className="block text-sm font-medium text-gray-700">Assign Plan</label>
+              <Select
+                id="planType"
+                value={selectedPlan}
+                onChange={setSelectedPlan}
+                isClearable
+                isSearchable
+                placeholder="Select a plan..."
+                className="mt-1"
+                options={[
+                  {
+                    label: 'Membership Tiers',
+                    options: tiers.filter(t => t.status === 'active').map(t => ({ value: `tier-${t.id}`, label: t.name }))
+                  },
+                  {
+                    label: 'Free Trials',
+                    options: trials.map(tr => ({ value: `trial-${tr.id}`, label: tr.name }))
+                  }
+                ]}
+              />
+            </div>
+
+            {selectedPlan?.value.startsWith('tier-') && (
+              <>
+                <div><label htmlFor="paymentType" className="block text-sm font-medium text-gray-700">Billing cycle</label><select id="paymentType" value={paymentType} onChange={(e) => setPaymentType(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="Monthly">Monthly</option><option value="Semiannual">Semiannual</option><option value="Annual">Annual</option></select></div>
+                <div><label htmlFor="planStartDate" className="block text-sm font-medium text-gray-700">Start Date</label><input type="date" id="planStartDate" value={planStartDate} onChange={(e) => setPlanStartDate(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
+              </>
+            )}
+
+            {selectedPlan?.value.startsWith('trial-') && (() => {
+              const trialId = selectedPlan.value.split('-')[1];
+              const selectedTrialData = trials.find(tr => tr.id === trialId);
+
+              if (selectedTrialData?.convertsToTierId) {
+                const conversionTier = tiers.find(t => t.id === selectedTrialData.convertsToTierId);
+                if (conversionTier) {
+                  const startDate = new Date(); // Trial starts today
+                  const duration = Number(selectedTrialData.durationInDays);
+                  const conversionDate = new Date(startDate);
+                  conversionDate.setDate(startDate.getDate() + duration);
+
+                  const formattedConversionDate = conversionDate.toLocaleDateString(undefined, {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  });
+                  return (
+                    <div className="md:col-span-2 -mt-2">
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                        <p className="text-sm font-semibold text-blue-800">Automatic Conversion</p>
+                        <p className="text-sm text-blue-700 mt-1">At the end of the trial on <strong>{formattedConversionDate}</strong>, this plan will convert to the <strong>{conversionTier.name}</strong> tier with <strong>Monthly</strong> billing.</p>
+                      </div>
+                    </div>
+                  );
+                }
+              }
+              return null;
+            })()}
+
             <div className="md:col-span-2"><label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes</label><textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows="3" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></textarea></div>
           </div>
         </fieldset>
