@@ -39,11 +39,12 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
   useEffect(() => {
     const fetchCountries = async () => {
       try {
-        const response = await fetch('https://restcountries.com/v3.1/all?fields=name');
+        const response = await fetch('https://restcountries.com/v3.1/all?fields=name,cca2');
         const data = await response.json();
         const countries = data.map(country => ({
           value: country.name.common,
-          label: country.name.common
+          label: country.name.common,
+          countryCode: country.cca2 // Store the 2-letter country code
         }));
         countries.sort((a, b) => a.label.localeCompare(b.label));
         setCountryOptions(countries);
@@ -98,6 +99,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
         otherCategory: selectedAcademyCategory === 'Otro' ? otherCategory : '',
         currency: selectedCurrency.value,
         country: selectedCountry?.value || null,
+        countryCode: selectedCountry?.countryCode || null,
       });
       await onAcademyUpdate(); // Llama a la función para refrescar los datos en App.jsx
       toast.success("Academy settings updated successfully.");

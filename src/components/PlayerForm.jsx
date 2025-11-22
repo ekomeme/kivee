@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, doc, getDocs, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import toast from 'react-hot-toast';
+import Select from 'react-select';
 
 export default function PlayerForm({ user, academy, db, onComplete, playerToEdit }) {
   // Player Info
@@ -35,7 +36,6 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [countryCodes, setCountryCodes] = useState([]);
-  // Fetch Tiers for the dropdown
   useEffect(() => {
     const fetchTiers = async () => {
       if (!user || !academy) return;
@@ -51,32 +51,38 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
   useEffect(() => {
     const fetchCountryCodes = async () => {
       try {
-        const response = await fetch('https://restcountries.com/v3.1/all?fields=name,idd');
+        const response = await fetch('https://restcountries.com/v3.1/all?fields=name,idd,cca2');
         const data = await response.json();
         const codes = data
           .filter(country => country.idd?.root)
           .map(country => {
-            const prefix = country.idd.suffixes?.length === 1 ? `${country.idd.root}${country.idd.suffixes[0]}` : country.idd.root;
+            const suffix = country.idd.suffixes?.[0] || '';
+            const prefix = country.idd.suffixes?.length > 1 ? country.idd.root : `${country.idd.root}${suffix}`;
             return {
-              code: prefix,
-              name: country.name.common,
+              value: prefix,
+              label: `${country.name.common} (${prefix})`,
+              cca2: country.cca2
             };
           })
-          .sort((a, b) => a.name.localeCompare(b.name));
-        setCountryCodes(codes);
+          .sort((a, b) => a.label.localeCompare(b.label));
+        
+        // Remove duplicates by label, as some countries might share codes or names
+        const uniqueCodes = Array.from(new Map(codes.map(item => [item.label, item])).values());
+
+        setCountryCodes(uniqueCodes);
 
         // Set default prefix based on academy country, only for new players
-        if (!playerToEdit && academy.country) {
-          const academyCountryCode = codes.find(c => c.name === academy.country);
-          if (academyCountryCode) {
-            setPlayerPhonePrefix(academyCountryCode.code);
-            setTutorPhonePrefix(academyCountryCode.code);
+        if (!playerToEdit && academy.countryCode) {
+          const academyCountry = uniqueCodes.find(c => c.cca2 === academy.countryCode);
+          if (academyCountry?.value) {
+            setPlayerPhonePrefix(academyCountry.value);
+            setTutorPhonePrefix(academyCountry.value);
           }
         }
       } catch (error) { console.error("Error fetching country codes:", error); }
     };
     fetchCountryCodes();
-  }, [academy.country, playerToEdit]); // Rerun if academy country changes or if we switch between edit/new
+  }, [academy.countryCode, playerToEdit]);
 
   // Calculate category based on birthday
   useEffect(() => {
@@ -105,20 +111,17 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       setPhotoURL(playerToEdit.photoURL || '');
       setCategory(playerToEdit.category || '');
       setPlayerEmail(playerToEdit.email || '');
-      if (playerToEdit.contactPhone) {
-        setPlayerPhonePrefix(playerToEdit.contactPhonePrefix || '+1');
-        setPlayerContactPhone(playerToEdit.contactPhoneNumber || '');
-      }
+      setPlayerPhonePrefix(playerToEdit.contactPhonePrefix || '+1');
+      setPlayerContactPhone(playerToEdit.contactPhoneNumber || '');
+
       // Tutor Info
       if (playerToEdit.tutorId && playerToEdit.tutor) {
         setHasTutor(true);
         setTutorName(playerToEdit.tutor.name || '');
         setTutorLastName(playerToEdit.tutor.lastName || '');
         setTutorEmail(playerToEdit.tutor.email || '');
-        if (playerToEdit.tutor.contactPhone) {
-          setTutorPhonePrefix(playerToEdit.tutor.contactPhonePrefix || '+1');
-          setTutorContactPhone(playerToEdit.tutor.contactPhoneNumber || '');
-        }
+        setTutorPhonePrefix(playerToEdit.tutor.contactPhonePrefix || '+1');
+        setTutorContactPhone(playerToEdit.tutor.contactPhoneNumber || '');
       }
 
       // Payment Info
@@ -140,6 +143,17 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Basic phone number length validation
+    if (playerContactPhone && (playerContactPhone.length < 6 || playerContactPhone.length > 15)) {
+      toast.error("Student's phone number has an invalid length.");
+      return;
+    }
+    if (hasTutor && tutorContactPhone && (tutorContactPhone.length < 6 || tutorContactPhone.length > 15)) {
+      toast.error("Tutor's phone number has an invalid length.");
+      return;
+    }
+
     if (!user || !academy || loading) return;
 
     setLoading(true);
@@ -184,7 +198,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
         email: tutorEmail,
         contactPhonePrefix: tutorContactPhone ? tutorPhonePrefix : null,
         contactPhoneNumber: tutorContactPhone ? tutorContactPhone : null,
-        contactPhone: tutorContactPhone ? `${tutorPhonePrefix}${tutorContactPhone}` : null, // For backward compatibility
+        contactPhone: tutorContactPhone ? `${tutorPhonePrefix}${tutorContactPhone}` : null,
         academyId: user.uid,
         createdAt: playerToEdit?.tutor?.createdAt || new Date(),
         updatedAt: new Date(),
@@ -215,7 +229,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       email: playerEmail || null,
       contactPhonePrefix: playerContactPhone ? playerPhonePrefix : null,
       contactPhoneNumber: playerContactPhone ? playerContactPhone : null,
-      contactPhone: playerContactPhone ? `${playerPhonePrefix}${playerContactPhone}` : null, // For backward compatibility
+      contactPhone: playerContactPhone ? `${playerPhonePrefix}${playerContactPhone}` : null,
       tutorId: hasTutor ? linkedTutorId : null,
       tierId,
       notes,
@@ -261,8 +275,19 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
             <div>
               <label htmlFor="playerContactPhone" className="block text-sm font-medium text-gray-700">Phone (Optional)</label>
               <div className="mt-1 flex rounded-md shadow-sm">
-                <select value={playerPhonePrefix} onChange={(e) => setPlayerPhonePrefix(e.target.value)} className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm max-w-[150px]">{countryCodes.map(cc => <option key={cc.code} value={cc.code}>{cc.name} ({cc.code})</option>)}</select>
-                <input type="tel" id="playerContactPhone" value={playerContactPhone} onChange={(e) => setPlayerContactPhone(e.target.value)} className="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-blue-500" />
+                <Select
+                  options={countryCodes}
+                  value={countryCodes.find(c => c.value === playerPhonePrefix)}
+                  onChange={(option) => setPlayerPhonePrefix(option.value)}
+                  isSearchable
+                  placeholder="Prefix"
+                  className="w-60"
+                  styles={{
+                    control: (base) => ({ ...base, borderTopRightRadius: 0, borderBottomRightRadius: 0 }),
+                    menu: (base) => ({ ...base, zIndex: 20 })
+                  }}
+                />
+                <input type="tel" id="playerContactPhone" value={playerContactPhone} onChange={(e) => setPlayerContactPhone(e.target.value.replace(/\D/g, ''))} maxLength="15" className="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-blue-500" placeholder="Phone number" />
               </div>
             </div>
             <div className="md:col-span-2">
@@ -292,8 +317,19 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
               <div>
                 <label htmlFor="tutorContactPhone" className="block text-sm font-medium text-gray-700">Tutor Phone (Optional)</label>
                 <div className="mt-1 flex rounded-md shadow-sm">
-                  <select value={tutorPhonePrefix} onChange={(e) => setTutorPhonePrefix(e.target.value)} className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm max-w-[150px]">{countryCodes.map(cc => <option key={cc.code} value={cc.code}>{cc.name} ({cc.code})</option>)}</select>
-                  <input type="tel" id="tutorContactPhone" value={tutorContactPhone} onChange={(e) => setTutorContactPhone(e.target.value)} className="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-blue-500" />
+                  <Select
+                    options={countryCodes}
+                    value={countryCodes.find(c => c.value === tutorPhonePrefix)}
+                    onChange={(option) => setTutorPhonePrefix(option.value)}
+                    isSearchable
+                    placeholder="Prefix"
+                    className="w-60"
+                    styles={{
+                      control: (base) => ({ ...base, borderTopRightRadius: 0, borderBottomRightRadius: 0 }),
+                      menu: (base) => ({ ...base, zIndex: 20 })
+                    }}
+                  />
+                  <input type="tel" id="tutorContactPhone" value={tutorContactPhone} onChange={(e) => setTutorContactPhone(e.target.value.replace(/\D/g, ''))} maxLength="15" className="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-blue-500" placeholder="Phone number" />
                 </div>
               </div>
             </div>
@@ -304,7 +340,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
         <fieldset className="border-t-2 border-gray-200 pt-6">
           <legend className="text-xl font-semibold text-gray-900 px-2">Plan Information</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            <div><label htmlFor="tier" className="block text-sm font-medium text-gray-700">Plan</label><select id="tier" value={tierId} onChange={(e) => setTierId(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="">Select a Plan</option>{tiers.map(tier => (<option key={tier.id} value={tier.id}>{tier.name}</option>))}</select></div>
+            <div><label htmlFor="tier" className="block text-sm font-medium text-gray-700">Plan</label><select id="tier" value={tierId} onChange={(e) => setTierId(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="">Select a Plan</option>{tiers.map(tier => (<option key={tier.id} value={tier.id}>{tier.name}</option>))}</select></div>
             <div><label htmlFor="paymentType" className="block text-sm font-medium text-gray-700">Billing cycle</label><select id="paymentType" value={paymentType} onChange={(e) => setPaymentType(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="Monthly">Monthly</option><option value="Semiannual">Semiannual</option><option value="Annual">Annual</option></select></div>
             <div className="md:col-span-2"><label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes</label><textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows="3" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></textarea></div>
           </div>
