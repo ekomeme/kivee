@@ -80,15 +80,9 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       setCategory(playerToEdit.category || '');
       setPlayerEmail(playerToEdit.email || '');
       if (playerToEdit.contactPhone) {
-        const phoneParts = playerToEdit.contactPhone.match(/^(\+\d+)(\d+)$/);
-        if (phoneParts) {
-          setPlayerPhonePrefix(phoneParts[1]);
-          setPlayerContactPhone(phoneParts[2]);
-        } else {
-          setPlayerContactPhone(playerToEdit.contactPhone);
-        }
+        setPlayerPhonePrefix(playerToEdit.contactPhonePrefix || '+1');
+        setPlayerContactPhone(playerToEdit.contactPhoneNumber || '');
       }
-
       // Tutor Info
       if (playerToEdit.tutorId && playerToEdit.tutor) {
         setHasTutor(true);
@@ -96,13 +90,8 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
         setTutorLastName(playerToEdit.tutor.lastName || '');
         setTutorEmail(playerToEdit.tutor.email || '');
         if (playerToEdit.tutor.contactPhone) {
-          const tutorPhoneParts = playerToEdit.tutor.contactPhone.match(/^(\+\d+)(\d+)$/);
-          if (tutorPhoneParts) {
-            setTutorPhonePrefix(tutorPhoneParts[1]);
-            setTutorContactPhone(tutorPhoneParts[2]);
-          } else {
-            setTutorContactPhone(playerToEdit.tutor.contactPhone);
-          }
+          setTutorPhonePrefix(playerToEdit.tutor.contactPhonePrefix || '+1');
+          setTutorContactPhone(playerToEdit.tutor.contactPhoneNumber || '');
         }
       }
 
@@ -167,7 +156,9 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
         name: tutorName,
         lastName: tutorLastName,
         email: tutorEmail,
-        contactPhone: tutorContactPhone ? `${tutorPhonePrefix}${tutorContactPhone}` : null,
+        contactPhonePrefix: tutorContactPhone ? tutorPhonePrefix : null,
+        contactPhoneNumber: tutorContactPhone ? tutorContactPhone : null,
+        contactPhone: tutorContactPhone ? `${tutorPhonePrefix}${tutorContactPhone}` : null, // For backward compatibility
         academyId: user.uid,
         createdAt: playerToEdit?.tutor?.createdAt || new Date(),
         updatedAt: new Date(),
@@ -196,7 +187,9 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       photoURL: finalPhotoURL,
       category,
       email: playerEmail || null,
-      contactPhone: playerContactPhone ? `${playerPhonePrefix}${playerContactPhone}` : null,
+      contactPhonePrefix: playerContactPhone ? playerPhonePrefix : null,
+      contactPhoneNumber: playerContactPhone ? playerContactPhone : null,
+      contactPhone: playerContactPhone ? `${playerPhonePrefix}${playerContactPhone}` : null, // For backward compatibility
       tutorId: hasTutor ? linkedTutorId : null,
       tierId,
       notes,
