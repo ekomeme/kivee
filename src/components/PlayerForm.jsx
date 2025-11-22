@@ -30,7 +30,6 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
   const [selectedPlan, setSelectedPlan] = useState(null); // This will hold the selected plan object from react-select
   const [planStartDate, setPlanStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
-  const [paymentType, setPaymentType] = useState('Monthly');
 
   // Component State
   const [tiers, setTiers] = useState([]);
@@ -146,13 +145,11 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
           setSelectedPlan(planToSet);
         }
         setPlanStartDate(playerToEdit.plan.startDate || new Date().toISOString().split('T')[0]);
-        setPaymentType(playerToEdit.plan.paymentCycle || 'Monthly');
       } else { // For backward compatibility with old data structure
         if (playerToEdit.tierId && tiers.length > 0) {
             const tierToSet = tiers.find(t => t.id === playerToEdit.tierId);
             if (tierToSet) {
                 setSelectedPlan({ value: `tier-${tierToSet.id}`, label: tierToSet.name });
-                setPaymentType(playerToEdit.paymentType || 'Monthly');
             }
         }
       }
@@ -251,11 +248,16 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
     let planData = null;
     if (selectedPlan) {
       const [type, id] = selectedPlan.value.split('-');
+      let paymentCycle = null;
+      if (type === 'tier') {
+        const tier = tiers.find(t => t.id === id);
+        paymentCycle = tier?.pricingModel || null;
+      }
       planData = {
         type,
         id,
         startDate: type === 'tier' ? planStartDate : new Date().toISOString().split('T')[0],
-        paymentCycle: type === 'tier' ? paymentType : null,
+        paymentCycle: paymentCycle,
       };
     }
 
@@ -404,7 +406,6 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
 
             {selectedPlan?.value.startsWith('tier-') && (
               <>
-                <div><label htmlFor="paymentType" className="block text-sm font-medium text-gray-700">Billing cycle</label><select id="paymentType" value={paymentType} onChange={(e) => setPaymentType(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="Monthly">Monthly</option><option value="Semiannual">Semiannual</option><option value="Annual">Annual</option></select></div>
                 <div><label htmlFor="planStartDate" className="block text-sm font-medium text-gray-700">Start Date</label><input type="date" id="planStartDate" value={planStartDate} onChange={(e) => setPlanStartDate(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
               </>
             )}

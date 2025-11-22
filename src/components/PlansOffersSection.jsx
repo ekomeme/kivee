@@ -13,9 +13,10 @@ export default function PlansOffersSection({ user, academy, db }) {
   // States for Membership Tiers
   const [newTierName, setNewTierName] = useState('');
   const [newTierDescription, setNewTierDescription] = useState('');
-  const [monthlyPrice, setMonthlyPrice] = useState('');
-  const [semiAnnualPrice, setSemiAnnualPrice] = useState('');
-  const [annualPrice, setAnnualPrice] = useState('');
+  const [pricingModel, setPricingModel] = useState('monthly'); // 'monthly', 'semi-annual', 'annual', 'term'
+  const [price, setPrice] = useState('');
+  const [termStartDate, setTermStartDate] = useState('');
+  const [termEndDate, setTermEndDate] = useState('');
   const [classesPerWeek, setClassesPerWeek] = useState('');
   const [classLimitPerCycle, setClassLimitPerCycle] = useState('');
   const [autoRenew, setAutoRenew] = useState(true);
@@ -98,9 +99,10 @@ export default function PlansOffersSection({ user, academy, db }) {
     const tierData = {
       name: newTierName,
       description: newTierDescription,
-      monthlyPrice: Number(monthlyPrice) || 0,
-      semiAnnualPrice: semiAnnualPrice ? Number(semiAnnualPrice) : null,
-      annualPrice: annualPrice ? Number(annualPrice) : null,
+      pricingModel: pricingModel,
+      price: Number(price) || 0,
+      termStartDate: pricingModel === 'term' ? termStartDate : null,
+      termEndDate: pricingModel === 'term' ? termEndDate : null,
       classesPerWeek: Number(classesPerWeek) || 0,
       classLimitPerCycle: classLimitPerCycle ? Number(classLimitPerCycle) : null,
       autoRenew,
@@ -125,9 +127,10 @@ export default function PlansOffersSection({ user, academy, db }) {
       }
       setNewTierName('');
       setNewTierDescription('');
-      setMonthlyPrice('');
-      setSemiAnnualPrice('');
-      setAnnualPrice('');
+      setPricingModel('monthly');
+      setPrice('');
+      setTermStartDate('');
+      setTermEndDate('');
       setClassesPerWeek('');
       setClassLimitPerCycle('');
       setAutoRenew(true);
@@ -149,9 +152,10 @@ export default function PlansOffersSection({ user, academy, db }) {
     setEditingTier(tier);
     setNewTierName(tier.name);
     setNewTierDescription(tier.description);
-    setMonthlyPrice(tier.monthlyPrice || '');
-    setSemiAnnualPrice(tier.semiAnnualPrice || '');
-    setAnnualPrice(tier.annualPrice || '');
+    setPricingModel(tier.pricingModel || 'monthly');
+    setPrice(tier.price || '');
+    setTermStartDate(tier.termStartDate || '');
+    setTermEndDate(tier.termEndDate || '');
     setClassesPerWeek(tier.classesPerWeek || '');
     setClassLimitPerCycle(tier.classLimitPerCycle || '');
     setAutoRenew(tier.autoRenew === false ? false : true);
@@ -167,9 +171,10 @@ export default function PlansOffersSection({ user, academy, db }) {
       setEditingTier(null);
       setNewTierName('');
       setNewTierDescription('');
-      setMonthlyPrice('');
-      setSemiAnnualPrice('');
-      setAnnualPrice('');
+      setPricingModel('monthly');
+      setPrice('');
+      setTermStartDate('');
+      setTermEndDate('');
       setClassesPerWeek('');
       setClassLimitPerCycle('');
       setAutoRenew(true);
@@ -500,7 +505,18 @@ export default function PlansOffersSection({ user, academy, db }) {
                   <tr key={tier.id} className="hover:bg-gray-50">
                     <td className="py-3 px-4 border-b text-base font-medium">{tier.name}</td>
                     <td className="py-3 px-4 border-b text-sm text-gray-600 max-w-xs truncate">{tier.description}</td>
-                    <td className="py-3 px-4 border-b text-base">{formatCurrency(tier.monthlyPrice, academy.currency)}/mo</td>
+                    <td className="py-3 px-4 border-b text-base">
+                      {tier.pricingModel === 'monthly' && `${formatCurrency(tier.price, academy.currency)}/mo`}
+                      {tier.pricingModel === 'semi-annual' && `${formatCurrency(tier.price, academy.currency)}/6mo`}
+                      {tier.pricingModel === 'annual' && `${formatCurrency(tier.price, academy.currency)}/yr`}
+                      {tier.pricingModel === 'term' && (
+                        <div>
+                          <p>{formatCurrency(tier.price, academy.currency)}/term</p>
+                          <p className="text-xs text-gray-500">{tier.termStartDate} - {tier.termEndDate}</p>
+                        </div>
+                      )}
+                      {!tier.pricingModel && `${formatCurrency(tier.price, academy.currency)}`}
+                    </td>
                     <td className="py-3 px-4 border-b text-sm text-gray-600">{tier.classesPerWeek ? `${tier.classesPerWeek} per week` : 'N/A'}</td>
                     <td className="py-3 px-4 border-b">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${tier.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
@@ -669,35 +685,39 @@ export default function PlansOffersSection({ user, academy, db }) {
                   ></textarea>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="monthlyPrice" className="block text-sm font-medium text-gray-700">Monthly Price</label>
-                    <div className="relative mt-1">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
-                      </div>
-                      <input type="number" id="monthlyPrice" value={monthlyPrice} onChange={(e) => setMonthlyPrice(e.target.value)} required min="0" step="0.01" className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
-                    </div>
+                    <label htmlFor="pricingModel" className="block text-sm font-medium text-gray-700">Pricing Model</label>
+                    <select id="pricingModel" value={pricingModel} onChange={(e) => setPricingModel(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                      <option value="monthly">Monthly</option>
+                      <option value="semi-annual">Semi-Annual</option>
+                      <option value="annual">Annual</option>
+                      <option value="term">Term</option>
+                    </select>
                   </div>
                   <div>
-                    <label htmlFor="semiAnnualPrice" className="block text-sm font-medium text-gray-700">Semi-Annual Price (Optional)</label>
+                    <label htmlFor="price" className="block text-sm font-medium text-gray-700">Price</label>
                     <div className="relative mt-1">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
                       </div>
-                      <input type="number" id="semiAnnualPrice" value={semiAnnualPrice} onChange={(e) => setSemiAnnualPrice(e.target.value)} min="0" step="0.01" className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor="annualPrice" className="block text-sm font-medium text-gray-700">Annual Price (Optional)</label>
-                    <div className="relative mt-1">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
-                      </div>
-                      <input type="number" id="annualPrice" value={annualPrice} onChange={(e) => setAnnualPrice(e.target.value)} min="0" step="0.01" className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                      <input type="number" id="price" value={price} onChange={(e) => setPrice(e.target.value)} required min="0" step="0.01" className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
                     </div>
                   </div>
                 </div>
+
+                {pricingModel === 'term' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-md border">
+                    <div>
+                      <label htmlFor="termStartDate" className="block text-sm font-medium text-gray-700">Term Start Date</label>
+                      <input type="date" id="termStartDate" value={termStartDate} onChange={(e) => setTermStartDate(e.target.value)} required={pricingModel === 'term'} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                    </div>
+                    <div>
+                      <label htmlFor="termEndDate" className="block text-sm font-medium text-gray-700">Term End Date</label>
+                      <input type="date" id="termEndDate" value={termEndDate} onChange={(e) => setTermEndDate(e.target.value)} required={pricingModel === 'term'} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
