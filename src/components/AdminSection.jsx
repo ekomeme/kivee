@@ -9,6 +9,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
   ];
 
   const [currencyOptions, setCurrencyOptions] = useState([]);
+  const [countryOptions, setCountryOptions] = useState([]);
 
   useEffect(() => {
     const fetchCurrencies = async () => {
@@ -35,12 +36,31 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
     fetchCurrencies();
   }, []);
 
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const response = await fetch('https://restcountries.com/v3.1/all?fields=name');
+        const data = await response.json();
+        const countries = data.map(country => ({
+          value: country.name.common,
+          label: country.name.common
+        }));
+        countries.sort((a, b) => a.label.localeCompare(b.label));
+        setCountryOptions(countries);
+      } catch (error) {
+        console.error("Error fetching countries:", error);
+      }
+    };
+    fetchCountries();
+  }, []);
+
   const findCurrencyOption = (currencyCode) => currencyOptions.find(option => option.value === currencyCode);
 
   const [academyNameInput, setAcademyNameInput] = useState(academy.name);
   const [selectedAcademyCategory, setSelectedAcademyCategory] = useState(academy.category || '');
   const [otherCategory, setOtherCategory] = useState(academy.otherCategory || '');
   const [selectedCurrency, setSelectedCurrency] = useState(null);
+  const [selectedCountry, setSelectedCountry] = useState(null);
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
   const [updateSettingsError, setUpdateSettingsError] = useState(null);
   const ACADEMY_CATEGORIES = ['Fútbol', 'Baloncesto', 'Tenis', 'Otro'];
@@ -54,7 +74,13 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
         setSelectedCurrency(currencyToSet);
       }
     }
-  }, [currencyOptions, academy.currency]);
+    if (countryOptions.length > 0 && academy.country) {
+      const countryToSet = countryOptions.find(option => option.value === academy.country);
+      if (countryToSet) {
+        setSelectedCountry(countryToSet);
+      }
+    }
+  }, [currencyOptions, countryOptions, academy.currency, academy.country]);
 
   const handleUpdateAcademySettings = async (e) => {
     e.preventDefault();
@@ -71,6 +97,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
         category: selectedAcademyCategory,
         otherCategory: selectedAcademyCategory === 'Otro' ? otherCategory : '',
         currency: selectedCurrency.value,
+        country: selectedCountry?.value || null,
       });
       await onAcademyUpdate(); // Llama a la función para refrescar los datos en App.jsx
       toast.success("Academy settings updated successfully.");
@@ -129,6 +156,22 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
             </div>
           )}
+          <div>
+            <label htmlFor="academyCountry" className="block font-medium text-gray-700">
+              Country (Optional)
+            </label>
+            <Select
+              id="academyCountry"
+              options={countryOptions}
+              value={selectedCountry}
+              onChange={setSelectedCountry}
+              isSearchable
+              isClearable
+              placeholder="Search or select a country..."
+              className="mt-1"
+              classNamePrefix="react-select"
+            />
+          </div>
           <div>
             <label htmlFor="academyCurrency" className="block font-medium text-gray-700">
               Currency

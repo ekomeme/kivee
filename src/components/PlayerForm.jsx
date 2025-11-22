@@ -34,12 +34,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
   const [tiers, setTiers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  const COUNTRY_CODES = [
-    { code: '+1', country: 'USA' },
-    { code: '+44', country: 'UK' },
-    { code: '+54', country: 'Argentina' },
-  ];
+  const [countryCodes, setCountryCodes] = useState([]);
   // Fetch Tiers for the dropdown
   useEffect(() => {
     const fetchTiers = async () => {
@@ -51,6 +46,37 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
 
     fetchTiers();
   }, [user, academy, db]);
+
+  // Fetch country codes for phone prefixes
+  useEffect(() => {
+    const fetchCountryCodes = async () => {
+      try {
+        const response = await fetch('https://restcountries.com/v3.1/all?fields=name,idd');
+        const data = await response.json();
+        const codes = data
+          .filter(country => country.idd?.root)
+          .map(country => {
+            const prefix = country.idd.suffixes?.length === 1 ? `${country.idd.root}${country.idd.suffixes[0]}` : country.idd.root;
+            return {
+              code: prefix,
+              name: country.name.common,
+            };
+          })
+          .sort((a, b) => a.name.localeCompare(b.name));
+        setCountryCodes(codes);
+
+        // Set default prefix based on academy country, only for new players
+        if (!playerToEdit && academy.country) {
+          const academyCountryCode = codes.find(c => c.name === academy.country);
+          if (academyCountryCode) {
+            setPlayerPhonePrefix(academyCountryCode.code);
+            setTutorPhonePrefix(academyCountryCode.code);
+          }
+        }
+      } catch (error) { console.error("Error fetching country codes:", error); }
+    };
+    fetchCountryCodes();
+  }, [academy.country, playerToEdit]); // Rerun if academy country changes or if we switch between edit/new
 
   // Calculate category based on birthday
   useEffect(() => {
@@ -235,7 +261,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
             <div>
               <label htmlFor="playerContactPhone" className="block text-sm font-medium text-gray-700">Phone (Optional)</label>
               <div className="mt-1 flex rounded-md shadow-sm">
-                <select value={playerPhonePrefix} onChange={(e) => setPlayerPhonePrefix(e.target.value)} className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">{COUNTRY_CODES.map(cc => <option key={cc.code} value={cc.code}>{cc.code} ({cc.country})</option>)}</select>
+                <select value={playerPhonePrefix} onChange={(e) => setPlayerPhonePrefix(e.target.value)} className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm max-w-[150px]">{countryCodes.map(cc => <option key={cc.code} value={cc.code}>{cc.name} ({cc.code})</option>)}</select>
                 <input type="tel" id="playerContactPhone" value={playerContactPhone} onChange={(e) => setPlayerContactPhone(e.target.value)} className="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-blue-500" />
               </div>
             </div>
@@ -266,7 +292,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
               <div>
                 <label htmlFor="tutorContactPhone" className="block text-sm font-medium text-gray-700">Tutor Phone (Optional)</label>
                 <div className="mt-1 flex rounded-md shadow-sm">
-                  <select value={tutorPhonePrefix} onChange={(e) => setTutorPhonePrefix(e.target.value)} className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">{COUNTRY_CODES.map(cc => <option key={cc.code} value={cc.code}>{cc.code} ({cc.country})</option>)}</select>
+                  <select value={tutorPhonePrefix} onChange={(e) => setTutorPhonePrefix(e.target.value)} className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm max-w-[150px]">{countryCodes.map(cc => <option key={cc.code} value={cc.code}>{cc.name} ({cc.code})</option>)}</select>
                   <input type="tel" id="tutorContactPhone" value={tutorContactPhone} onChange={(e) => setTutorContactPhone(e.target.value)} className="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-blue-500" />
                 </div>
               </div>
