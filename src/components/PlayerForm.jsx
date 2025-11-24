@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { collection, addDoc, updateDoc, doc, getDocs, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import toast from 'react-hot-toast';
@@ -42,6 +42,12 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [countryCodes, setCountryCodes] = useState([]);
+
+  const formatDate = (date) => {
+    if (!date) return 'N/A';
+    const parsed = date?.seconds ? new Date(date.seconds * 1000) : new Date(date);
+    return parsed.toLocaleDateString();
+  };
   useEffect(() => {
     const fetchTiers = async () => {
       if (!user || !academy) return;
@@ -113,6 +119,22 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
     };
     fetchCountryCodes();
   }, [academy.countryCode, playerToEdit]);
+
+  const existingPlanStartDate = useMemo(() => {
+    if (!playerToEdit?.plan) return null;
+    if (playerToEdit.plan.type === 'tier') {
+      const tierPayments = (playerToEdit.oneTimeProducts || []).filter(p => p.paymentFor === 'tier' && p.dueDate);
+      if (tierPayments.length > 0) {
+        const sorted = [...tierPayments].sort((a, b) => {
+          const da = a.dueDate?.seconds ? new Date(a.dueDate.seconds * 1000) : new Date(a.dueDate);
+          const db = b.dueDate?.seconds ? new Date(b.dueDate.seconds * 1000) : new Date(b.dueDate);
+          return da - db;
+        });
+        return sorted[0].dueDate;
+      }
+    }
+    return playerToEdit.plan.startDate || null;
+  }, [playerToEdit]);
 
   // Populate form if editing a player
   useEffect(() => {
@@ -456,64 +478,74 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
         <fieldset className="border-t-2 border-gray-200 pt-6">
           <legend className="text-xl font-semibold text-gray-900 px-2">Plan Information</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 items-start">
-            <div>
-              <label htmlFor="planType" className="block text-sm font-medium text-gray-700">Assign Plan</label>
-              <Select
-                id="planType"
-                value={selectedPlan}
-                onChange={setSelectedPlan}
-                isClearable
-                isSearchable
-                placeholder="Select a plan..."
-                className="mt-1"
-                options={[
-                  {
-                    label: 'Membership Tiers',
-                    options: tiers.filter(t => t.status === 'active').map(t => ({ value: `tier-${t.id}`, label: t.name }))
-                  },
-                  {
-                    label: 'Free Trials',
-                    options: trials.map(tr => ({ value: `trial-${tr.id}`, label: tr.name }))
-                  }
-                ]}
-              />
-            </div>
-
-            {selectedPlan?.value.startsWith('tier-') && (
+            {playerToEdit?.plan ? (
+              <div className="md:col-span-2 space-y-2">
+                <p className="text-sm font-medium text-gray-700">Assigned Plan</p>
+                <p className="text-gray-900 font-semibold">{selectedPlan?.label || 'Unknown plan'}</p>
+                <p className="text-sm text-gray-700">Start date: <span className="font-semibold">{formatDate(existingPlanStartDate)}</span></p>
+              </div>
+            ) : (
               <>
-                <div><label htmlFor="planStartDate" className="block text-sm font-medium text-gray-700">Start Date</label><input type="date" id="planStartDate" value={planStartDate} onChange={(e) => setPlanStartDate(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
+                <div>
+                  <label htmlFor="planType" className="block text-sm font-medium text-gray-700">Assign Plan</label>
+                  <Select
+                    id="planType"
+                    value={selectedPlan}
+                    onChange={setSelectedPlan}
+                    isClearable
+                    isSearchable
+                    placeholder="Select a plan..."
+                    className="mt-1"
+                    options={[
+                      {
+                        label: 'Membership Tiers',
+                        options: tiers.filter(t => t.status === 'active').map(t => ({ value: `tier-${t.id}`, label: t.name }))
+                      },
+                      {
+                        label: 'Free Trials',
+                        options: trials.map(tr => ({ value: `trial-${tr.id}`, label: tr.name }))
+                      }
+                    ]}
+                  />
+                </div>
+
+                {selectedPlan?.value.startsWith('tier-') && (
+                  <>
+                    <div><label htmlFor="planStartDate" className="block text-sm font-medium text-gray-700">Start Date</label><input type="date" id="planStartDate" value={planStartDate} onChange={(e) => setPlanStartDate(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
+                  </>
+                )}
+
+                {selectedPlan?.value.startsWith('trial-') && (() => {
+                  const trialId = selectedPlan.value.split('-')[1];
+                  const selectedTrialData = trials.find(tr => tr.id === trialId);
+
+                  if (selectedTrialData?.convertsToTierId) {
+                    const conversionTier = tiers.find(t => t.id === selectedTrialData.convertsToTierId);
+                    if (conversionTier) {
+                      const startDate = new Date(); // Trial starts today
+                      const duration = Number(selectedTrialData.durationInDays);
+                      const conversionDate = new Date(startDate);
+                      conversionDate.setDate(startDate.getDate() + duration);
+
+                      const formattedConversionDate = conversionDate.toLocaleDateString(undefined, {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      });
+                      return (
+                        <div className="md:col-span-2 -mt-2">
+                          <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                            <p className="text-sm font-semibold text-blue-800">Automatic Conversion</p>
+                            <p className="text-sm text-blue-700 mt-1">At the end of the trial on <strong>{formattedConversionDate}</strong>, this plan will convert to the <strong>{conversionTier.name}</strong> tier with <strong>Monthly</strong> billing.</p>
+                          </div>
+                        </div>
+                      );
+                    }
+                  }
+                  return null;
+                })()}
               </>
             )}
-
-            {selectedPlan?.value.startsWith('trial-') && (() => {
-              const trialId = selectedPlan.value.split('-')[1];
-              const selectedTrialData = trials.find(tr => tr.id === trialId);
-
-              if (selectedTrialData?.convertsToTierId) {
-                const conversionTier = tiers.find(t => t.id === selectedTrialData.convertsToTierId);
-                if (conversionTier) {
-                  const startDate = new Date(); // Trial starts today
-                  const duration = Number(selectedTrialData.durationInDays);
-                  const conversionDate = new Date(startDate);
-                  conversionDate.setDate(startDate.getDate() + duration);
-
-                  const formattedConversionDate = conversionDate.toLocaleDateString(undefined, {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  });
-                  return (
-                    <div className="md:col-span-2 -mt-2">
-                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                        <p className="text-sm font-semibold text-blue-800">Automatic Conversion</p>
-                        <p className="text-sm text-blue-700 mt-1">At the end of the trial on <strong>{formattedConversionDate}</strong>, this plan will convert to the <strong>{conversionTier.name}</strong> tier with <strong>Monthly</strong> billing.</p>
-                      </div>
-                    </div>
-                  );
-                }
-              }
-              return null;
-            })()}
 
             {/* Notes field moved to its own section */}
           </div>

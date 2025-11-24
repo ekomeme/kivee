@@ -13,7 +13,7 @@ import PaymentsSection from "./components/PaymentsSection.jsx";
 import GroupsAndClassesSection from "./components/GroupsAndClassesSection.jsx";
 import AdminSection from "./components/AdminSection.jsx";
 import { Toaster } from "react-hot-toast";
-import { LogOut } from "lucide-react";
+import { LogOut, Users, Layers, Tags, CreditCard, Settings } from "lucide-react";
 import loginIllustration from "./assets/login-ilustration.svg";
 import logoKivee from "./assets/logo-kivee.svg";
 
@@ -211,19 +211,34 @@ export default function App() {
         <nav className="flex-grow">
           <ul className="space-y-2">
             <li className="relative">
-              <NavLink to="/students" className={({ isActive }) => `block w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>Students</NavLink>
+              <NavLink to="/students" className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>
+                <Users className="h-4 w-4" />
+                <span>Students</span>
+              </NavLink>
             </li>
             <li className="relative">
-              <NavLink to="/plans" className={({ isActive }) => `block w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>Plans & Offers</NavLink>
+              <NavLink to="/groups" className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>
+                <Layers className="h-4 w-4" />
+                <span>Groups & Classes</span>
+              </NavLink>
             </li>
             <li className="relative">
-              <NavLink to="/groups" className={({ isActive }) => `block w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>Groups & Classes</NavLink>
+              <NavLink to="/plans" className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>
+                <Tags className="h-4 w-4" />
+                <span>Plans & Offers</span>
+              </NavLink>
             </li>
             <li className="relative">
-              <NavLink to="/payments" className={({ isActive }) => `block w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>Payments</NavLink>
+              <NavLink to="/payments" className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>
+                <CreditCard className="h-4 w-4" />
+                <span>Payments</span>
+              </NavLink>
             </li>
             <li className="relative">
-              <NavLink to="/settings" className={({ isActive }) => `block w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>Account & Preferences</NavLink>
+              <NavLink to="/settings" className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>
+                <Settings className="h-4 w-4" />
+                <span>Settings</span>
+              </NavLink>
             </li>
           </ul>
         </nav>

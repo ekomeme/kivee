@@ -1,17 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 
-export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, academy }) {
+export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, academy, activeTab: controlledTab, onTabChange }) {
+  const [activeTab, setActiveTab] = useState(controlledTab || 'details');
 
-  const getBillingCycleLabel = (pricingModel) => {
-    const labels = {
-      'monthly': 'Monthly',
-      'semi-annual': 'Semi-Annual',
-      'annual': 'Annual',
-      'term': 'Term',
-    };
-    return labels[pricingModel] || 'N/A';
+  useEffect(() => {
+    if (controlledTab) setActiveTab(controlledTab);
+  }, [controlledTab]);
+
+  const changeTab = (tab) => {
+    setActiveTab(tab);
+    onTabChange?.(tab);
   };
+
+  const toDate = (d) => (d?.seconds ? new Date(d.seconds * 1000) : new Date(d));
+
+  const [showPaymentModalFor, setShowPaymentModalFor] = useState(null); // Holds the original index of the payment
+
+  const allPaymentsWithOriginalIndex = player.oneTimeProducts?.map((p, index) => ({ ...p, originalIndex: index })) || [];
+  const subscriptionPayments = allPaymentsWithOriginalIndex
+    .filter(p => p.paymentFor === 'tier')
+    .sort((a, b) => toDate(b.dueDate) - toDate(a.dueDate)); // Most recent first
+  const productPayments = allPaymentsWithOriginalIndex.filter(p => !p.paymentFor || p.paymentFor !== 'tier');
+
+  const earliestSubscription = subscriptionPayments.length
+    ? [...subscriptionPayments].sort((a, b) => toDate(a.dueDate) - toDate(b.dueDate))[0]
+    : null;
+
+  const combinedPayments = [...subscriptionPayments, ...productPayments].sort((a, b) => {
+    const da = a.dueDate || a.paidAt;
+    const db = b.dueDate || b.paidAt;
+    return toDate(db) - toDate(da);
+  });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(combinedPayments.length / pageSize));
+  const paginatedPayments = combinedPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const PaymentModal = ({ product, productIndex, onClose }) => {
     const [paymentMethod, setPaymentMethod] = useState('Cash');
@@ -53,120 +78,226 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
     );
   };
 
-  const [showPaymentModalFor, setShowPaymentModalFor] = useState(null); // Holds the index of the product
-
-  const allPaymentsWithOriginalIndex = player.oneTimeProducts?.map((p, index) => ({ ...p, originalIndex: index })) || [];
-  const subscriptionPayments = allPaymentsWithOriginalIndex.filter(p => p.paymentFor === 'tier');
-  const productPayments = allPaymentsWithOriginalIndex.filter(p => !p.paymentFor || p.paymentFor !== 'tier');
-
   const formatValue = (value) => value || 'N/A';
 
+  const formatDate = (date) => {
+    if (!date) return 'N/A';
+    if (date.seconds) return new Date(date.seconds * 1000).toLocaleDateString();
+    return new Date(date).toLocaleDateString();
+  };
+
+  const addCycleToDate = (date, pricingModel) => {
+    const base = date.seconds ? new Date(date.seconds * 1000) : new Date(date);
+    const result = new Date(base);
+    switch (pricingModel) {
+      case 'monthly':
+        result.setMonth(result.getMonth() + 1);
+        break;
+      case 'semi-annual':
+        result.setMonth(result.getMonth() + 6);
+        break;
+      case 'annual':
+        result.setFullYear(result.getFullYear() + 1);
+        break;
+      default:
+        break;
+    }
+    return result;
+  };
+
+  const getExpiryInfo = (payment) => {
+    if (!payment?.dueDate) return { label: 'No due date', isSoon: false };
+
+    const pricingModel = payment.tierDetails?.pricingModel;
+    let expiryDate;
+
+    if (pricingModel === 'term' && payment.tierDetails?.termEndDate) {
+      expiryDate = payment.tierDetails.termEndDate;
+    } else if (pricingModel) {
+      expiryDate = addCycleToDate(payment.dueDate, pricingModel);
+    } else {
+      expiryDate = payment.dueDate;
+    }
+
+    const now = new Date();
+    const target = expiryDate instanceof Date ? expiryDate : (expiryDate?.seconds ? new Date(expiryDate.seconds * 1000) : new Date(expiryDate));
+    const diffDays = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+    let status = 'ok';
+    if (diffDays < 0) {
+      status = 'expired';
+    } else if (diffDays <= 10) {
+      status = 'soon';
+    }
+
+    return {
+      label: formatDate(target),
+      status,
+    };
+  };
+
   return (
-    <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-4xl mx-auto">
-      <div className="space-y-8">
-        {/* Player Info Section */}
-        <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">Student Information</legend>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            <div className="flex items-center">
-              {player.photoURL ? (
-                <img src={player.photoURL} alt="Student photo" className="w-24 h-24 rounded-full object-cover" />
-              ) : (
-                <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">No photo</div>
-              )}
-            </div>
-            <div></div>
-            <div><strong>Name:</strong> <span className="text-gray-800">{formatValue(`${player.name} ${player.lastName}`)}</span></div>
-            <div><strong>Date of Birth:</strong> <span className="text-gray-800">{formatValue(player.birthday)}</span></div>
-            <div><strong>Gender:</strong> <span className="text-gray-800">{formatValue(player.gender)}</span></div>
-            <div><strong>Group:</strong> <span className="text-gray-800">{formatValue(player.groupName)}</span></div>
-            <div><strong>Email:</strong> <span className="text-gray-800">{formatValue(player.email)}</span></div>
-            <div><strong>Phone:</strong> <span className="text-gray-800">{formatValue(player.contactPhone)}</span></div>
-          </div>
-        </fieldset>
+    <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-7xl mx-auto">
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+          <button onClick={() => changeTab('details')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'details' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+            Details
+          </button>
+          <button onClick={() => changeTab('payments')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'payments' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+            Payments
+          </button>
+        </nav>
+      </div>
 
-        {/* Tutor Section */}
-        <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">Tutor / Guardian</legend>
-          {player.tutor ? (
+      {activeTab === 'details' && (
+        <div className="space-y-8">
+          <fieldset className="border-t-2 border-gray-200 pt-6">
+            <legend className="text-xl font-semibold text-gray-900 px-2">Student Information</legend>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-              <div><strong>Tutor Name:</strong> <span className="text-gray-800">{formatValue(`${player.tutor.name} ${player.tutor.lastName}`)}</span></div>
-              <div><strong>Tutor Email:</strong> <span className="text-gray-800">{formatValue(player.tutor.email)}</span></div>
-              <div><strong>Tutor Phone:</strong> <span className="text-gray-800">{formatValue(player.tutor.contactPhone)}</span></div>
+              <div className="flex items-center">
+                {player.photoURL ? (
+                  <img src={player.photoURL} alt="Student photo" className="w-24 h-24 rounded-full object-cover" />
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">No photo</div>
+                )}
+              </div>
+              <div></div>
+              <div><strong>Name:</strong> <span className="text-gray-800">{formatValue(`${player.name} ${player.lastName}`)}</span></div>
+              <div><strong>Date of Birth:</strong> <span className="text-gray-800">{formatValue(player.birthday)}</span></div>
+              <div><strong>Gender:</strong> <span className="text-gray-800">{formatValue(player.gender)}</span></div>
+              <div><strong>Group:</strong> <span className="text-gray-800">{formatValue(player.groupName)}</span></div>
+              <div><strong>Email:</strong> <span className="text-gray-800">{formatValue(player.email)}</span></div>
+              <div><strong>Phone:</strong> <span className="text-gray-800">{formatValue(player.contactPhone)}</span></div>
             </div>
-          ) : (
-            <p className="mt-4 text-gray-600">No tutor/guardian assigned.</p>
-          )}
-        </fieldset>
+          </fieldset>
 
-        {/* Subscriptions Section */}
-        <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">Subscriptions</legend>
-          {subscriptionPayments.length > 0 ? (
-            <div className="space-y-3 mt-4">
-              {subscriptionPayments.map((p) => {
-                return (
-                  <div key={`sub-${p.originalIndex}`} className="flex justify-between items-center p-3 bg-gray-50 rounded-md border">
+          <fieldset className="border-t-2 border-gray-200 pt-6">
+            <legend className="text-xl font-semibold text-gray-900 px-2">Tutor / Guardian</legend>
+            {player.tutor ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <div><strong>Tutor Name:</strong> <span className="text-gray-800">{formatValue(`${player.tutor.name} ${player.tutor.lastName}`)}</span></div>
+                <div><strong>Tutor Email:</strong> <span className="text-gray-800">{formatValue(player.tutor.email)}</span></div>
+                <div><strong>Tutor Phone:</strong> <span className="text-gray-800">{formatValue(player.tutor.contactPhone)}</span></div>
+              </div>
+            ) : (
+              <p className="mt-4 text-gray-600">No tutor/guardian assigned.</p>
+            )}
+          </fieldset>
+
+          <fieldset className="border-t-2 border-gray-200 pt-6">
+            <legend className="text-xl font-semibold text-gray-900 px-2">Subscription</legend>
+            {player.plan ? (
+              <div className="p-3 bg-gray-50 rounded-md border mt-4">
+                <p className="text-sm font-medium text-gray-700">Assigned Plan</p>
+                <p className="text-lg font-semibold text-gray-900">{player.planDetails?.name || 'Plan not found'}</p>
+                <p className="text-sm text-gray-700 mt-1">
+                  Start date:{' '}
+                  <span className="font-semibold">
+                    {earliestSubscription ? formatDate(earliestSubscription.dueDate) : 'N/A'}
+                  </span>
+                </p>
+              </div>
+            ) : (
+              <p className="mt-4 text-gray-600">No subscription assigned.</p>
+            )}
+          </fieldset>
+
+          <fieldset className="border-t-2 border-gray-200 pt-6">
+            <legend className="text-xl font-semibold text-gray-900 px-2">One-time Products</legend>
+            {productPayments.length > 0 ? (
+              <div className="space-y-3 mt-4">
+                {productPayments.map((p) => (
+                  <div key={`prod-detail-${p.originalIndex}`} className="flex justify-between items-center p-3 bg-gray-50 rounded-md border">
                     <div>
-                      <p className="font-medium">{p.itemName || 'Subscription Item'}</p>
-                      <p className="text-sm text-gray-600">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(p.amount || 0)}</p>
+                      <p className="font-medium">{p.productDetails?.name || 'Product not found'}</p>
+                      <p className="text-sm text-gray-600">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(p.productDetails?.price || 0)}</p>
                     </div>
-                    <div className="flex items-center space-x-3">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${p.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                        {p.status}
-                      </span>
-                      {p.status !== 'paid' && (
-                        <>
-                          <button onClick={() => setShowPaymentModalFor(p.originalIndex)} className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded-md flex items-center">
-                            <Plus className="mr-1 h-4 w-4" /> Add Payment
-                          </button>
-                          <button onClick={() => onRemoveProduct(p.originalIndex)} className="p-1 text-gray-400 hover:text-red-600" title="Remove Item">
-                            <Trash2 size={16} />
-                          </button>
-                        </>
-                      )}
-                      {p.status === 'paid' && p.paidAt && (
-                        <p className="text-xs text-gray-500">Paid on {new Date(p.paidAt.seconds * 1000).toLocaleDateString()} via {p.paymentMethod}</p>
-                      )}
-                    </div>
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${p.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{p.status}</span>
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="mt-4 text-gray-600">No subscription payments recorded.</p>
-          )}
-        </fieldset>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-4 text-gray-600">No one-time products assigned.</p>
+            )}
+          </fieldset>
+        </div>
+      )}
 
-        {/* One-time Products Section */}
-        <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">One-time Products</legend>
-          {productPayments.length > 0 ? (
-            <div className="space-y-3 mt-4">
-              {productPayments.map((p) => (
-                <div key={`prod-${p.originalIndex}`} className="flex justify-between items-center p-3 bg-gray-50 rounded-md border">
+      {activeTab === 'payments' && (
+        <div className="space-y-4">
+          {paginatedPayments.length > 0 ? (
+            paginatedPayments.map((p, idx) => {
+              const isSubscription = p.paymentFor === 'tier';
+              const expiryInfo = isSubscription ? getExpiryInfo(p) : null;
+              const showExpiredBadge = expiryInfo?.status === 'expired' && p.status !== 'paid';
+              const expiryClass =
+                showExpiredBadge
+                  ? 'text-red-600 font-semibold'
+                  : expiryInfo?.status === 'soon'
+                    ? 'text-amber-600 font-semibold'
+                    : '';
+              const expiryLabel = (() => {
+                if (expiryInfo?.status === 'expired') return `Expired on ${expiryInfo.label}`;
+                if (expiryInfo?.status === 'soon') return `Expires soon on ${expiryInfo.label}`;
+                return `Expires on ${expiryInfo?.label || 'N/A'}`;
+              })();
+              return (
+                <div key={`pay-${p.originalIndex}-${idx}`} className="flex justify-between items-center p-3 bg-gray-50 rounded-md border">
                   <div>
-                    <p className="font-medium">{p.productDetails?.name || 'Product not found'}</p>
-                    <p className="text-sm text-gray-600">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(p.productDetails?.price || 0)}</p>
+                    <p className="font-medium">{isSubscription ? (p.itemName || 'Subscription Item') : (p.productDetails?.name || 'Product not found')}</p>
+                    <p className="text-sm text-gray-600">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(isSubscription ? p.amount || 0 : p.productDetails?.price || 0)}</p>
+                    {isSubscription && (
+                      <p className="text-sm text-gray-600">
+                        <span className={expiryClass}>{expiryLabel}</span>
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center space-x-3">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${p.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{p.status}</span>
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${p.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                      {p.status}
+                    </span>
                     {p.status !== 'paid' && (
-                      <>
-                        <button onClick={() => setShowPaymentModalFor(p.originalIndex)} className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded-md flex items-center"><Plus className="mr-1 h-4 w-4" /> Add Payment</button>
-                        <button onClick={() => onRemoveProduct(p.originalIndex)} className="p-1 text-gray-400 hover:text-red-600" title="Remove Item"><Trash2 size={16} /></button>
-                      </>
+                      <button onClick={() => setShowPaymentModalFor(p.originalIndex)} className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded-md flex items-center">
+                        <Plus className="mr-1 h-4 w-4" /> Add Payment
+                      </button>
                     )}
-                    {p.status === 'paid' && p.paidAt && (<p className="text-xs text-gray-500">Paid on {new Date(p.paidAt.seconds * 1000).toLocaleDateString()} via {p.paymentMethod}</p>)}
+                    {!isSubscription && p.status !== 'paid' && (
+                      <button onClick={() => onRemoveProduct(p.originalIndex)} className="p-1 text-gray-400 hover:text-red-600" title="Remove Item">
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                    {p.status === 'paid' && p.paidAt && (
+                      <p className="text-xs text-gray-500">Paid on {new Date(p.paidAt.seconds * 1000).toLocaleDateString()} via {p.paymentMethod}</p>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })
           ) : (
-            <p className="mt-4 text-gray-600">No one-time products assigned.</p>
+            <p className="text-gray-600">No payments to display.</p>
           )}
-        </fieldset>
-      </div>
+
+          {combinedPayments.length > pageSize && (
+            <div className="flex justify-between items-center pt-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 text-sm bg-gray-200 rounded disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <p className="text-sm text-gray-700">Page {currentPage} of {totalPages}</p>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 text-sm bg-gray-200 rounded disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {showPaymentModalFor !== null && <PaymentModal product={player.oneTimeProducts[showPaymentModalFor]} productIndex={showPaymentModalFor} onClose={() => setShowPaymentModalFor(null)} />}
     </div>
   );

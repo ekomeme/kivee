@@ -11,6 +11,84 @@ export default function PlayerDetailPage({ user, academy, db }) {
   const [player, setPlayer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('details');
+
+  const dateFromAny = (d) => (d?.seconds ? new Date(d.seconds * 1000) : new Date(d));
+
+  const addCycleToDate = (date, pricingModel) => {
+    const base = dateFromAny(date);
+    const result = new Date(base);
+    switch (pricingModel) {
+      case 'monthly':
+        result.setMonth(result.getMonth() + 1);
+        break;
+      case 'semi-annual':
+        result.setMonth(result.getMonth() + 6);
+        break;
+      case 'annual':
+        result.setFullYear(result.getFullYear() + 1);
+        break;
+      default:
+        return null; // term or unknown -> no recurrence
+    }
+    return result;
+  };
+
+  const ensureSubscriptionPaymentsAreCurrent = async (playerData, tiersMap, playerRef) => {
+    const payments = playerData.oneTimeProducts || [];
+    const groupedByTier = new Map();
+
+    payments
+      .filter(p => p.paymentFor === 'tier')
+      .forEach(p => {
+        const tier = tiersMap.get(p.itemId);
+        if (!tier) return;
+        const list = groupedByTier.get(p.itemId) || [];
+        list.push({ payment: p, tier });
+        groupedByTier.set(p.itemId, list);
+      });
+
+    let updated = false;
+    const newPayments = [...payments];
+    const now = new Date();
+
+    groupedByTier.forEach((list, tierId) => {
+      // Sort by dueDate ascending
+      list.sort((a, b) => dateFromAny(a.payment.dueDate) - dateFromAny(b.payment.dueDate));
+      let lastDueDate = list[list.length - 1].payment.dueDate;
+      const tierDetails = list[list.length - 1].tier;
+
+      // Only auto-generate for recurring plans (non-term) that have cycled past now
+      let nextCycleStart = addCycleToDate(lastDueDate, tierDetails.pricingModel);
+      while (nextCycleStart && nextCycleStart <= now) {
+        newPayments.push({
+          paymentFor: 'tier',
+          itemId: tierId,
+          itemName: tierDetails.name,
+          amount: tierDetails.price,
+          dueDate: nextCycleStart,
+          status: 'unpaid',
+        });
+        updated = true;
+        lastDueDate = nextCycleStart;
+        nextCycleStart = addCycleToDate(lastDueDate, tierDetails.pricingModel);
+      }
+    });
+
+    if (!updated) return false;
+
+    // Clean before saving
+    const cleaned = newPayments.map(p => {
+      const cp = { ...p };
+      delete cp.productDetails;
+      delete cp.originalIndex;
+      delete cp.tierDetails;
+      return cp;
+    });
+
+    await updateDoc(playerRef, { oneTimeProducts: cleaned });
+    return true;
+  };
 
   const fetchPlayerDetails = React.useCallback(async () => {
     if (!user || !db || !playerId) return;
@@ -66,7 +144,16 @@ export default function PlayerDetailPage({ user, academy, db }) {
           playerData.oneTimeProducts = playerData.oneTimeProducts.map(p => ({
             ...p,
             productDetails: productsMap.get(p.productId),
+            tierDetails: p.paymentFor === 'tier' ? tiersMap.get(p.itemId) : undefined,
           }));
+        }
+
+        // Auto-create next subscription period payments if the last one expired
+        const updated = await ensureSubscriptionPaymentsAreCurrent(playerData, tiersMap, playerRef);
+        if (updated) {
+          // Re-fetch to show the newly added cycle
+          fetchPlayerDetails();
+          return;
         }
 
         setPlayer(playerData);
@@ -103,6 +190,7 @@ export default function PlayerDetailPage({ user, academy, db }) {
     const playerRef = doc(db, `academies/${user.uid}/players`, playerId);
     try {
       await updateDoc(playerRef, { oneTimeProducts: finalProductsForDB });
+      setActiveTab('payments');
       fetchPlayerDetails(); // Re-fetch all player data to ensure UI consistency
       toast.success('Payment registered successfully!');
     } catch (error) {
@@ -124,6 +212,7 @@ export default function PlayerDetailPage({ user, academy, db }) {
 
     try {
       await updateDoc(playerRef, { oneTimeProducts: finalProductsForDB });
+      setActiveTab('payments');
       fetchPlayerDetails(); // Re-fetch all player data
       toast.success('Item removed successfully!');
     } catch (error) {
@@ -146,20 +235,29 @@ export default function PlayerDetailPage({ user, academy, db }) {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div className="text-xl font-semibold text-gray-800">
-          <Link to="/students" className="text-primary hover:underline">Students</Link>
-          <span className="text-gray-500 mx-2">&gt;</span>
-          <span className="text-gray-800">{player.name} {player.lastName}</span>
+      <div className="w-full max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <div className="text-xl font-semibold text-gray-800">
+            <Link to="/students" className="text-primary hover:underline">Students</Link>
+            <span className="text-gray-500 mx-2">&gt;</span>
+            <span className="text-gray-800">{player.name} {player.lastName}</span>
+          </div>
+          <div>
+            <button onClick={handleEdit} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center">
+              <Edit className="mr-2 h-5 w-5" />
+              <span>Edit</span>
+            </button>
+          </div>
         </div>
-        <div>
-          <button onClick={handleEdit} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center">
-            <Edit className="mr-2 h-5 w-5" />
-            <span>Edit</span>
-          </button>
-        </div>
+        <PlayerDetail
+          player={player}
+          onMarkAsPaid={handleMarkProductAsPaid}
+          onRemoveProduct={handleRemoveProduct}
+          academy={academy}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
       </div>
-      <PlayerDetail player={player} onMarkAsPaid={handleMarkProductAsPaid} onRemoveProduct={handleRemoveProduct} academy={academy} />
     </div>
   );
 }
