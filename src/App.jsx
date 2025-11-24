@@ -1,9 +1,10 @@
-import { useEffect, useState, useRef, useCallback } from "react";
-import { Routes, Route, NavLink, useNavigate } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import { Routes, Route, NavLink, Navigate } from "react-router-dom";
 import { onAuthStateChanged, signOut } from "firebase/auth"; // Import signOut
 import { auth, db } from "./firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import GoogleSignIn from "./components/GoogleSignIn.jsx";
+import LandingPage from "./components/LandingPage.jsx";
 import PlayerDetailPage from "./components/PlayerDetailPage.jsx";
 import EditPlayerPage from "./components/EditPlayerPage.jsx";
 import PlayersSection from "./components/PlayersSection.jsx";
@@ -75,7 +76,6 @@ export default function App() {
   const [error, setError] = useState(null);
   const [nameInput, setNameInput] = useState("");
   const nameInputRef = useRef(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async u => {
@@ -154,7 +154,9 @@ export default function App() {
   if (!user) {
     return (
       <Routes>
-        <Route path="*" element={<GoogleSignIn />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/sign-in" element={<GoogleSignIn />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
   }
@@ -267,6 +269,7 @@ export default function App() {
       {/* Main Content */}
       <div className="flex-grow p-8 overflow-auto"> {/* Added overflow-auto for scrollable content */}
         <Routes>
+          <Route path="/sign-in" element={<Navigate to="/" replace />} />
           <Route path="/students/new" element={<NewPlayerPage user={user} academy={academy} db={db} />} />
           <Route path="/students" element={<PlayersSection user={user} academy={academy} db={db} />} />
           <Route path="/students/:playerId" element={<PlayerDetailPage user={user} academy={academy} db={db} />} />
@@ -277,6 +280,7 @@ export default function App() {
           <Route path="/groups/:groupId" element={<GroupDetailPage user={user} academy={academy} db={db} />} />
           <Route path="/settings" element={<AdminSection user={user} academy={academy} db={db} onAcademyUpdate={async () => setAcademy((await getDoc(doc(db, "academies", user.uid))).data())} />} />
           <Route path="/" element={<Dashboard user={user} academy={academy} db={db} />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </div>

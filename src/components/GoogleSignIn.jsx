@@ -3,6 +3,7 @@ import { auth } from "../firebase";
 import toast from 'react-hot-toast';
 import loginIllustration from '../assets/login-ilustration.svg';
 import logoKivee from '../assets/logo-kivee.svg';
+import { Link } from "react-router-dom";
 
 export default function GoogleSignIn() {
   const onClick = async () => {
@@ -19,7 +20,9 @@ export default function GoogleSignIn() {
     <div className="flex h-screen w-screen font-sans">
       {/* Left Side */}
       <div className="w-1/2 bg-white flex flex-col justify-center items-center p-12 relative">
-        <img src={logoKivee} alt="Kivee Logo" className="absolute top-8 left-8 h-5 w-auto" />
+        <Link to="/" className="absolute top-8 left-8 h-5 w-auto">
+          <img src={logoKivee} alt="Kivee Logo" className="h-5 w-auto" />
+        </Link>
         <div className="w-full max-w-[360px]">
           <div className="text-left">
             <h1 className="text-[24px] font-semibold text-black">Welcome to Kivee</h1>
