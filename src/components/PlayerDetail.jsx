@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 
-export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, academy, activeTab: controlledTab, onTabChange }) {
+export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, academy, activeTab: controlledTab, onTabChange, paymentPage, onPaymentPageChange }) {
   const [activeTab, setActiveTab] = useState(controlledTab || 'details');
 
   useEffect(() => {
@@ -28,12 +28,20 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
     : null;
 
   const combinedPayments = [...subscriptionPayments, ...productPayments].sort((a, b) => {
-    const da = a.dueDate || a.paidAt;
-    const db = b.dueDate || b.paidAt;
+    const da = a.dueDate || a.paidAt || (a.productDetails ? new Date() : null);
+    const db = b.dueDate || b.paidAt || (b.productDetails ? new Date() : null);
     return toDate(db) - toDate(da);
   });
 
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(paymentPage || 1);
+  useEffect(() => {
+    if (paymentPage) setCurrentPage(paymentPage);
+  }, [paymentPage]);
+
+  const setPage = (next) => {
+    setCurrentPage(next);
+    onPaymentPageChange?.(next);
+  };
   const pageSize = 10;
   const totalPages = Math.max(1, Math.ceil(combinedPayments.length / pageSize));
   const paginatedPayments = combinedPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -279,7 +287,7 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
           {combinedPayments.length > pageSize && (
             <div className="flex justify-between items-center pt-2">
               <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                onClick={() => setPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
                 className="px-3 py-1 text-sm bg-gray-200 rounded disabled:opacity-50"
               >
@@ -287,7 +295,7 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
               </button>
               <p className="text-sm text-gray-700">Page {currentPage} of {totalPages}</p>
               <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
                 className="px-3 py-1 text-sm bg-gray-200 rounded disabled:opacity-50"
               >

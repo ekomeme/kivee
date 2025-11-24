@@ -3,6 +3,7 @@ import { collection, query, getDocs, doc, updateDoc, getDoc } from 'firebase/fir
 import { Link } from 'react-router-dom';
 import { CheckCircle, Clock, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
+import LoadingBar from './LoadingBar.jsx';
 
 export default function PaymentsSection({ user, academy, db }) {
     const [allPayments, setAllPayments] = useState([]);
@@ -196,9 +197,10 @@ export default function PaymentsSection({ user, academy, db }) {
         );
     };
 
-    return (
-        <div className="p-6 bg-white rounded-lg shadow-md">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Payments</h2>
+  return (
+    <div className="p-6 bg-white rounded-lg shadow-md">
+      <LoadingBar loading={loading} />
+      <h2 className="text-2xl font-bold text-gray-800 mb-2">Payments</h2>
 
             <div className="border-b border-gray-200 mb-6">
                 <nav className="-mb-px flex space-x-8" aria-label="Tabs">

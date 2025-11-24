@@ -12,6 +12,7 @@ export default function PlayerDetailPage({ user, academy, db }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('details');
+  const [paymentPage, setPaymentPage] = useState(1);
 
   const dateFromAny = (d) => (d?.seconds ? new Date(d.seconds * 1000) : new Date(d));
 
@@ -191,7 +192,7 @@ export default function PlayerDetailPage({ user, academy, db }) {
     try {
       await updateDoc(playerRef, { oneTimeProducts: finalProductsForDB });
       setActiveTab('payments');
-      fetchPlayerDetails(); // Re-fetch all player data to ensure UI consistency
+      setPlayer(prev => prev ? { ...prev, oneTimeProducts: updatedProducts } : prev);
       toast.success('Payment registered successfully!');
     } catch (error) {
       console.error("Error updating payment status:", error);
@@ -213,7 +214,7 @@ export default function PlayerDetailPage({ user, academy, db }) {
     try {
       await updateDoc(playerRef, { oneTimeProducts: finalProductsForDB });
       setActiveTab('payments');
-      fetchPlayerDetails(); // Re-fetch all player data
+      setPlayer(prev => prev ? { ...prev, oneTimeProducts: updatedProducts } : prev);
       toast.success('Item removed successfully!');
     } catch (error) {
       console.error("Error removing product:", error);
@@ -256,6 +257,8 @@ export default function PlayerDetailPage({ user, academy, db }) {
           academy={academy}
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          paymentPage={paymentPage}
+          onPaymentPageChange={setPaymentPage}
         />
       </div>
     </div>

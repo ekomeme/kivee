@@ -9,13 +9,13 @@ import EditPlayerPage from "./components/EditPlayerPage.jsx";
 import PlayersSection from "./components/PlayersSection.jsx";
 import PlansOffersSection from "./components/PlansOffersSection.jsx";
 import NewPlayerPage from "./components/NewPlayerPage.jsx"; // Import the new page
-import PaymentsSection from "./components/PaymentsSection.jsx";
 import GroupsAndClassesSection from "./components/GroupsAndClassesSection.jsx";
 import AdminSection from "./components/AdminSection.jsx";
+import PaymentsSection from "./components/PaymentsSection.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 import GroupDetailPage from "./components/GroupDetailPage.jsx";
 import { Toaster } from "react-hot-toast";
-import { LogOut, Users, Layers, Tags, CreditCard, Settings, Home } from "lucide-react";
+import { LogOut, Home, Users, Layers, Tags, CreditCard, Settings } from "lucide-react";
 import loginIllustration from "./assets/login-ilustration.svg";
 import logoKivee from "./assets/logo-kivee.svg";
 
