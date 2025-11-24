@@ -1,0 +1,18 @@
+{
+  "projects": {
+    "default": "kivee-f4c53"
+  },
+  "targets": {
+    "kivee-f4c53": {
+      "hosting": {
+        "prod": [
+          "kivee-f4c53"
+        ],
+        "staging": [
+          "kivee-staging"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
