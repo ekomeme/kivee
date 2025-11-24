@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, doc, getDocs, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import toast from 'react-hot-toast';
-import Select from 'react-select';
+import Select from 'react-select'; // Import Select for country codes
+import { Upload } from 'lucide-react'; // Import Upload icon
 
 export default function PlayerForm({ user, academy, db, onComplete, playerToEdit }) {
   // Player Info
@@ -12,6 +13,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
   const [birthday, setBirthday] = useState('');
   const [photoURL, setPhotoURL] = useState('');
   const [playerPhotoFile, setPlayerPhotoFile] = useState(null);
+  const fileInputRef = React.useRef(null); // Ref for hidden file input
   const [uploadProgress, setUploadProgress] = useState(0);
   const [playerEmail, setPlayerEmail] = useState('');
   const [playerPhonePrefix, setPlayerPhonePrefix] = useState('+1');
@@ -356,7 +358,27 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
   return (
     <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-4xl mx-auto">
       <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Player Info Section */}
+        {/* Student Photo Section */}
+        <fieldset className="border-t-2 border-gray-200 pt-6">
+          <legend className="text-xl font-semibold text-gray-900 px-2">Student Photo</legend>
+          <div className="flex flex-col items-center justify-center mt-4">
+            <input type="file" ref={fileInputRef} onChange={handlePhotoFileChange} accept="image/*" className="hidden" />
+            <div
+              className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer overflow-hidden"
+              onClick={() => fileInputRef.current.click()}
+            >
+              {photoURL ? (
+                <img src={photoURL} alt="Student" className="w-full h-full object-cover" />
+              ) : (
+                <Upload className="h-8 w-8 text-gray-400" />
+              )}
+            </div>
+            <p className="text-sm text-gray-600 mt-2">Student Photo</p>
+            {uploadProgress > 0 && uploadProgress < 100 && <div className="w-24 bg-gray-200 rounded-full h-1.5 mt-2"><div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div></div>}
+          </div>
+        </fieldset>
+
+        {/* Student Information Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
           <legend className="text-xl font-semibold text-gray-900 px-2">Student Information</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
@@ -389,12 +411,6 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
                 />
                 <input type="tel" id="playerContactPhone" value={playerContactPhone} onChange={(e) => setPlayerContactPhone(e.target.value.replace(/\D/g, ''))} maxLength="15" className="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-blue-500" placeholder="Phone number" />
               </div>
-            </div>
-            <div className="md:col-span-2">
-              <label htmlFor="playerPhoto" className="block text-sm font-medium text-gray-700">Student Photo (Optional, max 5MB)</label>
-              <input type="file" id="playerPhoto" accept="image/*" onChange={handlePhotoFileChange} className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-              {uploadProgress > 0 && <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2"><div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div></div>}
-              {photoURL && <div className="mt-2"><img src={photoURL} alt="Current photo" className="w-20 h-20 object-cover rounded-full" /></div>}
             </div>
           </div>
         </fieldset>
@@ -499,7 +515,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
               return null;
             })()}
 
-            <div className="md:col-span-2"><label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes</label><textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows="3" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></textarea></div>
+            {/* Notes field moved to its own section */}
           </div>
         </fieldset>
 
@@ -547,6 +563,14 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
           </div>
         </fieldset>
 
+        {/* Notes Section */}
+        <fieldset className="border-t-2 border-gray-200 pt-6">
+          <legend className="text-xl font-semibold text-gray-900 px-2">Notes</legend>
+          <div className="mt-4">
+            <label htmlFor="notes" className="sr-only">Notes</label> {/* Hidden label for accessibility */}
+            <textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows="3" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></textarea>
+          </div>
+        </fieldset>
         {/* Form Actions */}
         {error && <p className="text-red-500 text-sm text-center">{error}</p>}
         <div className="flex justify-end space-x-4 pt-4">

@@ -819,8 +819,6 @@ export default function PlansOffersSection({ user, academy, db }) {
             <form onSubmit={handleAddOrUpdateTrial} className="space-y-4">
               <div><label htmlFor="trialName" className="block text-sm font-medium text-gray-700">Trial Name</label><input type="text" id="trialName" value={trialName} onChange={(e) => setTrialName(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label htmlFor="durationInDays" className="block text-sm font-medium text-gray-700">Duration (in days)</label><input type="number" id="durationInDays" value={durationInDays} onChange={(e) => setDurationInDays(e.target.value)} required min="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
-                <div><label htmlFor="trialPrice" className="block text-sm font-medium text-gray-700">Price</label><input type="number" id="trialPrice" value={trialPrice} onChange={(e) => setTrialPrice(e.target.value)} required min="0" step="0.01" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
                 <div>
                   <label htmlFor="trialPrice" className="block text-sm font-medium text-gray-700">Price</label>
                   <div className="relative mt-1">
@@ -830,17 +828,17 @@ export default function PlansOffersSection({ user, academy, db }) {
                     <input type="number" id="trialPrice" value={trialPrice} onChange={(e) => setTrialPrice(e.target.value)} required min="0" step="0.01" className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
                   </div>
                 </div>
-              </div>
-              <div>
-                <label htmlFor="classLimit" className="block text-sm font-medium text-gray-700">Class Limit (leave empty for unlimited)</label>
-                <input type="number" id="classLimit" value={classLimit} onChange={(e) => setClassLimit(e.target.value)} min="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
-              </div>
-              <div>
-                <label htmlFor="convertsToTierId" className="block text-sm font-medium text-gray-700">Converts to (Optional)</label>
-                <select id="convertsToTierId" value={convertsToTierId} onChange={(e) => setConvertsToTierId(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                  <option value="">No automatic conversion</option>
-                  {tiers.filter(t => t.status === 'active').map(tier => (<option key={tier.id} value={tier.id}>{tier.name}</option>))}
-                </select>
+                <div>
+                  <label htmlFor="classLimit" className="block text-sm font-medium text-gray-700">Class Limit (leave empty for unlimited)</label>
+                  <input type="number" id="classLimit" value={classLimit} onChange={(e) => setClassLimit(e.target.value)} min="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                </div>
+                <div>
+                  <label htmlFor="convertsToTierId" className="block text-sm font-medium text-gray-700">Converts to (Optional)</label>
+                  <select id="convertsToTierId" value={convertsToTierId} onChange={(e) => setConvertsToTierId(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    <option value="">No automatic conversion</option>
+                    {tiers.filter(t => t.status === 'active').map(tier => (<option key={tier.id} value={tier.id}>{tier.name}</option>))}
+                  </select>
+                </div>
               </div>
               {trialError && <p className="text-red-500 text-sm mt-4">{trialError}</p>}
               <div className="mt-6 flex justify-end space-x-3">
