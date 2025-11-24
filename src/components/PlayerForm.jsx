@@ -259,17 +259,21 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
     let planData = null;
     if (selectedPlan) {
       const [type, id] = selectedPlan.value.split('-');
-      let paymentCycle = null;
       if (type === 'tier') {
         const tier = tiers.find(t => t.id === id);
-        paymentCycle = tier?.pricingModel || null;
+        planData = {
+          type: 'tier',
+          id: id,
+          // We no longer store startDate or paymentCycle directly on the plan object
+          // It will be part of the payment record.
+        };
+      } else { // It's a trial
+        planData = {
+          type: 'trial',
+          id: id,
+          startDate: new Date().toISOString().split('T')[0],
+        };
       }
-      planData = {
-        type,
-        id,
-        startDate: type === 'tier' ? planStartDate : new Date().toISOString().split('T')[0],
-        paymentCycle: paymentCycle,
-      };
     }
 
     // Combine existing products with newly added ones for this session.
@@ -277,14 +281,37 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
     const newProducts = selectedProducts || [];
     const combinedProducts = [...existingProducts, ...newProducts];
 
-    // When saving, we only need the product ID and its payment status info, not the full product details.
-    const finalProductsData = combinedProducts.map(({ productId, status, paidAt, paymentMethod }) => ({
-      productId: productId,
-      status: status,
-      paidAt: paidAt || null, // Ensure null instead of undefined
-      paymentMethod: paymentMethod || null, // Ensure null instead of undefined
-    }));
+    // This is the key fix for the "Product not found" bug.
+    // We process and clean each payment item according to its type.
+    const finalProductsData = combinedProducts.map(item => {
+      if (item.paymentFor === 'tier') {
+        // This is a subscription payment, keep its structure.
+        return item;
+      }
+      // This is a one-time product.
+      return {
+        productId: item.productId,
+        status: item.status,
+        paidAt: item.paidAt || null,
+        paymentMethod: item.paymentMethod || null,
+      };
+    });
 
+    // If a new tier is being assigned, create its first payment record.
+    // This logic assumes we are not editing an existing plan, just assigning a new one.
+    if (selectedPlan && selectedPlan.value.startsWith('tier-') && !playerToEdit?.plan) {
+        const [type, id] = selectedPlan.value.split('-');
+        const tierDetails = tiers.find(t => t.id === id);
+        const firstPayment = {
+            paymentFor: 'tier',
+            itemId: id,
+            itemName: tierDetails.name,
+            amount: tierDetails.price,
+            dueDate: planStartDate,
+            status: 'unpaid',
+        };
+        finalProductsData.push(firstPayment); // We'll rename oneTimeProducts to payments later
+    }
 
     const playerData = {
       name,
@@ -472,55 +499,51 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
               return null;
             })()}
 
-            <div className="md:col-span-2 space-y-4">
-              <div>
-                <h4 className="text-sm font-medium text-gray-700">Products</h4>
-                {playerToEdit?.oneTimeProducts?.length > 0 && (
-                  <div className="mt-2 space-y-2">
-                    <p className="text-xs text-gray-500 mb-1">Existing Products (Cannot be removed here)</p>
-                    {playerToEdit.oneTimeProducts.map((p, index) => {
-                        const productDetails = oneTimeProducts.find(op => op.id === p.productId);
-                        return (
-                          <div key={`existing-${p.productId}-${index}`} className="flex justify-between items-center p-2 bg-gray-100 rounded-md">
-                            <span>{productDetails?.name || 'Product not found'} ({p.status})</span>
-                            <span className="font-mono text-sm">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(productDetails?.price || 0)}</span>
-                          </div>
-                        );
-                      })}
+            <div className="md:col-span-2"><label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes</label><textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows="3" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></textarea></div>
+          </div>
+        </fieldset>
+
+        {/* Additional Products Section */}
+        <fieldset className="border-t-2 border-gray-200 pt-6">
+          <legend className="text-xl font-semibold text-gray-900 px-2">Additional Products</legend>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
+            {/* Left side: Available products */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Available Products</h4>
+              <div className="space-y-2 max-h-60 overflow-y-auto border p-2 rounded-md">
+                {oneTimeProducts.map(product => (
+                  <div key={product.id} className="flex justify-between items-center p-2 hover:bg-gray-50">
+                    <div>
+                      <p>{product.name}</p>
+                      <p className="text-sm text-gray-500">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(product.price)}</p>
+                    </div>
+                    <button type="button" onClick={() => setSelectedProducts([...selectedProducts, { productId: product.id, status: 'unpaid' }])} className="bg-blue-100 text-blue-800 text-xs font-bold py-1 px-3 rounded-md">Add</button>
                   </div>
-                )}
-                {selectedProducts.length > 0 && (
-                  <div className="mt-2 space-y-2">
-                    <p className="text-xs text-gray-500 mb-1">Newly Added Products</p>
-                    {selectedProducts.map((p, index) => {
-                      const productDetails = oneTimeProducts.find(op => op.id === p.productId);
-                      return (
-                        <div key={`new-${p.productId}-${index}`} className="flex justify-between items-center p-2 bg-blue-50 rounded-md">
-                          <span>{productDetails?.name || 'Product not found'}</span>
-                          <span className="font-mono text-sm">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(productDetails?.price || 0)}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-700">Available Products</h4>
-                <div className="mt-2 space-y-2 max-h-48 overflow-y-auto border p-2 rounded-md">
-                  {oneTimeProducts.map(product => (
-                      <div key={product.id} className="flex justify-between items-center p-2 hover:bg-gray-50">
-                        <div>
-                          <p>{product.name}</p>
-                          <p className="text-sm text-gray-500">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(product.price)}</p>
-                        </div>
-                        <button type="button" onClick={() => setSelectedProducts([...selectedProducts, { productId: product.id, status: 'unpaid' }])} className="bg-blue-100 text-blue-800 text-xs font-bold py-1 px-3 rounded-md">Add</button>
-                      </div>
-                  ))}
-                </div>
+                ))}
               </div>
             </div>
-
-            <div className="md:col-span-2"><label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes</label><textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows="3" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></textarea></div>
+            {/* Right side: Product History */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Product History</h4>
+              <div className="space-y-2 max-h-60 overflow-y-auto border p-2 rounded-md bg-gray-50">
+                {[...(playerToEdit?.oneTimeProducts || []), ...selectedProducts].filter(p => !p.paymentFor).length > 0 ? (
+                  [...(playerToEdit?.oneTimeProducts || []), ...selectedProducts].filter(p => !p.paymentFor).map((p, index) => {
+                    const productDetails = oneTimeProducts.find(op => op.id === p.productId);
+                    return (
+                      <div key={`history-${p.productId}-${index}`} className="flex justify-between items-center p-2 rounded-md">
+                        <div>
+                          <p className="font-medium">{productDetails?.name || 'Product not found'}</p>
+                          {p.status === 'paid' && p.paidAt && (
+                            <p className="text-xs text-gray-500">Paid on {new Date(p.paidAt.seconds * 1000).toLocaleDateString()}</p>
+                          )}
+                        </div>
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${p.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{p.status}</span>
+                      </div>
+                    );
+                  })
+                ) : <p className="text-sm text-gray-500 p-2">No products assigned yet.</p>}
+              </div>
+            </div>
           </div>
         </fieldset>
 

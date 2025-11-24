@@ -16,6 +16,9 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
   const PaymentModal = ({ product, productIndex, onClose }) => {
     const [paymentMethod, setPaymentMethod] = useState('Cash');
 
+    const isSubscription = product.paymentFor === 'tier';
+    const name = isSubscription ? product.itemName : product.productDetails?.name;
+    const amount = isSubscription ? product.amount : product.productDetails?.price;
     const handleSubmit = (e) => {
       e.preventDefault();
       onMarkAsPaid(productIndex, paymentMethod);
@@ -25,9 +28,9 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
         <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
-          <h3 className="text-xl font-bold mb-4">Register Payment</h3>
-          <p className="mb-1"><strong>Product:</strong> {product.productDetails.name}</p>
-          <p className="mb-4"><strong>Amount:</strong> {new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(product.productDetails.price)}</p>
+          <h3 className="text-xl font-bold mb-4">Register Payment</h3> 
+          <p className="mb-1"><strong>Item:</strong> {name || 'N/A'}</p>
+          <p className="mb-4"><strong>Amount:</strong> {new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(amount || 0)}</p>
           <form onSubmit={handleSubmit}>
             <div className="space-y-4">
               <div>
@@ -51,6 +54,10 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
   };
 
   const [showPaymentModalFor, setShowPaymentModalFor] = useState(null); // Holds the index of the product
+
+  const allPaymentsWithOriginalIndex = player.oneTimeProducts?.map((p, index) => ({ ...p, originalIndex: index })) || [];
+  const subscriptionPayments = allPaymentsWithOriginalIndex.filter(p => p.paymentFor === 'tier');
+  const productPayments = allPaymentsWithOriginalIndex.filter(p => !p.paymentFor || p.paymentFor !== 'tier');
 
   const formatValue = (value) => value || 'N/A';
 
@@ -92,51 +99,65 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
           )}
         </fieldset>
 
-        {/* Payment Info Section */}
+        {/* Subscriptions Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">Plan Information</legend>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            {player.plan ? (
-              <>
-                <div><strong>Plan:</strong> <span className="text-gray-800">{formatValue(player.planDetails?.name)} ({player.plan.type})</span></div>
-                <div><strong>Billing cycle:</strong> <span className="text-gray-800">{getBillingCycleLabel(player.plan.paymentCycle)}</span></div>
-                <div><strong>Start Date:</strong> <span className="text-gray-800">{formatValue(player.plan.startDate)}</span></div>
-              </>
-            ) : (
-              <p className="text-gray-600 md:col-span-2">No plan assigned.</p>
-            )}
-            <div className="md:col-span-2"><strong>Notes:</strong> <p className="text-gray-800 whitespace-pre-wrap">{formatValue(player.notes)}</p></div>
-          </div>
+          <legend className="text-xl font-semibold text-gray-900 px-2">Subscriptions</legend>
+          {subscriptionPayments.length > 0 ? (
+            <div className="space-y-3 mt-4">
+              {subscriptionPayments.map((p) => {
+                return (
+                  <div key={`sub-${p.originalIndex}`} className="flex justify-between items-center p-3 bg-gray-50 rounded-md border">
+                    <div>
+                      <p className="font-medium">{p.itemName || 'Subscription Item'}</p>
+                      <p className="text-sm text-gray-600">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(p.amount || 0)}</p>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${p.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                        {p.status}
+                      </span>
+                      {p.status !== 'paid' && (
+                        <>
+                          <button onClick={() => setShowPaymentModalFor(p.originalIndex)} className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded-md flex items-center">
+                            <Plus className="mr-1 h-4 w-4" /> Add Payment
+                          </button>
+                          <button onClick={() => onRemoveProduct(p.originalIndex)} className="p-1 text-gray-400 hover:text-red-600" title="Remove Item">
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      )}
+                      {p.status === 'paid' && p.paidAt && (
+                        <p className="text-xs text-gray-500">Paid on {new Date(p.paidAt.seconds * 1000).toLocaleDateString()} via {p.paymentMethod}</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="mt-4 text-gray-600">No subscription payments recorded.</p>
+          )}
         </fieldset>
 
         {/* One-time Products Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
           <legend className="text-xl font-semibold text-gray-900 px-2">One-time Products</legend>
-          {player.oneTimeProducts && player.oneTimeProducts.length > 0 ? (
+          {productPayments.length > 0 ? (
             <div className="space-y-3 mt-4">
-              {player.oneTimeProducts.map((p, index) => (
-                <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-md border">
+              {productPayments.map((p) => (
+                <div key={`prod-${p.originalIndex}`} className="flex justify-between items-center p-3 bg-gray-50 rounded-md border">
                   <div>
                     <p className="font-medium">{p.productDetails?.name || 'Product not found'}</p>
                     <p className="text-sm text-gray-600">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(p.productDetails?.price || 0)}</p>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${p.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                      {p.status}
-                    </span>
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${p.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{p.status}</span>
                     {p.status !== 'paid' && (
                       <>
-                        <button onClick={() => setShowPaymentModalFor(index)} className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded-md flex items-center">
-                          <Plus className="mr-1 h-4 w-4" /> Add Payment
-                        </button>
-                        <button onClick={() => onRemoveProduct(index)} className="p-1 text-gray-400 hover:text-red-600" title="Remove Product">
-                          <Trash2 size={16} />
-                        </button>
+                        <button onClick={() => setShowPaymentModalFor(p.originalIndex)} className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1 px-3 rounded-md flex items-center"><Plus className="mr-1 h-4 w-4" /> Add Payment</button>
+                        <button onClick={() => onRemoveProduct(p.originalIndex)} className="p-1 text-gray-400 hover:text-red-600" title="Remove Item"><Trash2 size={16} /></button>
                       </>
                     )}
-                    {p.status === 'paid' && p.paidAt && (
-                      <p className="text-xs text-gray-500">Paid on {new Date(p.paidAt.seconds * 1000).toLocaleDateString()} via {p.paymentMethod}</p>
-                    )}
+                    {p.status === 'paid' && p.paidAt && (<p className="text-xs text-gray-500">Paid on {new Date(p.paidAt.seconds * 1000).toLocaleDateString()} via {p.paymentMethod}</p>)}
                   </div>
                 </div>
               ))}
