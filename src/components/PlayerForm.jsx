@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, addDoc, updateDoc, doc, getDocs, serverTimestamp } from 'firebase/firestore';
-import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import toast from 'react-hot-toast';
 import Select from 'react-select'; // Import Select for country codes
 import { Upload } from 'lucide-react'; // Import Upload icon
@@ -194,14 +194,59 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
     }
   }, [playerToEdit, tiers, trials, oneTimeProducts, academy.currency]); // academy.currency is a dependency
 
-  const handlePhotoFileChange = (e) => {
+  const handlePhotoFileChange = async (e) => {
     const file = e.target.files[0];
-    if (file && file.size <= 5 * 1024 * 1024) { // 5MB limit
-      setPlayerPhotoFile(file);
-      setPhotoURL(URL.createObjectURL(file)); // Preview
-    } else {
-      toast.error("Photo must be smaller than 5MB.");
+    if (!file) return;
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+    const MIN_DIMENSION = 100;
+    const MAX_DIMENSION = 3000;
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Only JPG, PNG or WEBP are allowed.");
+      e.target.value = "";
+      return;
     }
+
+    if (file.size > MAX_SIZE) {
+      toast.error("Photo must be smaller than 2MB.");
+      e.target.value = "";
+      return;
+    }
+
+    const isValidDimensions = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const { width, height } = img;
+          if (width < MIN_DIMENSION || height < MIN_DIMENSION) {
+            toast.error("Photo is too small (min 100x100px).");
+            resolve(false);
+            return;
+          }
+          if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+            toast.error("Photo is too large (max 3000px).");
+            resolve(false);
+            return;
+          }
+          resolve(true);
+        };
+        img.onerror = () => resolve(false);
+        img.src = ev.target.result;
+      };
+      reader.onerror = () => resolve(false);
+      reader.readAsDataURL(file);
+    });
+
+    if (!isValidDimensions) {
+      e.target.value = "";
+      return;
+    }
+
+    setPlayerPhotoFile(file);
+    setPhotoURL(URL.createObjectURL(file)); // Preview
   };
 
   const handleSubmit = async (e) => {
@@ -224,6 +269,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
 
     let finalPhotoURL = playerToEdit?.photoURL || photoURL;
     let finalPhotoPath = playerToEdit?.photoPath || null;
+    const previousPhotoPath = playerToEdit?.photoPath || null;
 
     if (playerPhotoFile) {
       const storage = getStorage();
@@ -247,6 +293,14 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
             async () => {
               finalPhotoURL = await getDownloadURL(uploadTask.snapshot.ref);
               finalPhotoPath = storagePath;
+              // Delete previous photo only after new upload succeeds
+              if (previousPhotoPath && previousPhotoPath !== storagePath) {
+                try {
+                  await deleteObject(ref(storage, previousPhotoPath));
+                } catch (deleteErr) {
+                  console.warn("Failed to delete previous player photo", deleteErr);
+                }
+              }
               resolve();
             }
           );
@@ -389,11 +443,11 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Student Photo Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">Student Photo</legend>
-          <div className="flex flex-col items-center justify-center mt-4">
-            <input type="file" ref={fileInputRef} onChange={handlePhotoFileChange} accept="image/*" className="hidden" />
-            <div
-              className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer overflow-hidden"
+      <legend className="text-xl font-semibold text-gray-900 px-2">Student Photo</legend>
+      <div className="flex flex-col items-center justify-center mt-4">
+        <input type="file" ref={fileInputRef} onChange={handlePhotoFileChange} accept="image/*" className="hidden" />
+        <div
+          className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer overflow-hidden"
               onClick={() => fileInputRef.current.click()}
             >
               {photoURL ? (
@@ -401,11 +455,12 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
               ) : (
                 <Upload className="h-8 w-8 text-gray-400" />
               )}
-            </div>
-            <p className="text-sm text-gray-600 mt-2">Student Photo</p>
-            {uploadProgress > 0 && uploadProgress < 100 && <div className="w-24 bg-gray-200 rounded-full h-1.5 mt-2"><div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div></div>}
-          </div>
-        </fieldset>
+        </div>
+        <p className="text-sm text-gray-600 mt-2">Student Photo</p>
+        <p className="text-xs text-gray-500">Max 2MB · JPG/PNG/WEBP · 100–3000px</p>
+        {uploadProgress > 0 && uploadProgress < 100 && <div className="w-24 bg-gray-200 rounded-full h-1.5 mt-2"><div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div></div>}
+      </div>
+    </fieldset>
 
         {/* Student Information Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">

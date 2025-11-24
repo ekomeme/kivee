@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import Select from 'react-select';
 import toast from 'react-hot-toast';
 import { Upload } from 'lucide-react';
@@ -91,14 +91,26 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
     setUpdateSettingsError(null);
 
     const academyRef = doc(db, "academies", user.uid);
+    const previousLogoPath = academy.logoPath || null;
 
     try {
       let logoUrl = academy.logoUrl || null;
+      let logoPath = academy.logoPath || null;
       if (logoFile) {
         const storage = getStorage();
-        const logoRef = ref(storage, `academies/${user.uid}/branding/logo_${Date.now()}_${logoFile.name}`);
+        const newLogoPath = `academies/${user.uid}/branding/logo_${Date.now()}_${logoFile.name}`;
+        const logoRef = ref(storage, newLogoPath);
         const snap = await uploadBytes(logoRef, logoFile);
         logoUrl = await getDownloadURL(snap.ref);
+        logoPath = newLogoPath;
+
+        if (previousLogoPath && previousLogoPath !== newLogoPath) {
+          try {
+            await deleteObject(ref(storage, previousLogoPath));
+          } catch (deleteErr) {
+            console.warn("Failed to delete previous logo", deleteErr);
+          }
+        }
       }
 
       await updateDoc(academyRef, {
@@ -109,6 +121,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
         country: selectedCountry?.value || null,
         countryCode: selectedCountry?.countryCode || null,
         logoUrl: logoUrl || null,
+        logoPath: logoPath || null,
       });
       await onAcademyUpdate(); // Llama a la función para refrescar los datos en App.jsx
       toast.success("Academy settings updated successfully.");
@@ -122,6 +135,60 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
     }
   };
 
+  const handleLogoFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+    const MIN_DIMENSION = 100;
+    const MAX_DIMENSION = 3000;
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Only JPG, PNG or WEBP are allowed.");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > MAX_SIZE) {
+      toast.error("Image must be smaller than 2MB.");
+      e.target.value = "";
+      return;
+    }
+
+    const isValidDimensions = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const { width, height } = img;
+          if (width < MIN_DIMENSION || height < MIN_DIMENSION) {
+            toast.error("Image is too small (min 100x100px).");
+            resolve(false);
+            return;
+          }
+          if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+            toast.error("Image is too large (max 3000px).");
+            resolve(false);
+            return;
+          }
+          resolve(true);
+        };
+        img.onerror = () => resolve(false);
+        img.src = ev.target.result;
+      };
+      reader.onerror = () => resolve(false);
+      reader.readAsDataURL(file);
+    });
+
+    if (!isValidDimensions) {
+      e.target.value = "";
+      return;
+    }
+
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  };
+
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold text-gray-800 mb-6">Account & Preferences</h2>
@@ -132,13 +199,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
                 type="file"
                 ref={logoInputRef}
                 accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    setLogoFile(file);
-                    setLogoPreview(URL.createObjectURL(file));
-                  }
-                }}
+                onChange={handleLogoFileChange}
                 className="hidden"
               />
               <div
@@ -152,6 +213,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
                 )}
               </div>
               <p className="text-sm text-gray-600">Academy Logo</p>
+              <p className="text-xs text-gray-500">Max 2MB · JPG/PNG/WEBP · 100–3000px</p>
             </div>
             <div>
               <label htmlFor="academyName" className="block font-medium text-gray-700">
