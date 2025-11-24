@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc, where } from 'firebase/firestore';
 import { Plus, Edit, Trash2, MoreVertical, Users, Calendar, ArrowRightLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 export default function GroupsAndClassesSection({ user, academy, db }) {
   const [activeGroupTab, setActiveGroupTab] = useState('groups'); // 'groups', 'schedule', 'transfers'
@@ -24,6 +25,9 @@ export default function GroupsAndClassesSection({ user, academy, db }) {
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [scheduleForm, setScheduleForm] = useState({ day: 'Monday', startTime: '', endTime: '' });
   const [scheduleError, setScheduleError] = useState(null);
+  const [groupMembers, setGroupMembers] = useState({}); // { groupId: [players] }
+  const [selectedGroupId, setSelectedGroupId] = useState(null);
+  const navigate = useNavigate();
 
   const fetchGroups = async () => {
     if (!user || !academy) return;
@@ -54,6 +58,22 @@ export default function GroupsAndClassesSection({ user, academy, db }) {
   useEffect(() => {
     if (selectedGroupIdForSchedule) fetchSchedulesForGroup(selectedGroupIdForSchedule);
   }, [selectedGroupIdForSchedule]);
+
+  useEffect(() => {
+    if (selectedGroupId) {
+      fetchSchedulesForGroup(selectedGroupId);
+      fetchMembersForGroup(selectedGroupId);
+    }
+  }, [selectedGroupId]);
+
+  const fetchMembersForGroup = async (groupId) => {
+    if (!groupId) return;
+    const playersRef = collection(db, `academies/${user.uid}/players`);
+    const q = query(playersRef, where('groupId', '==', groupId));
+    const snap = await getDocs(q);
+    const players = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    setGroupMembers(prev => ({ ...prev, [groupId]: players }));
+  };
 
   const handleGroupFormChange = (e) => {
     const { name, value } = e.target;
@@ -239,7 +259,11 @@ export default function GroupsAndClassesSection({ user, academy, db }) {
                 <thead><tr><th className="py-2 px-4 border-b text-left">Name</th><th className="py-2 px-4 border-b text-left">Age Range</th><th className="py-2 px-4 border-b text-left">Coach</th><th className="py-2 px-4 border-b text-left">Capacity</th><th className="py-2 px-4 border-b text-left">Status</th><th className="py-2 px-4 border-b text-right">Actions</th></tr></thead>
                 <tbody>
                   {groups.map(group => (
-                    <tr key={group.id} className="hover:bg-gray-50">
+                    <tr
+                      key={group.id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => navigate(`/groups/${group.id}`)}
+                    >
                       <td className="py-3 px-4 border-b font-medium">{group.name}</td>
                       <td className="py-3 px-4 border-b">{group.minAge}-{group.maxAge} years</td>
                       <td className="py-3 px-4 border-b">{group.coach}</td>

@@ -12,8 +12,10 @@ import NewPlayerPage from "./components/NewPlayerPage.jsx"; // Import the new pa
 import PaymentsSection from "./components/PaymentsSection.jsx";
 import GroupsAndClassesSection from "./components/GroupsAndClassesSection.jsx";
 import AdminSection from "./components/AdminSection.jsx";
+import Dashboard from "./components/Dashboard.jsx";
+import GroupDetailPage from "./components/GroupDetailPage.jsx";
 import { Toaster } from "react-hot-toast";
-import { LogOut, Users, Layers, Tags, CreditCard, Settings } from "lucide-react";
+import { LogOut, Users, Layers, Tags, CreditCard, Settings, Home } from "lucide-react";
 import loginIllustration from "./assets/login-ilustration.svg";
 import logoKivee from "./assets/logo-kivee.svg";
 
@@ -211,6 +213,12 @@ export default function App() {
         <nav className="flex-grow">
           <ul className="space-y-2">
             <li className="relative">
+              <NavLink to="/" end className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>
+                <Home className="h-4 w-4" />
+                <span>Dashboard</span>
+              </NavLink>
+            </li>
+            <li className="relative">
               <NavLink to="/students" className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>
                 <Users className="h-4 w-4" />
                 <span>Students</span>
@@ -257,8 +265,9 @@ export default function App() {
           <Route path="/plans" element={<PlansOffersSection user={user} academy={academy} db={db} />} />
           <Route path="/payments" element={<PaymentsSection user={user} academy={academy} db={db} />} />
           <Route path="/groups" element={<GroupsAndClassesSection user={user} academy={academy} db={db} />} />
+          <Route path="/groups/:groupId" element={<GroupDetailPage user={user} academy={academy} db={db} />} />
           <Route path="/settings" element={<AdminSection user={user} academy={academy} db={db} onAcademyUpdate={async () => setAcademy((await getDoc(doc(db, "academies", user.uid))).data())} />} />
-          <Route path="/" element={<h1 className="text-3xl font-bold text-gray-800 mb-4">Welcome to {academy.name}</h1>} />
+          <Route path="/" element={<Dashboard user={user} academy={academy} db={db} />} />
         </Routes>
       </div>
     </div>
