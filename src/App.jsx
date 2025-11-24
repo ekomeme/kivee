@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Routes, Route, NavLink, Navigate } from "react-router-dom";
-import { onAuthStateChanged, signOut } from "firebase/auth"; // Import signOut
-import { auth, db } from "./firebase";
+import { onAuthStateChanged, signOut, getRedirectResult } from "firebase/auth"; // Import getRedirectResult
+import { auth, db, authReady } from "./firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import GoogleSignIn from "./components/GoogleSignIn.jsx";
 import LandingPage from "./components/LandingPage.jsx";
@@ -78,33 +78,58 @@ export default function App() {
   const nameInputRef = useRef(null);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async u => {
-      setUser(u);
-      if (!u) {
+    // Esta función unificada maneja todos los casos de autenticación.
+    const handleAuthFlow = async (user) => {
+      setUser(user);
+      if (!user) {
+        // Si no hay usuario, no hay academia y terminamos de cargar.
         setAcademy(null);
         setLoading(false);
         return;
       }
 
-      const fetchAcademy = async () => {
-        const ref = doc(db, "academies", u.uid);
-        try {
-          const snap = await getDoc(ref);
-          if (snap.exists()) {
-            setAcademy(snap.data());
-          } else {
-            setAcademy(null);
-          }
-        } catch (e) {
-          console.error("Firestore error", e);
-          setError("Failed to fetch academy data");
+      // Si hay un usuario, buscamos su academia.
+      const ref = doc(db, "academies", user.uid);
+      try {
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          setAcademy(snap.data());
+        } else {
+          setAcademy(null); // El usuario existe pero aún no ha creado una academia.
         }
+      } catch (e) {
+        console.error("Firestore error", e);
+        setError("Failed to fetch academy data");
+      }
+      // Terminamos de cargar solo después de verificar la academia.
+      setLoading(false);
+    };
+
+    let unsubscribe;
+
+    const initAuth = async () => {
+      try {
+        await authReady;
+        const redirectResult = await getRedirectResult(auth);
+        if (redirectResult?.user) {
+          await handleAuthFlow(redirectResult.user);
+        }
+      } catch (err) {
+        console.error("Redirect Error:", err);
       }
 
-      await fetchAcademy();
-      setLoading(false);
-    });
-    return () => unsub();
+      // Luego, onAuthStateChanged se convierte en la única fuente de verdad.
+      // Se ejecutará con el usuario de la redirección o el de una sesión existente.
+      unsubscribe = onAuthStateChanged(auth, handleAuthFlow);
+    };
+
+    initAuth();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
          // La lógica de carga de la academia se maneja dentro del listener.
 
@@ -206,7 +231,6 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-gray-light font-sans">
-      <Toaster position="top-center" reverseOrder={false} />
       {/* Sidebar */}
       <div
         className="bg-white text-gray-800 w-64 p-4 flex flex-col border-r border-gray-border"
