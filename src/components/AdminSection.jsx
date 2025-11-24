@@ -18,7 +18,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(academy.logoUrl || '');
   const logoInputRef = useRef(null);
-  const ACADEMY_CATEGORIES = ['Fútbol', 'Baloncesto', 'Tenis', 'Otro'];
+  const ACADEMY_CATEGORIES = ['Soccer', 'Basketball', 'Tennis', 'Other'];
 
   useEffect(() => {
     const fetchCurrencies = async () => {
@@ -104,7 +104,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
       await updateDoc(academyRef, {
         name: academyNameInput.trim(),
         category: selectedAcademyCategory,
-        otherCategory: selectedAcademyCategory === 'Otro' ? otherCategory : '',
+        otherCategory: selectedAcademyCategory === 'Other' ? otherCategory : '',
         currency: selectedCurrency.value,
         country: selectedCountry?.value || null,
         countryCode: selectedCountry?.countryCode || null,
@@ -114,8 +114,8 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
       toast.success("Academy settings updated successfully.");
       setLogoFile(null);
     } catch (error) {
-      console.error("Error al actualizar el nombre de la academia:", error);
-      setUpdateSettingsError("Error al actualizar la configuración: " + error.message);
+      console.error("Error updating academy:", error);
+      setUpdateSettingsError("Error updating settings: " + error.message);
       toast.error("Error updating settings.");
     } finally {
       setIsUpdatingSettings(false);
@@ -170,7 +170,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
             </div>
             <div>
               <label htmlFor="academyCategory" className="block font-medium text-gray-700">
-                Categoría de la Academia
+                Academy Category
               </label>
               <select
                 id="academyCategory"
@@ -178,17 +178,17 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
                 onChange={(e) => setSelectedAcademyCategory(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
               >
-                <option value="">Selecciona una categoría</option>
+                <option value="">Select a category</option>
                 {ACADEMY_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             </div>
-            {selectedAcademyCategory === 'Otro' && (
+            {selectedAcademyCategory === 'Other' && (
               <div>
                 <label htmlFor="otherCategory" className="block font-medium text-gray-700">
-                  Especificar deporte
+                  Specify sport
                 </label>
                 <input
-                  type="text" id="otherCategory" value={otherCategory} onChange={(e) => setOtherCategory(e.target.value)} required={selectedAcademyCategory === 'Otro'} placeholder="Ej: Pádel, Voleibol"
+                  type="text" id="otherCategory" value={otherCategory} onChange={(e) => setOtherCategory(e.target.value)} required={selectedAcademyCategory === 'Other'} placeholder="e.g., Paddle, Volleyball"
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
               </div>
             )}

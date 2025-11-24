@@ -18,6 +18,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
   const [playerEmail, setPlayerEmail] = useState('');
   const [playerPhonePrefix, setPlayerPhonePrefix] = useState('+1');
   const [playerContactPhone, setPlayerContactPhone] = useState('');
+  const [playerStatus, setPlayerStatus] = useState('active');
   const [groupId, setGroupId] = useState('');
 
   // Tutor Info
@@ -149,6 +150,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       setPlayerPhonePrefix(playerToEdit.contactPhonePrefix || '+1');
       setPlayerContactPhone(playerToEdit.contactPhoneNumber || '');
       setGroupId(playerToEdit.groupId || '');
+      setPlayerStatus(playerToEdit.status || 'active');
 
       // Tutor Info
       if (playerToEdit.tutorId && playerToEdit.tutor) {
@@ -236,7 +238,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
             },
             (error) => {
               console.error("Upload failed:", error);
-              setError("Error al subir la foto: " + error.message);
+              setError("Error uploading photo: " + error.message);
               toast.error("Error uploading photo.");
               reject(error);
             },
@@ -274,7 +276,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
           linkedTutorId = tutorRef.id;
         }
       } catch (err) {
-        setError("Error al guardar el tutor: " + err.message);
+        setError("Error saving tutor: " + err.message);
         toast.error("Error saving tutor.");
         return;
       }
@@ -353,6 +355,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       oneTimeProducts: finalProductsData,
       notes,
       academyId: user.uid,
+      status: playerStatus || 'active',
       createdAt: playerToEdit ? playerToEdit.createdAt : serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -369,8 +372,8 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       }
       onComplete();
     } catch (err) {
-      console.error("Error al guardar jugador:", err);
-      setError("Error al guardar jugador: " + err.message);
+      console.error("Error saving player:", err);
+      setError("Error saving player: " + err.message);
       toast.error("Error saving player.");
     } finally {
       setLoading(false);
@@ -434,6 +437,20 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
                 <input type="tel" id="playerContactPhone" value={playerContactPhone} onChange={(e) => setPlayerContactPhone(e.target.value.replace(/\D/g, ''))} maxLength="15" className="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-blue-500" placeholder="Phone number" />
               </div>
             </div>
+            {playerToEdit && (
+              <div>
+                <label htmlFor="playerStatus" className="block text-sm font-medium text-gray-700">Status</label>
+                <select
+                  id="playerStatus"
+                  value={playerStatus}
+                  onChange={(e) => setPlayerStatus(e.target.value)}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            )}
           </div>
         </fieldset>
 
@@ -444,7 +461,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
             <label htmlFor="hasTutor" className="block text-sm font-medium text-gray-700">Has tutor/guardian?</label>
             <select id="hasTutor" value={hasTutor} onChange={(e) => setHasTutor(e.target.value === 'true')} className="mt-1 block w-full md:w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500">
               <option value={false}>No</option>
-              <option value={true}>Sí</option>
+              <option value={true}>Yes</option>
             </select>
           </div>
           {hasTutor && (

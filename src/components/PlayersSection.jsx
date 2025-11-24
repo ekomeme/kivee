@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, getDocs, doc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, query, getDocs, doc, deleteDoc, getDoc, updateDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
 import { Plus, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Filter, ChevronRight, Check, X } from 'lucide-react';
@@ -140,7 +140,7 @@ export default function PlayersSection({ user, academy, db }) {
         fetchPlayers();
         toast.success("Student deleted successfully.");
       } catch (error) {
-        console.error("Error al eliminar jugador:", error);
+        console.error("Error deleting student:", error);
         toast.error("Error deleting student.");
       }
     }
@@ -354,6 +354,27 @@ export default function PlayersSection({ user, academy, db }) {
                 <button onClick={(e) => { e.stopPropagation(); navigate(`/students/${player.id}/edit`); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center">
                   <Edit className="mr-3 h-4 w-4" />
                   <span>Edit</span>
+                </button>
+              </li>
+              <li className="text-base">
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      const newStatus = player.status === 'inactive' ? 'active' : 'inactive';
+                      await updateDoc(doc(db, `academies/${user.uid}/players`, player.id), { status: newStatus });
+                      toast.success(`Student ${newStatus === 'inactive' ? 'deactivated' : 'activated'} successfully.`);
+                      fetchPlayers();
+                      onClose();
+                    } catch (err) {
+                      console.error(err);
+                      toast.error('Failed to update status.');
+                    }
+                  }}
+                  className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center"
+                >
+                  <X className="mr-3 h-4 w-4" />
+                  <span>{player.status === 'inactive' ? 'Activate' : 'Deactivate'}</span>
                 </button>
               </li>
               <li className="text-base">

@@ -185,6 +185,7 @@ export default function PlayerDetailPage({ user, academy, db }) {
       const cleanProduct = { ...p };
       delete cleanProduct.productDetails;
       delete cleanProduct.originalIndex;
+      delete cleanProduct.tierDetails;
       return cleanProduct;
     });
 
@@ -192,7 +193,7 @@ export default function PlayerDetailPage({ user, academy, db }) {
     try {
       await updateDoc(playerRef, { oneTimeProducts: finalProductsForDB });
       setActiveTab('payments');
-      setPlayer(prev => prev ? { ...prev, oneTimeProducts: updatedProducts } : prev);
+      await fetchPlayerDetails(); // reload to keep derived fields/product details in sync
       toast.success('Payment registered successfully!');
     } catch (error) {
       console.error("Error updating payment status:", error);
@@ -206,6 +207,7 @@ export default function PlayerDetailPage({ user, academy, db }) {
       const cleanProduct = { ...p };
       delete cleanProduct.productDetails;
       delete cleanProduct.originalIndex;
+      delete cleanProduct.tierDetails;
       return cleanProduct;
     });
 
@@ -214,7 +216,7 @@ export default function PlayerDetailPage({ user, academy, db }) {
     try {
       await updateDoc(playerRef, { oneTimeProducts: finalProductsForDB });
       setActiveTab('payments');
-      setPlayer(prev => prev ? { ...prev, oneTimeProducts: updatedProducts } : prev);
+      await fetchPlayerDetails(); // reload to keep derived fields in sync
       toast.success('Item removed successfully!');
     } catch (error) {
       console.error("Error removing product:", error);

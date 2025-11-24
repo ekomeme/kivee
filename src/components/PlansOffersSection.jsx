@@ -140,8 +140,8 @@ export default function PlansOffersSection({ user, academy, db }) {
       setShowTierModal(false); // Close modal on success
       fetchTiers(); // Refresh the list
     } catch (err) {
-      console.error("Error al guardar tier:", err);
-      setTierError("Error al guardar tier: " + err.message);
+      console.error("Error saving tier:", err);
+      setTierError("Error saving tier: " + err.message);
       toast.error("Error saving tier.");
     } finally {
       setLoadingTiers(false);
@@ -312,7 +312,7 @@ export default function PlansOffersSection({ user, academy, db }) {
         fetchTiers();
         toast.success("Tier deleted successfully.");
       } catch (error) {
-        console.error("Error al eliminar tier:", error);
+        console.error("Error deleting tier:", error);
         toast.error("Error deleting tier.");
       }
     };
