@@ -223,10 +223,12 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
     setError(null);
 
     let finalPhotoURL = playerToEdit?.photoURL || photoURL;
+    let finalPhotoPath = playerToEdit?.photoPath || null;
 
     if (playerPhotoFile) {
       const storage = getStorage();
-      const storageRef = ref(storage, `academies/${user.uid}/player_photos/${Date.now()}_${playerPhotoFile.name}`);
+      const storagePath = `academies/${user.uid}/player_photos/${Date.now()}_${playerPhotoFile.name}`;
+      const storageRef = ref(storage, storagePath);
       const uploadTask = uploadBytesResumable(storageRef, playerPhotoFile);
 
       try {
@@ -244,6 +246,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
             },
             async () => {
               finalPhotoURL = await getDownloadURL(uploadTask.snapshot.ref);
+              finalPhotoPath = storagePath;
               resolve();
             }
           );
@@ -346,6 +349,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       birthday,
       photoURL: finalPhotoURL,
       email: playerEmail || null,
+      photoPath: finalPhotoPath || null,
       contactPhonePrefix: playerContactPhone ? playerPhonePrefix : null,
       contactPhoneNumber: playerContactPhone ? playerContactPhone : null,
       contactPhone: playerContactPhone ? `${playerPhonePrefix}${playerContactPhone}` : null,

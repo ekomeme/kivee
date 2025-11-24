@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, getDocs, doc, deleteDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { deleteObject, ref as storageRef } from 'firebase/storage';
+import { storage } from '../firebase';
 import toast from 'react-hot-toast';
 
 import { Plus, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Filter, ChevronRight, Check, X } from 'lucide-react';
@@ -136,7 +138,18 @@ export default function PlayersSection({ user, academy, db }) {
   const handleDeletePlayer = async (playerId) => {
     const deleteAction = async () => {
       try {
+        // Fetch latest player to get photoPath (if any)
+        const playerSnapshot = await getDoc(doc(db, `academies/${user.uid}/players`, playerId));
+        const playerData = playerSnapshot.exists() ? playerSnapshot.data() : null;
+
         await deleteDoc(doc(db, `academies/${user.uid}/players`, playerId));
+        if (playerData?.photoPath) {
+          try {
+            await deleteObject(storageRef(storage, playerData.photoPath));
+          } catch (storageErr) {
+            console.warn("Failed to delete player photo from storage", storageErr);
+          }
+        }
         fetchPlayers();
         toast.success("Student deleted successfully.");
       } catch (error) {
