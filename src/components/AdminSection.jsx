@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import Select from 'react-select';
 import toast from 'react-hot-toast';
+import { Upload } from 'lucide-react';
 export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
   // States for Academy Settings
   const [currencyOptions, setCurrencyOptions] = useState([]);
@@ -13,6 +15,9 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
   const [updateSettingsError, setUpdateSettingsError] = useState(null);
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(academy.logoUrl || '');
+  const logoInputRef = useRef(null);
   const ACADEMY_CATEGORIES = ['Fútbol', 'Baloncesto', 'Tenis', 'Otro'];
 
   useEffect(() => {
@@ -88,6 +93,14 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
     const academyRef = doc(db, "academies", user.uid);
 
     try {
+      let logoUrl = academy.logoUrl || null;
+      if (logoFile) {
+        const storage = getStorage();
+        const logoRef = ref(storage, `academies/${user.uid}/branding/logo_${Date.now()}_${logoFile.name}`);
+        const snap = await uploadBytes(logoRef, logoFile);
+        logoUrl = await getDownloadURL(snap.ref);
+      }
+
       await updateDoc(academyRef, {
         name: academyNameInput.trim(),
         category: selectedAcademyCategory,
@@ -95,9 +108,11 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
         currency: selectedCurrency.value,
         country: selectedCountry?.value || null,
         countryCode: selectedCountry?.countryCode || null,
+        logoUrl: logoUrl || null,
       });
       await onAcademyUpdate(); // Llama a la función para refrescar los datos en App.jsx
       toast.success("Academy settings updated successfully.");
+      setLogoFile(null);
     } catch (error) {
       console.error("Error al actualizar el nombre de la academia:", error);
       setUpdateSettingsError("Error al actualizar la configuración: " + error.message);
@@ -112,6 +127,32 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
       <h2 className="text-2xl font-bold text-gray-800 mb-6">Account & Preferences</h2>
         <div className="space-y-8">
           <form onSubmit={handleUpdateAcademySettings} className="space-y-4 max-w-3xl">
+            <div className="flex flex-col items-start space-y-2">
+              <input
+                type="file"
+                ref={logoInputRef}
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setLogoFile(file);
+                    setLogoPreview(URL.createObjectURL(file));
+                  }
+                }}
+                className="hidden"
+              />
+              <div
+                className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer overflow-hidden"
+                onClick={() => logoInputRef.current?.click()}
+              >
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Academy logo" className="w-full h-full object-cover" />
+                ) : (
+                  <Upload className="h-8 w-8 text-gray-400" />
+                )}
+              </div>
+              <p className="text-sm text-gray-600">Academy Logo</p>
+            </div>
             <div>
               <label htmlFor="academyName" className="block font-medium text-gray-700">
                 Academy Name

@@ -209,7 +209,16 @@ export default function App() {
       <div
         className="bg-white text-gray-800 w-64 p-4 flex flex-col border-r border-gray-border"
       >
-        <h2 className="text-2xl font-semibold mb-4">{academy.name}</h2>
+        <div className="flex items-center space-x-3 mb-4">
+          <div className="h-12 w-12 rounded-full border-2 border-dashed border-gray-300 overflow-hidden flex items-center justify-center">
+            {academy.logoUrl ? (
+              <img src={academy.logoUrl} alt="Academy logo" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-gray-600 font-semibold uppercase">{academy.name?.charAt(0) || '?'}</span>
+            )}
+          </div>
+          <h2 className="text-xl font-semibold">{academy.name}</h2>
+        </div>
         <nav className="flex-grow">
           <ul className="space-y-2">
             <li className="relative">
