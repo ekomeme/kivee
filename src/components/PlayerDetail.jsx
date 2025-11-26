@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, academy, activeTab: controlledTab, onTabChange, paymentPage, onPaymentPageChange }) {
   const [activeTab, setActiveTab] = useState(controlledTab || 'details');
+  const studentLabelSingular = academy?.studentLabelSingular || 'Student';
+  const studentLabelPlural = academy?.studentLabelPlural || 'Students';
 
   useEffect(() => {
     if (controlledTab) setActiveTab(controlledTab);
@@ -49,13 +52,24 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
   const PaymentModal = ({ product, productIndex, onClose }) => {
     const [paymentMethod, setPaymentMethod] = useState('Cash');
     const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const isSubscription = product.paymentFor === 'tier';
     const name = isSubscription ? product.itemName : product.productDetails?.name;
     const amount = isSubscription ? product.amount : product.productDetails?.price;
     const handleSubmit = (e) => {
       e.preventDefault();
+      const picked = new Date(paymentDate);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      picked.setHours(0,0,0,0);
+      if (picked > today) {
+        toast.error('Payment date cannot be in the future.');
+        return;
+      }
+      setIsSubmitting(true);
       onMarkAsPaid(productIndex, paymentMethod, paymentDate);
+      setIsSubmitting(false);
       onClose();
     };
 
@@ -99,7 +113,7 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
             </div>
             <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-white py-3 md:bg-transparent md:py-0">
               <button type="button" onClick={onClose} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
-              <button type="submit" className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md w-full md:w-auto">Confirm Payment</button>
+              <button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md w-full md:w-auto disabled:opacity-50">{isSubmitting ? 'Saving...' : 'Confirm Payment'}</button>
             </div>
           </form>
         </div>
@@ -180,11 +194,11 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
       {activeTab === 'details' && (
         <div className="space-y-8">
           <fieldset className="border-t-2 border-gray-200 pt-6">
-            <legend className="text-xl font-semibold text-gray-900 px-2">Student Information</legend>
+            <legend className="text-xl font-semibold text-gray-900 px-2">{studentLabelSingular} Information</legend>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
               <div className="flex items-center">
                 {player.photoURL ? (
-                  <img src={player.photoURL} alt="Student photo" className="w-24 h-24 rounded-full object-cover" />
+                  <img src={player.photoURL} alt={`${studentLabelSingular} photo`} className="w-24 h-24 rounded-full object-cover" />
                 ) : (
                   <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">No photo</div>
                 )}

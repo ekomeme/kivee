@@ -481,7 +481,7 @@ export default function PlansOffersSection({ user, academy, db }) {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
+      <div className="border-b border-gray-200 mb-4">
         <div
           className="relative w-full max-w-full overflow-x-auto no-scrollbar"
           onTouchStart={handleTabTouchStart}
@@ -490,14 +490,15 @@ export default function PlansOffersSection({ user, academy, db }) {
           <nav
             className="-mb-px flex space-x-6 w-max min-w-0"
             aria-label="Tabs"
+            role="tablist"
           >
-            <button onClick={handleTabClick(() => setActiveTab('tiers'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'tiers' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+            <button role="tab" aria-selected={activeTab === 'tiers'} onClick={handleTabClick(() => setActiveTab('tiers'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'tiers' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
             <Zap className="mr-2 h-5 w-5" /> Membership Tiers
           </button>
-            <button onClick={handleTabClick(() => setActiveTab('products'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'products' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+            <button role="tab" aria-selected={activeTab === 'products'} onClick={handleTabClick(() => setActiveTab('products'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'products' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
             <Package className="mr-2 h-5 w-5" /> One-time Products
           </button>
-            <button onClick={handleTabClick(() => setActiveTab('trials'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'trials' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+            <button role="tab" aria-selected={activeTab === 'trials'} onClick={handleTabClick(() => setActiveTab('trials'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'trials' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
             <Tag className="mr-2 h-5 w-5" /> Trials
           </button>
         </nav>
@@ -556,9 +557,9 @@ export default function PlansOffersSection({ user, academy, db }) {
                       </span>
                     </td>
                     <td className="py-3 px-4 border-b text-right">
-                      <button onClick={(e) => handleOpenActionsMenu(tier, e)} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none">
-                        <MoreVertical className="h-5 w-5 text-gray-500" />
-                      </button>
+                        <button onClick={(e) => handleOpenActionsMenu(tier, e)} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none" aria-label={`Actions for tier ${tier.name}`}>
+                          <MoreVertical className="h-5 w-5 text-gray-500" />
+                        </button>
                     </td>
                   </tr>
                 ))}
@@ -644,9 +645,9 @@ export default function PlansOffersSection({ user, academy, db }) {
                         <td className="py-3 px-4 border-b text-base">{formatCurrency(product.price, academy.currency)}</td>
                         <td className="py-3 px-4 border-b text-sm text-gray-600">{product.inventory ?? 'N/A'}</td>
                         <td className="py-3 px-4 border-b text-right">
-                          <button onClick={(e) => { e.stopPropagation(); setActiveProductMenu(product); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none">
-                            <MoreVertical className="h-5 w-5 text-gray-500" />
-                          </button>
+                        <button onClick={(e) => { e.stopPropagation(); setActiveProductMenu(product); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none" aria-label={`Actions for product ${product.name}`}>
+                          <MoreVertical className="h-5 w-5 text-gray-500" />
+                        </button>
                         </td>
                       </tr>
                     ))}
@@ -715,9 +716,9 @@ export default function PlansOffersSection({ user, academy, db }) {
                         <td className="py-3 px-4 border-b text-sm text-gray-600 capitalize">{trial.classLimit}</td>
                         <td className="py-3 px-4 border-b text-base">{formatCurrency(trial.price, academy.currency)}</td>
                         <td className="py-3 px-4 border-b text-right">
-                          <button onClick={(e) => { e.stopPropagation(); setActiveTrialMenu(trial); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none">
-                            <MoreVertical className="h-5 w-5 text-gray-500" />
-                          </button>
+                        <button onClick={(e) => { e.stopPropagation(); setActiveTrialMenu(trial); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none" aria-label={`Actions for trial ${trial.name}`}>
+                          <MoreVertical className="h-5 w-5 text-gray-500" />
+                        </button>
                         </td>
                       </tr>
                     ))}

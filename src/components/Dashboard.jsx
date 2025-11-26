@@ -10,6 +10,8 @@ export default function Dashboard({ user, academy, db }) {
   const [tiers, setTiers] = useState([]);
   const [trialsMap, setTrialsMap] = useState(new Map());
   const navigate = useNavigate();
+  const studentLabelPlural = academy?.studentLabelPlural || 'Students';
+  const studentLabelSingular = academy?.studentLabelSingular || 'Student';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -149,10 +151,10 @@ export default function Dashboard({ user, academy, db }) {
 
       {/* Students */}
       <section className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm space-y-3">
-        <h2 className="text-lg font-semibold text-gray-900">Students</h2>
+        <h2 className="text-lg font-semibold text-gray-900">{studentLabelPlural}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <p className="text-sm text-gray-600">Active students</p>
+            <p className="text-sm text-gray-600">Active {studentLabelPlural.toLowerCase()}</p>
             <p className="text-2xl font-bold text-gray-900 mt-1 flex items-center gap-2"><Users className="h-5 w-5 text-primary" /> {studentStats.active}</p>
           </div>
           <div>

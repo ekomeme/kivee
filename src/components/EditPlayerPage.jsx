@@ -9,6 +9,7 @@ export default function EditPlayerPage({ user, academy, db }) {
   const [playerToEdit, setPlayerToEdit] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const studentLabelSingular = academy?.studentLabelSingular || 'Student';
 
   useEffect(() => {
     if (!user || !db || !playerId) return;
@@ -30,7 +31,7 @@ export default function EditPlayerPage({ user, academy, db }) {
           }
           setPlayerToEdit(playerData);
         } else {
-          setError("Student not found.");
+          setError(`${studentLabelSingular} not found.`);
         }
       } catch (err) {
         console.error("Error fetching player for edit:", err);
@@ -53,7 +54,7 @@ export default function EditPlayerPage({ user, academy, db }) {
 
   return (
     <div className="p-4 md:p-6">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6">Edit Student</h2>
+      <h2 className="text-3xl font-bold text-gray-800 mb-6">Edit {studentLabelSingular}</h2>
       {playerToEdit && (
         <PlayerForm
           user={user}

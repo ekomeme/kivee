@@ -7,6 +7,8 @@ import toast from 'react-hot-toast';
 
 import { Plus, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Filter, ChevronRight, Check, X } from 'lucide-react';
 export default function PlayersSection({ user, academy, db }) {
+  const studentLabelPlural = academy?.studentLabelPlural || 'Students';
+  const studentLabelSingular = academy?.studentLabelSingular || 'Student';
   const [players, setPlayers] = useState([]);
   // Fetches players and their tutors
   const fetchPlayers = async () => {
@@ -151,16 +153,16 @@ export default function PlayersSection({ user, academy, db }) {
           }
         }
         fetchPlayers();
-        toast.success("Student deleted successfully.");
+        toast.success(`${studentLabelSingular} deleted successfully.`);
       } catch (error) {
         console.error("Error deleting student:", error);
-        toast.error("Error deleting student.");
+        toast.error(`Error deleting ${studentLabelSingular.toLowerCase()}.`);
       }
     }
 
     toast((t) => (
       <div className="bg-white p-4 rounded-lg shadow-lg flex flex-col items-center">
-        <p className="text-center mb-4">Are you sure you want to delete this student?</p>
+        <p className="text-center mb-4">Are you sure you want to delete this {studentLabelSingular.toLowerCase()}?</p>
         <div className="flex space-x-2">
           <button
             onClick={() => { toast.dismiss(t.id); deleteAction(); }}
@@ -329,7 +331,7 @@ export default function PlayersSection({ user, academy, db }) {
 
   const Avatar = ({ player }) => {
     if (player.photoURL) {
-      return <img src={player.photoURL} alt="Student" className="w-10 h-10 rounded-full object-cover" />;
+      return <img src={player.photoURL} alt={studentLabelSingular} className="w-10 h-10 rounded-full object-cover" />;
     }
 
     const initial = player.name ? player.name.charAt(0).toUpperCase() : '?';
@@ -376,7 +378,7 @@ export default function PlayersSection({ user, academy, db }) {
                     try {
                       const newStatus = player.status === 'inactive' ? 'active' : 'inactive';
                       await updateDoc(doc(db, `academies/${user.uid}/players`, player.id), { status: newStatus });
-                      toast.success(`Student ${newStatus === 'inactive' ? 'deactivated' : 'activated'} successfully.`);
+                      toast.success(`${studentLabelSingular} ${newStatus === 'inactive' ? 'deactivated' : 'activated'} successfully.`);
                       fetchPlayers();
                       onClose();
                     } catch (err) {
@@ -406,13 +408,13 @@ export default function PlayersSection({ user, academy, db }) {
     <div className="p-6 bg-white rounded-none shadow-none md:rounded-lg md:shadow-md">
       {/* Header with title and Add Player button */}
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">Students of {academy.name}</h2>
+        <h2 className="text-2xl font-bold text-gray-800">{studentLabelPlural} of {academy.name}</h2>
         <button
           onClick={handleAddPlayer}
           className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center"
         >
           <Plus className="mr-2 h-5 w-5" />
-          <span>Add New Student</span>
+          <span>Add New {studentLabelSingular}</span>
         </button>
       </div>
 
@@ -436,13 +438,13 @@ export default function PlayersSection({ user, academy, db }) {
             id="searchFilter"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search Student..."
+            placeholder={`Search ${studentLabelSingular}...`}
             className="block w-full pl-10 pr-3 py-2 border-gray-border focus:outline-none focus:ring-primary focus:border-primary rounded-md"
           />
         </div>
       </div>
       {filteredAndSortedPlayers.length === 0 ? (
-        <p className="text-gray-600">No students registered yet.</p>
+        <p className="text-gray-600">No {studentLabelPlural.toLowerCase()} registered yet.</p>
       ) : (
         <>
           {/* Desktop table */} 
@@ -488,15 +490,16 @@ export default function PlayersSection({ user, academy, db }) {
                       ) : 'N/A'}
                     </td>
                     <td className="py-2 px-4 border-b text-right">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity relative">
-                        <button
-                          onClick={(e) => handleOpenActionsMenu(player, e)}
-                          className="p-1 rounded-full hover:bg-gray-200 focus:outline-none"
-                        >
-                          <MoreVertical className="h-5 w-5 text-gray-500" />
-                        </button>
-                      </div>
-                    </td>
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity relative">
+                      <button
+                        onClick={(e) => handleOpenActionsMenu(player, e)}
+                        className="p-1 rounded-full hover:bg-gray-200 focus:outline-none"
+                        aria-label={`Actions for ${player.name} ${player.lastName}`}
+                      >
+                        <MoreVertical className="h-5 w-5 text-gray-500" />
+                      </button>
+                    </div>
+                  </td>
                   </tr>
                 ))}
               </tbody>

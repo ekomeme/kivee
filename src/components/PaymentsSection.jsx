@@ -116,7 +116,7 @@ export default function PaymentsSection({ user, academy, db }) {
                 <table className="min-w-full bg-white border border-gray-200">
                     <thead>
                         <tr>
-                            <th className="py-2 px-4 border-b text-left">Student</th>
+                        <th className="py-2 px-4 border-b text-left">{academy?.studentLabelSingular || 'Student'}</th>
                             <th className="py-2 px-4 border-b text-left">Item</th>
                             <th className="py-2 px-4 border-b text-left">Amount</th>
                             <th className="py-2 px-4 border-b text-left">{isPaidTab ? 'Paid Date' : 'Due Date'}</th> 
@@ -133,18 +133,22 @@ export default function PaymentsSection({ user, academy, db }) {
                                     </Link>
                                 </td>
                                 <td className="py-3 px-4 border-b">{payment.itemName}</td>
-                                <td className="py-3 px-4 border-b">{formatCurrency(payment.amount)}</td>
+                                <td className="py-3 px-4 border-b flex items-center gap-2">
+                                    <span>{formatCurrency(payment.amount)}</span>
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isPaidTab ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>{isPaidTab ? 'Paid' : 'Unpaid'}</span>
+                                </td>
                                 <td className="py-3 px-4 border-b">{formatDate(isPaidTab ? payment.paidAt : payment.dueDate)}</td>
 
                                 {isPaidTab && <td className="py-3 px-4 border-b">{payment.paymentMethod}</td>}
                                 {!isPaidTab && (
                                     <td className="py-3 px-4 border-b">
-                                        <button
-                                            onClick={() => onPay && onPay(index)}
-                                            className="bg-primary hover:bg-primary-hover text-white text-xs font-bold py-1 px-3 rounded-md flex items-center"
-                                        >
-                                            <Plus className="mr-1 h-4 w-4" /> Add Payment
-                                        </button>
+                <button
+                    onClick={() => onPay && onPay(index)}
+                    className="bg-primary hover:bg-primary-hover text-white text-xs font-bold py-1 px-3 rounded-md flex items-center"
+                    aria-label={`Add payment for ${payment.studentName}`}
+                >
+                    <Plus className="mr-1 h-4 w-4" /> Add Payment
+                </button>
                                     </td>
                                 )}
                             </tr>
@@ -157,7 +161,7 @@ export default function PaymentsSection({ user, academy, db }) {
                     <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                         <div className="flex items-start justify-between">
                             <div>
-                                <p className="text-xs text-gray-500">Student</p>
+                                <p className="text-xs text-gray-500">{academy?.studentLabelSingular || 'Student'}</p>
                                 <Link to={`/students/${payment.studentId}`} className="font-semibold text-gray-900 hover:underline">
                                     {payment.studentName}
                                 </Link>
@@ -166,16 +170,20 @@ export default function PaymentsSection({ user, academy, db }) {
                             {!isPaidTab && (
                                 <button
                                     onClick={() => onPay && onPay(index)}
-                                    className="bg-primary hover:bg-primary-hover text-white text-xs font-bold py-1.5 px-3 rounded-md flex items-center"
-                                >
-                                    <Plus className="mr-1 h-4 w-4" /> Pay
-                                </button>
+                            className="bg-primary hover:bg-primary-hover text-white text-xs font-bold py-1.5 px-3 rounded-md flex items-center"
+                            aria-label={`Add payment for ${payment.studentName}`}
+                        >
+                            <Plus className="mr-1 h-4 w-4" /> Pay
+                        </button>
                             )}
                         </div>
                         <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-700">
                             <div className="bg-gray-50 rounded-md p-2">
                                 <p className="text-xs text-gray-500">Amount</p>
-                                <p className="font-medium">{formatCurrency(payment.amount)}</p>
+                                <div className="flex items-center gap-2">
+                                    <p className="font-medium">{formatCurrency(payment.amount)}</p>
+                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isPaidTab ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>{isPaidTab ? 'Paid' : 'Unpaid'}</span>
+                                </div>
                             </div>
                             <div className="bg-gray-50 rounded-md p-2">
                                 <p className="text-xs text-gray-500">{isPaidTab ? 'Paid Date' : 'Due Date'}</p>
@@ -194,17 +202,27 @@ export default function PaymentsSection({ user, academy, db }) {
         </>
     );
 
-    const PaymentModal = ({ payment, onClose }) => {
+        const PaymentModal = ({ payment, onClose }) => {
         const [paymentMethod, setPaymentMethod] = useState('Cash');
         const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+        const [isSubmitting, setIsSubmitting] = useState(false);
 
         const handleSubmit = async (e) => {
             e.preventDefault();
             try {
+                const picked = new Date(paymentDate);
+                const today = new Date();
+                picked.setHours(0,0,0,0);
+                today.setHours(0,0,0,0);
+                if (picked > today) {
+                    toast.error('Payment date cannot be in the future.');
+                    return;
+                }
+                setIsSubmitting(true);
                 const playerRef = doc(db, `academies/${user.uid}/players`, payment.studentId);
                 const playerDoc = await getDoc(playerRef);
                 if (!playerDoc.exists()) {
-                    toast.error("Student not found.");
+                    toast.error(`${academy?.studentLabelSingular || 'Student'} not found.`);
                     return;
                 }
 
@@ -223,6 +241,8 @@ export default function PaymentsSection({ user, academy, db }) {
             } catch (error) {
                 console.error("Error updating payment status:", error);
                 toast.error('Failed to register payment.');
+            } finally {
+                setIsSubmitting(false);
             }
         };
 
@@ -247,7 +267,7 @@ export default function PaymentsSection({ user, academy, db }) {
                         <div><label htmlFor="paymentDate" className="block text-sm font-medium text-gray-700">Payment Date</label><input type="date" id="paymentDate" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
                         <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-white py-3 md:bg-transparent md:py-0">
                             <button type="button" onClick={onClose} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
-                            <button type="submit" className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md w-full md:w-auto">Confirm Payment</button>
+                            <button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md w-full md:w-auto disabled:opacity-50">{isSubmitting ? 'Saving...' : 'Confirm Payment'}</button>
                         </div>
                     </form>
                 </div>
@@ -288,11 +308,12 @@ export default function PaymentsSection({ user, academy, db }) {
                     <nav
                         className="-mb-px flex space-x-6 w-max min-w-0"
                         aria-label="Tabs"
+                        role="tablist"
                     >
-                        <button onClick={handleTabClick(() => setActiveTab('unpaid'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'unpaid' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                        <button role="tab" aria-selected={activeTab === 'unpaid'} onClick={handleTabClick(() => setActiveTab('unpaid'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'unpaid' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                         <Clock className="mr-2 h-5 w-5" /> Unpaid
                     </button>
-                        <button onClick={handleTabClick(() => setActiveTab('paid'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'paid' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                        <button role="tab" aria-selected={activeTab === 'paid'} onClick={handleTabClick(() => setActiveTab('paid'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'paid' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                         <CheckCircle className="mr-2 h-5 w-5" /> Paid
                     </button>
                     </nav>

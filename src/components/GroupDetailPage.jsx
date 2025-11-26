@@ -16,6 +16,8 @@ export default function GroupDetailPage({ user, academy, db }) {
   const [coachDraft, setCoachDraft] = useState('');
   const [scheduleForm, setScheduleForm] = useState({ day: 'Monday', startTime: '', endTime: '' });
   const [editingSession, setEditingSession] = useState(null);
+  const studentLabelPlural = academy?.studentLabelPlural || 'Students';
+  const studentLabelSingular = academy?.studentLabelSingular || 'Student';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -187,7 +189,7 @@ export default function GroupDetailPage({ user, academy, db }) {
             <div>
               <div className="flex items-center mb-2">
                 <Users className="h-5 w-5 text-gray-600 mr-2" />
-                <h3 className="text-lg font-semibold text-gray-900">Students</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{studentLabelPlural}</h3>
               </div>
               {students.length ? (
                 <ul className="space-y-2">

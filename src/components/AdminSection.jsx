@@ -17,6 +17,8 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
   const [updateSettingsError, setUpdateSettingsError] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(academy.logoUrl || '');
+  const [studentLabelSingular, setStudentLabelSingular] = useState(academy.studentLabelSingular || 'Student');
+  const [studentLabelPlural, setStudentLabelPlural] = useState(academy.studentLabelPlural || 'Students');
   const logoInputRef = useRef(null);
   const ACADEMY_CATEGORIES = ['Soccer', 'Basketball', 'Tennis', 'Other'];
 
@@ -122,6 +124,8 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
         countryCode: selectedCountry?.countryCode || null,
         logoUrl: logoUrl || null,
         logoPath: logoPath || null,
+        studentLabelSingular: studentLabelSingular.trim() || 'Student',
+        studentLabelPlural: studentLabelPlural.trim() || 'Students',
       });
       await onAcademyUpdate(); // Llama a la función para refrescar los datos en App.jsx
       toast.success("Academy settings updated successfully.");
@@ -254,6 +258,28 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
               </div>
             )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-medium text-gray-700">Students (singular)</label>
+                <input
+                  type="text"
+                  value={studentLabelSingular}
+                  onChange={(e) => setStudentLabelSingular(e.target.value)}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                  placeholder="Student"
+                />
+              </div>
+              <div>
+                <label className="block font-medium text-gray-700">Students (plural)</label>
+                <input
+                  type="text"
+                  value={studentLabelPlural}
+                  onChange={(e) => setStudentLabelPlural(e.target.value)}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                  placeholder="Students"
+                />
+              </div>
+            </div>
             <div>
               <label htmlFor="academyCountry" className="block font-medium text-gray-700">
                 Country (Optional)

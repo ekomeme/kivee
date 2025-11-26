@@ -248,20 +248,20 @@ export default function GroupsAndClassesSection({ user, academy, db }) {
   return (
     <div className="p-6 bg-white rounded-none shadow-none md:rounded-lg md:shadow-md">
       <h2 className="text-2xl font-bold text-gray-800 mb-2">Groups & Classes</h2>
-      <div className="border-b border-gray-200 mb-6">
+      <div className="border-b border-gray-200 mb-4">
           <div
             className="relative w-full max-w-full overflow-x-auto no-scrollbar"
             onTouchStart={handleTabTouchStart}
             onTouchMove={handleTabTouchMove}
           >
-            <nav className="-mb-px flex space-x-6 w-max min-w-0" aria-label="Tabs">
-              <button onClick={handleTabClick(() => setActiveGroupTab('groups'))} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm flex items-center ${activeGroupTab === 'groups' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+            <nav className="-mb-px flex space-x-6 w-max min-w-0" aria-label="Tabs" role="tablist">
+              <button role="tab" aria-selected={activeGroupTab === 'groups'} onClick={handleTabClick(() => setActiveGroupTab('groups'))} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm flex items-center ${activeGroupTab === 'groups' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
               <Users className="mr-2 h-5 w-5" /> Groups
             </button>
-              <button onClick={handleTabClick(() => setActiveGroupTab('schedule'))} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm flex items-center ${activeGroupTab === 'schedule' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+              <button role="tab" aria-selected={activeGroupTab === 'schedule'} onClick={handleTabClick(() => setActiveGroupTab('schedule'))} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm flex items-center ${activeGroupTab === 'schedule' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
               <Calendar className="mr-2 h-5 w-5" /> Class Schedule
             </button>
-              <button onClick={handleTabClick(() => setActiveGroupTab('transfers'))} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm flex items-center ${activeGroupTab === 'transfers' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+              <button role="tab" aria-selected={activeGroupTab === 'transfers'} onClick={handleTabClick(() => setActiveGroupTab('transfers'))} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm flex items-center ${activeGroupTab === 'transfers' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
               <ArrowRightLeft className="mr-2 h-5 w-5" /> Transfers
             </button>
             </nav>
@@ -299,7 +299,7 @@ export default function GroupsAndClassesSection({ user, academy, db }) {
                         <td className="py-3 px-4 border-b">{group.maxCapacity || 'N/A'}</td>
                         <td className="py-3 px-4 border-b"><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${group.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{group.status}</span></td>
                         <td className="py-3 px-4 border-b text-right">
-                          <button onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(group); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none"><MoreVertical className="h-5 w-5 text-gray-500" /></button>
+                        <button onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(group); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none" aria-label={`Actions for group ${group.name}`}><MoreVertical className="h-5 w-5 text-gray-500" /></button>
                         </td>
                       </tr>
                     ))}

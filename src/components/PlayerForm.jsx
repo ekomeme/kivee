@@ -6,6 +6,8 @@ import Select from 'react-select'; // Import Select for country codes
 import { Upload } from 'lucide-react'; // Import Upload icon
 
 export default function PlayerForm({ user, academy, db, onComplete, playerToEdit }) {
+  const studentLabelSingular = academy?.studentLabelSingular || 'Student';
+  const studentLabelPlural = academy?.studentLabelPlural || 'Students';
   // Player Info
   const [name, setName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -254,7 +256,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
 
     // Basic phone number length validation
     if (playerContactPhone && (playerContactPhone.length < 6 || playerContactPhone.length > 15)) {
-      toast.error("Student's phone number has an invalid length.");
+      toast.error(`${studentLabelSingular}'s phone number has an invalid length.`);
       return;
     }
     if (hasTutor && tutorContactPhone && (tutorContactPhone.length < 6 || tutorContactPhone.length > 15)) {
@@ -443,7 +445,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Student Photo Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
-      <legend className="text-xl font-semibold text-gray-900 px-2">Student Photo</legend>
+      <legend className="text-xl font-semibold text-gray-900 px-2">{studentLabelSingular} Photo</legend>
       <div className="flex flex-col items-center justify-center mt-4">
         <input type="file" ref={fileInputRef} onChange={handlePhotoFileChange} accept="image/*" className="hidden" />
         <div
@@ -451,12 +453,12 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
               onClick={() => fileInputRef.current.click()}
             >
               {photoURL ? (
-                <img src={photoURL} alt="Student" className="w-full h-full object-cover" />
+                <img src={photoURL} alt={studentLabelSingular} className="w-full h-full object-cover" />
               ) : (
                 <Upload className="h-8 w-8 text-gray-400" />
               )}
         </div>
-        <p className="text-sm text-gray-600 mt-2">Student Photo</p>
+        <p className="text-sm text-gray-600 mt-2">{studentLabelSingular} Photo</p>
         <p className="text-xs text-gray-500">Max 2MB · JPG/PNG/WEBP · 100–3000px</p>
         {uploadProgress > 0 && uploadProgress < 100 && <div className="w-24 bg-gray-200 rounded-full h-1.5 mt-2"><div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div></div>}
       </div>
@@ -464,7 +466,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
 
         {/* Student Information Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">Student Information</legend>
+          <legend className="text-xl font-semibold text-gray-900 px-2">{studentLabelSingular} Information</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
             <div><label htmlFor="name" className="block text-sm font-medium text-gray-700">First Name</label><input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
             <div><label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Last Name</label><input type="text" id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
@@ -686,7 +688,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
             Cancel
           </button>
           <button type="submit" disabled={loading || uploadProgress > 0} className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
-            {loading ? (uploadProgress > 0 ? `Uploading... ${uploadProgress.toFixed(0)}%` : 'Saving...') : (playerToEdit ? 'Update Student' : 'Add Student')}
+            {loading ? (uploadProgress > 0 ? `Uploading... ${uploadProgress.toFixed(0)}%` : 'Saving...') : (playerToEdit ? `Update ${studentLabelSingular}` : `Add ${studentLabelSingular}`)}
           </button>
         </div>
         </form>

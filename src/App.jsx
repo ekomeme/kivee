@@ -77,6 +77,8 @@ export default function App() {
   const [nameInput, setNameInput] = useState("");
   const nameInputRef = useRef(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const studentLabelSingular = academy?.studentLabelSingular || 'Student';
+  const studentLabelPlural = academy?.studentLabelPlural || 'Students';
 
   useEffect(() => {
     // Esta función unificada maneja todos los casos de autenticación.
@@ -148,7 +150,7 @@ export default function App() {
     setError(null); // Clear any previous errors
     try {
       const ref = doc(db, "academies", user.uid);
-      const data = { name: nameInput, ownerId: user.uid, createdAt: serverTimestamp() };
+      const data = { name: nameInput, ownerId: user.uid, createdAt: serverTimestamp(), studentLabelSingular: 'Student', studentLabelPlural: 'Students' };
       await setDoc(ref, data); // Escribe la academia en Firestore
 
       // Optimistically update academy state
@@ -206,7 +208,7 @@ export default function App() {
               className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}
             >
               <Users className="h-4 w-4" />
-              <span>Students</span>
+              <span>{studentLabelPlural}</span>
             </NavLink>
           </li>
           <li className="relative">

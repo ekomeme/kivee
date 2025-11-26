@@ -161,11 +161,14 @@ export default function PlayerDetailPage({ user, academy, db }) {
       }
     } catch (error) {
       console.error("Error fetching player details:", error);
-      setError("Failed to load student details.");
+      setError(`Failed to load ${studentLabelSingular.toLowerCase()} details.`);
     } finally {
       setLoading(false);
     }
   }, [user, db, playerId]);
+
+  const studentLabelPlural = academy?.studentLabelPlural || 'Students';
+  const studentLabelSingular = academy?.studentLabelSingular || 'Student';
 
   useEffect(() => {
     fetchPlayerDetails();
@@ -230,11 +233,11 @@ export default function PlayerDetailPage({ user, academy, db }) {
   };
 
   if (loading) {
-    return <div className="text-center p-10">Loading student details...</div>;
+    return <div className="text-center p-10">Loading {studentLabelSingular.toLowerCase()} details...</div>;
   }
 
   if (!player) {
-    return <div className="text-center p-10 text-red-500">{error || 'Student not found.'}</div>;
+    return <div className="text-center p-10 text-red-500">{error || `${studentLabelSingular} not found.`}</div>;
   }
 
   return (
@@ -242,14 +245,14 @@ export default function PlayerDetailPage({ user, academy, db }) {
       <div className="w-full max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <div className="text-xl font-semibold text-gray-800">
-            <Link to="/students" className="text-primary hover:underline">Students</Link>
+            <Link to="/students" className="text-primary hover:underline">{studentLabelPlural}</Link>
             <span className="text-gray-500 mx-2">&gt;</span>
             <span className="text-gray-800">{player.name} {player.lastName}</span>
           </div>
           <div>
             <button onClick={handleEdit} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center">
               <Edit className="mr-2 h-5 w-5" />
-              <span>Edit</span>
+              <span>Edit {studentLabelSingular}</span>
             </button>
           </div>
         </div>
