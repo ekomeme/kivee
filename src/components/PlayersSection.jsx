@@ -403,7 +403,7 @@ export default function PlayersSection({ user, academy, db }) {
 
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-md">
+    <div className="p-6 bg-white rounded-none shadow-none md:rounded-lg md:shadow-md">
       {/* Header with title and Add Player button */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold text-gray-800">Students of {academy.name}</h2>
@@ -444,62 +444,113 @@ export default function PlayersSection({ user, academy, db }) {
       {filteredAndSortedPlayers.length === 0 ? (
         <p className="text-gray-600">No students registered yet.</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200">
-            <thead>
-              <tr>
-                <th className="py-2 px-4 border-b text-left">
-                  <button onClick={() => handleSort('name')} className="font-bold flex items-center">
-                    Name {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />)}
-                  </button>
-                </th>
-                <th className="py-2 px-4 border-b text-left">Gender</th>
-                <th className="py-2 px-4 border-b text-left">Group</th>
-                <th className="py-2 px-4 border-b text-left">Tier</th>
-                <th className="py-2 px-4 border-b text-left">Tutor</th>
-                <th className="py-2 px-4 border-b text-right"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAndSortedPlayers.map(player => (
-                <tr key={player.id} className="group hover:bg-gray-100 cursor-pointer" onClick={() => handleRowClick(player)}>
-                  <td className="py-2 px-4 border-b">
-                    <div className="flex items-center space-x-3">
-                      <Avatar player={player} />
-                      <div className="flex items-center space-x-4">
-                        <span className="font-medium text-gray-800">{player.name} {player.lastName}</span>
-                        <ContactIcon value={player.email} icon={Mail} />
-                        <ContactIcon value={player.contactPhone} icon={Phone} />
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-2 px-4 border-b">{player.gender}</td>
-                  <td className="py-2 px-4 border-b">{player.groupName || 'N/A'}</td>
-                  <td className="py-2 px-4 border-b">{player.tierName || 'N/A'}</td>
-                  <td className="py-2 px-4 border-b">
-                    {player.tutor ? (
-                      <div className="flex items-center space-x-4">
-                        <span>{player.tutor.name} {player.tutor.lastName}</span>
-                        <ContactIcon value={player.tutor.email} icon={Mail} />
-                        <ContactIcon value={player.tutor.contactPhone} icon={Phone} />
-                      </div>
-                    ) : 'N/A'}
-                  </td>
-                  <td className="py-2 px-4 border-b text-right">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity relative">
-                      <button
-                        onClick={(e) => handleOpenActionsMenu(player, e)}
-                        className="p-1 rounded-full hover:bg-gray-200 focus:outline-none"
-                      >
-                        <MoreVertical className="h-5 w-5 text-gray-500" />
-                      </button>
-                    </div>
-                  </td>
+        <>
+          {/* Desktop table */} 
+          <div className="overflow-x-auto hidden md:block">
+            <table className="min-w-full bg-white border border-gray-200">
+              <thead>
+                <tr>
+                  <th className="py-2 px-4 border-b text-left">
+                    <button onClick={() => handleSort('name')} className="font-bold flex items-center">
+                      Name {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />)}
+                    </button>
+                  </th>
+                  <th className="py-2 px-4 border-b text-left">Gender</th>
+                  <th className="py-2 px-4 border-b text-left">Group</th>
+                  <th className="py-2 px-4 border-b text-left">Tier</th>
+                  <th className="py-2 px-4 border-b text-left">Tutor</th>
+                  <th className="py-2 px-4 border-b text-right"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filteredAndSortedPlayers.map(player => (
+                  <tr key={player.id} className="group hover:bg-gray-100 cursor-pointer" onClick={() => handleRowClick(player)}>
+                    <td className="py-2 px-4 border-b">
+                      <div className="flex items-center space-x-3">
+                        <Avatar player={player} />
+                        <div className="flex items-center space-x-4">
+                          <span className="font-medium text-gray-800">{player.name} {player.lastName}</span>
+                          <ContactIcon value={player.email} icon={Mail} />
+                          <ContactIcon value={player.contactPhone} icon={Phone} />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-2 px-4 border-b">{player.gender}</td>
+                    <td className="py-2 px-4 border-b">{player.groupName || 'N/A'}</td>
+                    <td className="py-2 px-4 border-b">{player.tierName || 'N/A'}</td>
+                    <td className="py-2 px-4 border-b">
+                      {player.tutor ? (
+                        <div className="flex items-center space-x-4">
+                          <span>{player.tutor.name} {player.tutor.lastName}</span>
+                          <ContactIcon value={player.tutor.email} icon={Mail} />
+                          <ContactIcon value={player.tutor.contactPhone} icon={Phone} />
+                        </div>
+                      ) : 'N/A'}
+                    </td>
+                    <td className="py-2 px-4 border-b text-right">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity relative">
+                        <button
+                          onClick={(e) => handleOpenActionsMenu(player, e)}
+                          className="p-1 rounded-full hover:bg-gray-200 focus:outline-none"
+                        >
+                          <MoreVertical className="h-5 w-5 text-gray-500" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile cards */} 
+          <div className="grid gap-3 md:hidden">
+            {filteredAndSortedPlayers.map(player => {
+              const playerPhone = player.contactPhone || player.contactPhoneNumber || '';
+              return (
+                <div
+                  key={player.id}
+                  className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm relative"
+                  onClick={() => handleRowClick(player)}
+                >
+                  <button
+                    onClick={(e) => handleOpenActionsMenu(player, e)}
+                    className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100"
+                    aria-label="More actions"
+                  >
+                    <MoreVertical className="h-5 w-5 text-gray-600" />
+                  </button>
+                  <div className="flex items-center space-x-3">
+                    <Avatar player={player} />
+                    <div>
+                      <p className="font-semibold text-gray-900">{player.name} {player.lastName}</p>
+                      <p className="text-sm text-gray-500">{player.email || 'No email'}</p>
+                      {playerPhone && <p className="text-sm text-gray-500">{playerPhone}</p>}
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-700">
+                    <div className="bg-gray-50 rounded-md p-2">
+                      <p className="text-xs text-gray-500">Gender</p>
+                      <p className="font-medium">{player.gender || 'N/A'}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-md p-2">
+                      <p className="text-xs text-gray-500">Group</p>
+                      <p className="font-medium truncate">{player.groupName || 'N/A'}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-md p-2">
+                      <p className="text-xs text-gray-500">Tier</p>
+                      <p className="font-medium truncate">{player.tierName || 'N/A'}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-md p-2">
+                      <p className="text-xs text-gray-500">Tutor</p>
+                      <p className="font-medium truncate">{player.tutor ? `${player.tutor.name} ${player.tutor.lastName}` : 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {showActionsMenu && selectedPlayerForActions && (

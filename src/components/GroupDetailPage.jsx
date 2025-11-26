@@ -242,9 +242,19 @@ export default function GroupDetailPage({ user, academy, db }) {
         </div>
 
         {editingSession !== null && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
-              <h3 className="text-lg font-semibold mb-4">{editingSession ? 'Edit Session' : 'Add Session'}</h3>
+          <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-white md:bg-black md:bg-opacity-50 overflow-y-auto">
+            <div className="relative w-full h-full md:h-auto bg-white p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-md">
+              <div className="flex items-start justify-between mb-4">
+                <h3 className="text-lg font-semibold">{editingSession ? 'Edit Session' : 'Add Session'}</h3>
+                <button
+                  type="button"
+                  onClick={() => setEditingSession(null)}
+                  className="p-2 rounded-md hover:bg-gray-100"
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
               <form onSubmit={handleSaveSession} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Day</label>

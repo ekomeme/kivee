@@ -52,7 +52,7 @@ export default function EditPlayerPage({ user, academy, db }) {
   if (error) return <div className="text-center p-10 text-red-500">{error}</div>;
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <h2 className="text-3xl font-bold text-gray-800 mb-6">Edit Student</h2>
       {playerToEdit && (
         <PlayerForm

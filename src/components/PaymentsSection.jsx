@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { collection, query, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
-import { CheckCircle, Clock, Plus } from 'lucide-react';
+import { CheckCircle, Clock, Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingBar from './LoadingBar.jsx';
 
 export default function PaymentsSection({ user, academy, db }) {
     const [allPayments, setAllPayments] = useState([]);
     const [showPaymentModalFor, setShowPaymentModalFor] = useState(null);
+    const touchStartX = useRef(0);
+    const touchMoved = useRef(false);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('unpaid');
 
@@ -109,46 +111,87 @@ export default function PaymentsSection({ user, academy, db }) {
     };
 
     const renderTable = (payments, isPaidTab = false, onPay = null) => ( 
-        <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border border-gray-200">
-                <thead>
-                    <tr>
-                        <th className="py-2 px-4 border-b text-left">Student</th>
-                        <th className="py-2 px-4 border-b text-left">Item</th>
-                        <th className="py-2 px-4 border-b text-left">Amount</th>
-                        <th className="py-2 px-4 border-b text-left">{isPaidTab ? 'Paid Date' : 'Due Date'}</th> 
-                        {isPaidTab && <th className="py-2 px-4 border-b text-left">Method</th>}
-                        {!isPaidTab && <th className="py-2 px-4 border-b text-left">Actions</th>}
-                    </tr>
-                </thead>
-                <tbody>
-                    {payments.map((payment, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                            <td className="py-3 px-4 border-b font-medium">
-                                <Link to={`/students/${payment.studentId}`} className="text-primary hover:underline">
+        <>
+            <div className="overflow-x-auto hidden md:block">
+                <table className="min-w-full bg-white border border-gray-200">
+                    <thead>
+                        <tr>
+                            <th className="py-2 px-4 border-b text-left">Student</th>
+                            <th className="py-2 px-4 border-b text-left">Item</th>
+                            <th className="py-2 px-4 border-b text-left">Amount</th>
+                            <th className="py-2 px-4 border-b text-left">{isPaidTab ? 'Paid Date' : 'Due Date'}</th> 
+                            {isPaidTab && <th className="py-2 px-4 border-b text-left">Method</th>}
+                            {!isPaidTab && <th className="py-2 px-4 border-b text-left">Actions</th>}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {payments.map((payment, index) => (
+                            <tr key={index} className="hover:bg-gray-50">
+                                <td className="py-3 px-4 border-b font-medium">
+                                    <Link to={`/students/${payment.studentId}`} className="text-primary hover:underline">
+                                        {payment.studentName}
+                                    </Link>
+                                </td>
+                                <td className="py-3 px-4 border-b">{payment.itemName}</td>
+                                <td className="py-3 px-4 border-b">{formatCurrency(payment.amount)}</td>
+                                <td className="py-3 px-4 border-b">{formatDate(isPaidTab ? payment.paidAt : payment.dueDate)}</td>
+
+                                {isPaidTab && <td className="py-3 px-4 border-b">{payment.paymentMethod}</td>}
+                                {!isPaidTab && (
+                                    <td className="py-3 px-4 border-b">
+                                        <button
+                                            onClick={() => onPay && onPay(index)}
+                                            className="bg-primary hover:bg-primary-hover text-white text-xs font-bold py-1 px-3 rounded-md flex items-center"
+                                        >
+                                            <Plus className="mr-1 h-4 w-4" /> Add Payment
+                                        </button>
+                                    </td>
+                                )}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            <div className="grid gap-3 md:hidden">
+                {payments.map((payment, index) => (
+                    <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <p className="text-xs text-gray-500">Student</p>
+                                <Link to={`/students/${payment.studentId}`} className="font-semibold text-gray-900 hover:underline">
                                     {payment.studentName}
                                 </Link>
-                            </td>
-                            <td className="py-3 px-4 border-b">{payment.itemName}</td>
-                            <td className="py-3 px-4 border-b">{formatCurrency(payment.amount)}</td>
-                            <td className="py-3 px-4 border-b">{formatDate(isPaidTab ? payment.paidAt : payment.dueDate)}</td>
-
-                            {isPaidTab && <td className="py-3 px-4 border-b">{payment.paymentMethod}</td>}
+                                <p className="text-sm text-gray-600 mt-1">{payment.itemName}</p>
+                            </div>
                             {!isPaidTab && (
-                                <td className="py-3 px-4 border-b">
-                                    <button
-                                        onClick={() => onPay && onPay(index)}
-                                        className="bg-primary hover:bg-primary-hover text-white text-xs font-bold py-1 px-3 rounded-md flex items-center"
-                                    >
-                                        <Plus className="mr-1 h-4 w-4" /> Add Payment
-                                    </button>
-                                </td>
+                                <button
+                                    onClick={() => onPay && onPay(index)}
+                                    className="bg-primary hover:bg-primary-hover text-white text-xs font-bold py-1.5 px-3 rounded-md flex items-center"
+                                >
+                                    <Plus className="mr-1 h-4 w-4" /> Pay
+                                </button>
                             )}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-700">
+                            <div className="bg-gray-50 rounded-md p-2">
+                                <p className="text-xs text-gray-500">Amount</p>
+                                <p className="font-medium">{formatCurrency(payment.amount)}</p>
+                            </div>
+                            <div className="bg-gray-50 rounded-md p-2">
+                                <p className="text-xs text-gray-500">{isPaidTab ? 'Paid Date' : 'Due Date'}</p>
+                                <p className="font-medium">{formatDate(isPaidTab ? payment.paidAt : payment.dueDate)}</p>
+                            </div>
+                            {isPaidTab && (
+                                <div className="bg-gray-50 rounded-md p-2 col-span-2">
+                                    <p className="text-xs text-gray-500">Method</p>
+                                    <p className="font-medium">{payment.paymentMethod}</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </>
     );
 
     const PaymentModal = ({ payment, onClose }) => {
@@ -183,34 +226,76 @@ export default function PaymentsSection({ user, academy, db }) {
         };
 
         return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-                <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
-                    <h3 className="text-xl font-bold mb-4">Register Payment</h3>
+            <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-white md:bg-black md:bg-opacity-50 overflow-y-auto">
+                <div className="relative w-full h-full md:h-auto bg-white p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-sm md:max-w-sm">
+                    <div className="flex items-start justify-between mb-4">
+                        <h3 className="text-xl font-bold">Register Payment</h3>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="p-2 rounded-md hover:bg-gray-100"
+                            aria-label="Close"
+                        >
+                            <X className="h-6 w-6" />
+                        </button>
+                    </div>
                     <p className="mb-1"><strong>Item:</strong> {payment.itemName}</p>
                     <p className="mb-4"><strong>Amount:</strong> {formatCurrency(payment.amount)}</p>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div><label htmlFor="paymentMethod" className="block text-sm font-medium text-gray-700">Payment Method</label><select id="paymentMethod" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option>Cash</option><option>Credit Card</option><option>Bank Transfer</option><option>Other</option></select></div>
-                        <div className="mt-6 flex justify-end space-x-3"><button type="button" onClick={onClose} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md">Cancel</button><button type="submit" className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md">Confirm Payment</button></div>
+                        <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-white py-3 md:bg-transparent md:py-0">
+                            <button type="button" onClick={onClose} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
+                            <button type="submit" className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md w-full md:w-auto">Confirm Payment</button>
+                        </div>
                     </form>
                 </div>
             </div>
         );
     };
 
+    const handleTabTouchStart = (e) => {
+        touchStartX.current = e.touches[0].clientX;
+        touchMoved.current = false;
+    };
+
+    const handleTabTouchMove = (e) => {
+        if (Math.abs(e.touches[0].clientX - touchStartX.current) > 10) {
+            touchMoved.current = true;
+        }
+    };
+
+    const handleTabClick = (action) => () => {
+        if (touchMoved.current) {
+            touchMoved.current = false;
+            return;
+        }
+        action();
+    };
+
   return (
-    <div className="p-6 bg-white rounded-lg shadow-md">
+    <div className="p-6 bg-white rounded-none shadow-none md:rounded-lg md:shadow-md">
       <LoadingBar loading={loading} />
       <h2 className="text-2xl font-bold text-gray-800 mb-2">Payments</h2>
 
             <div className="border-b border-gray-200 mb-6">
-                <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                    <button onClick={() => setActiveTab('unpaid')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'unpaid' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                <div
+                    className="relative w-full max-w-full overflow-x-auto no-scrollbar"
+                    onTouchStart={handleTabTouchStart}
+                    onTouchMove={handleTabTouchMove}
+                >
+                    <nav
+                        className="-mb-px flex space-x-6 w-max min-w-0"
+                        aria-label="Tabs"
+                    >
+                        <button onClick={handleTabClick(() => setActiveTab('unpaid'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'unpaid' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                         <Clock className="mr-2 h-5 w-5" /> Unpaid
                     </button>
-                    <button onClick={() => setActiveTab('paid')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'paid' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                        <button onClick={handleTabClick(() => setActiveTab('paid'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'paid' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                         <CheckCircle className="mr-2 h-5 w-5" /> Paid
                     </button>
-                </nav>
+                    </nav>
+                    <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent md:hidden" aria-hidden />
+                </div>
             </div>
 
             {loading ? (

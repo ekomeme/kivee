@@ -190,7 +190,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
   };
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-md">
+    <div className="p-6 bg-white rounded-none shadow-none md:rounded-lg md:shadow-md">
       <h2 className="text-2xl font-bold text-gray-800 mb-6">Account & Preferences</h2>
         <div className="space-y-8">
           <form onSubmit={handleUpdateAcademySettings} className="space-y-4 max-w-3xl">

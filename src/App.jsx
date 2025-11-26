@@ -16,7 +16,7 @@ import PaymentsSection from "./components/PaymentsSection.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 import GroupDetailPage from "./components/GroupDetailPage.jsx";
 import { Toaster } from "react-hot-toast";
-import { LogOut, Home, Users, Layers, Tags, CreditCard, Settings } from "lucide-react";
+import { LogOut, Home, Users, Layers, Tags, CreditCard, Settings, Menu, X } from "lucide-react";
 import loginIllustration from "./assets/login-ilustration.svg";
 import logoKivee from "./assets/logo-kivee.svg";
 
@@ -76,6 +76,7 @@ export default function App() {
   const [error, setError] = useState(null);
   const [nameInput, setNameInput] = useState("");
   const nameInputRef = useRef(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Esta función unificada maneja todos los casos de autenticación.
@@ -171,6 +172,92 @@ export default function App() {
     }
   };
 
+  const SidebarContent = ({ onNavigate, showHeader = true, className = "" }) => (
+    <div className={`flex flex-col h-full ${className}`}>
+      {showHeader && (
+        <div className="flex items-center space-x-3 mb-4">
+          <div className="h-12 w-12 rounded-full border-2 border-dashed border-gray-300 overflow-hidden flex items-center justify-center">
+            {academy.logoUrl ? (
+              <img src={academy.logoUrl} alt="Academy logo" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-gray-600 font-semibold uppercase">{academy.name?.charAt(0) || '?'}</span>
+            )}
+          </div>
+          <h2 className="text-xl font-semibold">{academy.name}</h2>
+        </div>
+      )}
+      <nav className="flex-grow">
+        <ul className="space-y-2">
+          <li className="relative">
+            <NavLink
+              to="/"
+              end
+              onClick={onNavigate}
+              className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}
+            >
+              <Home className="h-4 w-4" />
+              <span>Dashboard</span>
+            </NavLink>
+          </li>
+          <li className="relative">
+            <NavLink
+              to="/students"
+              onClick={onNavigate}
+              className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}
+            >
+              <Users className="h-4 w-4" />
+              <span>Students</span>
+            </NavLink>
+          </li>
+          <li className="relative">
+            <NavLink
+              to="/groups"
+              onClick={onNavigate}
+              className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}
+            >
+              <Layers className="h-4 w-4" />
+              <span>Groups & Classes</span>
+            </NavLink>
+          </li>
+          <li className="relative">
+            <NavLink
+              to="/plans"
+              onClick={onNavigate}
+              className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}
+            >
+              <Tags className="h-4 w-4" />
+              <span>Plans & Offers</span>
+            </NavLink>
+          </li>
+          <li className="relative">
+            <NavLink
+              to="/payments"
+              onClick={onNavigate}
+              className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}
+            >
+              <CreditCard className="h-4 w-4" />
+              <span>Payments</span>
+            </NavLink>
+          </li>
+          <li className="relative">
+            <NavLink
+              to="/settings"
+              onClick={onNavigate}
+              className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}
+            >
+              <Settings className="h-4 w-4" />
+              <span>Settings</span>
+            </NavLink>
+          </li>
+        </ul>
+      </nav>
+
+      <div className="mt-auto pt-4 border-t border-gray-border relative">
+        <UserMenu user={user} onSignOut={handleSignOut} isSidebar={true} />
+      </div>
+    </div>
+  );
+
   // Conditional rendering based on app state
   if (loading) {
     return <div className="flex items-center justify-center h-screen bg-gray-100 text-gray-800"><p className="text-lg font-medium">Cargando...</p></div>;
@@ -230,82 +317,82 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-light font-sans">
-      {/* Sidebar */}
-      <div
-        className="bg-white text-gray-800 w-64 p-4 flex flex-col border-r border-gray-border"
-      >
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="h-12 w-12 rounded-full border-2 border-dashed border-gray-300 overflow-hidden flex items-center justify-center">
-            {academy.logoUrl ? (
-              <img src={academy.logoUrl} alt="Academy logo" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-gray-600 font-semibold uppercase">{academy.name?.charAt(0) || '?'}</span>
-            )}
-          </div>
-          <h2 className="text-xl font-semibold">{academy.name}</h2>
-        </div>
-        <nav className="flex-grow">
-          <ul className="space-y-2">
-            <li className="relative">
-              <NavLink to="/" end className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>
-                <Home className="h-4 w-4" />
-                <span>Dashboard</span>
-              </NavLink>
-            </li>
-            <li className="relative">
-              <NavLink to="/students" className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>
-                <Users className="h-4 w-4" />
-                <span>Students</span>
-              </NavLink>
-            </li>
-            <li className="relative">
-              <NavLink to="/groups" className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>
-                <Layers className="h-4 w-4" />
-                <span>Groups & Classes</span>
-              </NavLink>
-            </li>
-            <li className="relative">
-              <NavLink to="/plans" className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>
-                <Tags className="h-4 w-4" />
-                <span>Plans & Offers</span>
-              </NavLink>
-            </li>
-            <li className="relative">
-              <NavLink to="/payments" className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>
-                <CreditCard className="h-4 w-4" />
-                <span>Payments</span>
-              </NavLink>
-            </li>
-            <li className="relative">
-              <NavLink to="/settings" className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}>
-                <Settings className="h-4 w-4" />
-                <span>Settings</span>
-              </NavLink>
-            </li>
-          </ul>
-        </nav>
-
-        <div className="mt-auto pt-4 border-t border-gray-border relative">
-          <UserMenu user={user} onSignOut={handleSignOut} isSidebar={true} />
-        </div>
+    <div className="flex h-screen bg-gray-light font-sans relative overflow-x-hidden">
+      {/* Desktop Sidebar */}
+      <div className="bg-white text-gray-800 w-64 p-4 border-r border-gray-border hidden md:flex md:flex-col md:h-full">
+        <SidebarContent />
       </div>
+
+      {/* Mobile full-screen menu */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-30 bg-white p-6 overflow-y-auto flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="h-10 w-10 rounded-full border-2 border-dashed border-gray-300 overflow-hidden flex items-center justify-center">
+                {academy.logoUrl ? (
+                  <img src={academy.logoUrl} alt="Academy logo" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-gray-600 font-semibold uppercase text-sm">{academy.name?.charAt(0) || '?'}</span>
+                )}
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Academy</p>
+                <p className="text-lg font-semibold">{academy.name}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="p-2 rounded-md hover:bg-gray-100"
+              aria-label="Close menu"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+          <SidebarContent
+            onNavigate={() => setIsMobileMenuOpen(false)}
+            showHeader={false}
+            className="flex-1"
+          />
+        </div>
+      )}
+
       {/* Main Content */}
-      <div className="flex-grow p-8 overflow-auto"> {/* Added overflow-auto for scrollable content */}
-        <Routes>
-          <Route path="/sign-in" element={<Navigate to="/" replace />} />
-          <Route path="/students/new" element={<NewPlayerPage user={user} academy={academy} db={db} />} />
-          <Route path="/students" element={<PlayersSection user={user} academy={academy} db={db} />} />
-          <Route path="/students/:playerId" element={<PlayerDetailPage user={user} academy={academy} db={db} />} />
-          <Route path="/students/:playerId/edit" element={<EditPlayerPage user={user} academy={academy} db={db} />} />
-          <Route path="/plans" element={<PlansOffersSection user={user} academy={academy} db={db} />} />
-          <Route path="/payments" element={<PaymentsSection user={user} academy={academy} db={db} />} />
-          <Route path="/groups" element={<GroupsAndClassesSection user={user} academy={academy} db={db} />} />
-          <Route path="/groups/:groupId" element={<GroupDetailPage user={user} academy={academy} db={db} />} />
-          <Route path="/settings" element={<AdminSection user={user} academy={academy} db={db} onAcademyUpdate={async () => setAcademy((await getDoc(doc(db, "academies", user.uid))).data())} />} />
-          <Route path="/" element={<Dashboard user={user} academy={academy} db={db} />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+      <div className="flex-grow flex flex-col min-w-0">
+        <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-border">
+          <div className="flex items-center space-x-2">
+            <div className="h-9 w-9 rounded-full border border-gray-200 overflow-hidden flex items-center justify-center">
+              {academy.logoUrl ? (
+                <img src={academy.logoUrl} alt="Academy logo" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-gray-600 font-semibold uppercase text-sm">{academy.name?.charAt(0) || '?'}</span>
+              )}
+            </div>
+            <span className="text-base font-semibold">{academy.name}</span>
+          </div>
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-2 rounded-md hover:bg-gray-100"
+            aria-label="Toggle menu"
+          >
+            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
+        <div className="flex-grow p-0 md:p-8 overflow-auto min-w-0"> {/* Added overflow-auto for scrollable content */}
+          <Routes>
+            <Route path="/sign-in" element={<Navigate to="/" replace />} />
+            <Route path="/students/new" element={<NewPlayerPage user={user} academy={academy} db={db} />} />
+            <Route path="/students" element={<PlayersSection user={user} academy={academy} db={db} />} />
+            <Route path="/students/:playerId" element={<PlayerDetailPage user={user} academy={academy} db={db} />} />
+            <Route path="/students/:playerId/edit" element={<EditPlayerPage user={user} academy={academy} db={db} />} />
+            <Route path="/plans" element={<PlansOffersSection user={user} academy={academy} db={db} />} />
+            <Route path="/payments" element={<PaymentsSection user={user} academy={academy} db={db} />} />
+            <Route path="/groups" element={<GroupsAndClassesSection user={user} academy={academy} db={db} />} />
+            <Route path="/groups/:groupId" element={<GroupDetailPage user={user} academy={academy} db={db} />} />
+            <Route path="/settings" element={<AdminSection user={user} academy={academy} db={db} onAcademyUpdate={async () => setAcademy((await getDoc(doc(db, "academies", user.uid))).data())} />} />
+            <Route path="/" element={<Dashboard user={user} academy={academy} db={db} />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
       </div>
     </div>
   );

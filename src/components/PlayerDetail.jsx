@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, X } from 'lucide-react';
 
 export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, academy, activeTab: controlledTab, onTabChange, paymentPage, onPaymentPageChange }) {
   const [activeTab, setActiveTab] = useState(controlledTab || 'details');
@@ -59,9 +59,19 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
     };
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-        <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
-          <h3 className="text-xl font-bold mb-4">Register Payment</h3> 
+      <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-white md:bg-black md:bg-opacity-50 overflow-y-auto">
+        <div className="relative w-full h-full md:h-auto bg-white p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-sm md:max-w-sm">
+          <div className="flex items-start justify-between mb-4">
+            <h3 className="text-xl font-bold">Register Payment</h3>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-md hover:bg-gray-100"
+              aria-label="Close"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
           <p className="mb-1"><strong>Item:</strong> {name || 'N/A'}</p>
           <p className="mb-4"><strong>Amount:</strong> {new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(amount || 0)}</p>
           <form onSubmit={handleSubmit}>
@@ -76,9 +86,9 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
                 </select>
               </div>
             </div>
-            <div className="mt-6 flex justify-end space-x-3">
-              <button type="button" onClick={onClose} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md">Cancel</button>
-              <button type="submit" className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md">Confirm Payment</button>
+            <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-white py-3 md:bg-transparent md:py-0">
+              <button type="button" onClick={onClose} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
+              <button type="submit" className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md w-full md:w-auto">Confirm Payment</button>
             </div>
           </form>
         </div>
@@ -144,7 +154,7 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
   };
 
   return (
-    <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-7xl mx-auto">
+    <div className="bg-white p-4 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl w-full max-w-7xl mx-auto">
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-8" aria-label="Tabs">
           <button onClick={() => changeTab('details')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'details' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>

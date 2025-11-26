@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
-import { Plus, Edit, Trash2, MoreVertical, Package, Tag, Zap } from 'lucide-react';
+import { Plus, Edit, Trash2, MoreVertical, Package, Tag, Zap, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function PlansOffersSection({ user, academy, db }) {
@@ -9,6 +9,8 @@ export default function PlansOffersSection({ user, academy, db }) {
   const [trials, setTrials] = useState([]);
 
   const [activeTab, setActiveTab] = useState('tiers'); // 'tiers', 'products', 'trials'
+  const touchStartX = useRef(0);
+  const touchMoved = useRef(false);
 
   // States for Membership Tiers
   const [newTierName, setNewTierName] = useState('');
@@ -453,25 +455,54 @@ export default function PlansOffersSection({ user, academy, db }) {
     setActiveTierMenu(tier);
   };
 
+  const handleTabTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchMoved.current = false;
+  };
+
+  const handleTabTouchMove = (e) => {
+    if (Math.abs(e.touches[0].clientX - touchStartX.current) > 10) {
+      touchMoved.current = true;
+    }
+  };
+
+  const handleTabClick = (action) => () => {
+    if (touchMoved.current) {
+      touchMoved.current = false;
+      return;
+    }
+    action();
+  };
+
   return (
-    <div className="p-6 bg-white rounded-lg shadow-md">
+    <div className="p-6 bg-white rounded-none shadow-none md:rounded-lg md:shadow-md">
       <div className="flex justify-between items-center mb-2">
         <h2 className="text-2xl font-bold text-gray-800">Plans & Offers</h2>
       </div>
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-          <button onClick={() => setActiveTab('tiers')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'tiers' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+        <div
+          className="relative w-full max-w-full overflow-x-auto no-scrollbar"
+          onTouchStart={handleTabTouchStart}
+          onTouchMove={handleTabTouchMove}
+        >
+          <nav
+            className="-mb-px flex space-x-6 w-max min-w-0"
+            aria-label="Tabs"
+          >
+            <button onClick={handleTabClick(() => setActiveTab('tiers'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'tiers' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
             <Zap className="mr-2 h-5 w-5" /> Membership Tiers
           </button>
-          <button onClick={() => setActiveTab('products')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'products' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+            <button onClick={handleTabClick(() => setActiveTab('products'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'products' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
             <Package className="mr-2 h-5 w-5" /> One-time Products
           </button>
-          <button onClick={() => setActiveTab('trials')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'trials' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+            <button onClick={handleTabClick(() => setActiveTab('trials'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'trials' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
             <Tag className="mr-2 h-5 w-5" /> Trials
           </button>
         </nav>
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent md:hidden" aria-hidden />
+        </div>
       </div>
 
       {/* Content based on active tab */}
@@ -488,7 +519,8 @@ export default function PlansOffersSection({ user, academy, db }) {
           <p className="text-sm">Click "Add New Tier" to get started.</p>
         </div>
       ) : (
-          <div className="overflow-x-auto">
+        <>
+          <div className="overflow-x-auto hidden md:block">
             <table className="min-w-full bg-white border border-gray-200">
               <thead>
                 <tr>
@@ -533,7 +565,49 @@ export default function PlansOffersSection({ user, academy, db }) {
               </tbody>
             </table>
           </div>
-        )
+          <div className="grid gap-3 md:hidden">
+            {tiers.map(tier => (
+              <div key={tier.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm relative">
+                <button
+                  onClick={(e) => handleOpenActionsMenu(tier, e)}
+                  className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100"
+                  aria-label="More actions"
+                >
+                  <MoreVertical className="h-5 w-5 text-gray-600" />
+                </button>
+                <p className="font-semibold text-gray-900 text-lg">{tier.name}</p>
+                <p className="text-sm text-gray-600 mt-1 line-clamp-2">{tier.description}</p>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-700">
+                  <div className="bg-gray-50 rounded-md p-2">
+                    <p className="text-xs text-gray-500">Price</p>
+                    <p className="font-medium">
+                      {tier.pricingModel === 'monthly' && `${formatCurrency(tier.price, academy.currency)}/mo`}
+                      {tier.pricingModel === 'semi-annual' && `${formatCurrency(tier.price, academy.currency)}/6mo`}
+                      {tier.pricingModel === 'annual' && `${formatCurrency(tier.price, academy.currency)}/yr`}
+                      {tier.pricingModel === 'term' && `${formatCurrency(tier.price, academy.currency)}/term`}
+                      {!tier.pricingModel && `${formatCurrency(tier.price, academy.currency)}`}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 rounded-md p-2">
+                    <p className="text-xs text-gray-500">Classes</p>
+                    <p className="font-medium">{tier.classesPerWeek ? `${tier.classesPerWeek}/week` : 'N/A'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-md p-2">
+                    <p className="text-xs text-gray-500">Status</p>
+                    <p className="font-medium capitalize">{tier.status}</p>
+                  </div>
+                  {tier.pricingModel === 'term' && (
+                    <div className="bg-gray-50 rounded-md p-2 col-span-2">
+                      <p className="text-xs text-gray-500">Term</p>
+                      <p className="font-medium">{tier.termStartDate} - {tier.termEndDate}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )
       }
       </>
       )}
@@ -550,34 +624,61 @@ export default function PlansOffersSection({ user, academy, db }) {
               <p className="text-sm">Create products like enrollment fees, equipment, or event tickets.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white border border-gray-200">
-                <thead>
-                  <tr>
-                    <th className="py-2 px-4 border-b text-left text-base">Name</th>
-                    <th className="py-2 px-4 border-b text-left text-base">Type</th>
-                    <th className="py-2 px-4 border-b text-left text-base">Price</th>
-                    <th className="py-2 px-4 border-b text-left text-base">Inventory</th>
-                    <th className="py-2 px-4 border-b text-right text-base">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {oneTimeProducts.map(product => (
-                    <tr key={product.id} className="hover:bg-gray-50">
-                      <td className="py-3 px-4 border-b text-base font-medium">{product.name}</td>
-                      <td className="py-3 px-4 border-b text-sm text-gray-600 capitalize">{product.type}</td>
-                      <td className="py-3 px-4 border-b text-base">{formatCurrency(product.price, academy.currency)}</td>
-                      <td className="py-3 px-4 border-b text-sm text-gray-600">{product.inventory ?? 'N/A'}</td>
-                      <td className="py-3 px-4 border-b text-right">
-                        <button onClick={(e) => { e.stopPropagation(); setActiveProductMenu(product); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none">
-                          <MoreVertical className="h-5 w-5 text-gray-500" />
-                        </button>
-                      </td>
+            <>
+              <div className="overflow-x-auto hidden md:block">
+                <table className="min-w-full bg-white border border-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="py-2 px-4 border-b text-left text-base">Name</th>
+                      <th className="py-2 px-4 border-b text-left text-base">Type</th>
+                      <th className="py-2 px-4 border-b text-left text-base">Price</th>
+                      <th className="py-2 px-4 border-b text-left text-base">Inventory</th>
+                      <th className="py-2 px-4 border-b text-right text-base">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {oneTimeProducts.map(product => (
+                      <tr key={product.id} className="hover:bg-gray-50">
+                        <td className="py-3 px-4 border-b text-base font-medium">{product.name}</td>
+                        <td className="py-3 px-4 border-b text-sm text-gray-600 capitalize">{product.type}</td>
+                        <td className="py-3 px-4 border-b text-base">{formatCurrency(product.price, academy.currency)}</td>
+                        <td className="py-3 px-4 border-b text-sm text-gray-600">{product.inventory ?? 'N/A'}</td>
+                        <td className="py-3 px-4 border-b text-right">
+                          <button onClick={(e) => { e.stopPropagation(); setActiveProductMenu(product); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none">
+                            <MoreVertical className="h-5 w-5 text-gray-500" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="grid gap-3 md:hidden">
+                {oneTimeProducts.map(product => (
+                  <div key={product.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm relative">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setActiveProductMenu(product); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }}
+                      className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100"
+                      aria-label="More actions"
+                    >
+                      <MoreVertical className="h-5 w-5 text-gray-600" />
+                    </button>
+                    <p className="font-semibold text-gray-900 text-lg">{product.name}</p>
+                    <p className="text-sm text-gray-600 capitalize mt-1">{product.type}</p>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-700">
+                      <div className="bg-gray-50 rounded-md p-2">
+                        <p className="text-xs text-gray-500">Price</p>
+                        <p className="font-medium">{formatCurrency(product.price, academy.currency)}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-md p-2">
+                        <p className="text-xs text-gray-500">Inventory</p>
+                        <p className="font-medium">{product.inventory ?? 'N/A'}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </>
       )}
@@ -594,34 +695,61 @@ export default function PlansOffersSection({ user, academy, db }) {
               <p className="text-sm">Offer free or discounted trials to attract new students.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white border border-gray-200">
-                <thead>
-                  <tr>
-                    <th className="py-2 px-4 border-b text-left text-base">Name</th>
-                    <th className="py-2 px-4 border-b text-left text-base">Duration</th>
-                    <th className="py-2 px-4 border-b text-left text-base">Class Limit</th>
-                    <th className="py-2 px-4 border-b text-left text-base">Price</th>
-                    <th className="py-2 px-4 border-b text-right text-base">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {trials.map(trial => (
-                    <tr key={trial.id} className="hover:bg-gray-50">
-                      <td className="py-3 px-4 border-b text-base font-medium">{trial.name}</td>
-                      <td className="py-3 px-4 border-b text-sm text-gray-600">{trial.durationInDays} days</td>
-                      <td className="py-3 px-4 border-b text-sm text-gray-600 capitalize">{trial.classLimit}</td>
-                      <td className="py-3 px-4 border-b text-base">{formatCurrency(trial.price, academy.currency)}</td>
-                      <td className="py-3 px-4 border-b text-right">
-                        <button onClick={(e) => { e.stopPropagation(); setActiveTrialMenu(trial); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none">
-                          <MoreVertical className="h-5 w-5 text-gray-500" />
-                        </button>
-                      </td>
+            <>
+              <div className="overflow-x-auto hidden md:block">
+                <table className="min-w-full bg-white border border-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="py-2 px-4 border-b text-left text-base">Name</th>
+                      <th className="py-2 px-4 border-b text-left text-base">Duration</th>
+                      <th className="py-2 px-4 border-b text-left text-base">Class Limit</th>
+                      <th className="py-2 px-4 border-b text-left text-base">Price</th>
+                      <th className="py-2 px-4 border-b text-right text-base">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {trials.map(trial => (
+                      <tr key={trial.id} className="hover:bg-gray-50">
+                        <td className="py-3 px-4 border-b text-base font-medium">{trial.name}</td>
+                        <td className="py-3 px-4 border-b text-sm text-gray-600">{trial.durationInDays} days</td>
+                        <td className="py-3 px-4 border-b text-sm text-gray-600 capitalize">{trial.classLimit}</td>
+                        <td className="py-3 px-4 border-b text-base">{formatCurrency(trial.price, academy.currency)}</td>
+                        <td className="py-3 px-4 border-b text-right">
+                          <button onClick={(e) => { e.stopPropagation(); setActiveTrialMenu(trial); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none">
+                            <MoreVertical className="h-5 w-5 text-gray-500" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="grid gap-3 md:hidden">
+                {trials.map(trial => (
+                  <div key={trial.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm relative">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setActiveTrialMenu(trial); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }}
+                      className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100"
+                      aria-label="More actions"
+                    >
+                      <MoreVertical className="h-5 w-5 text-gray-600" />
+                    </button>
+                    <p className="font-semibold text-gray-900 text-lg">{trial.name}</p>
+                    <p className="text-sm text-gray-600 mt-1">Duration: {trial.durationInDays} days</p>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-700">
+                      <div className="bg-gray-50 rounded-md p-2">
+                        <p className="text-xs text-gray-500">Class Limit</p>
+                        <p className="font-medium capitalize">{trial.classLimit}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-md p-2">
+                        <p className="text-xs text-gray-500">Price</p>
+                        <p className="font-medium">{formatCurrency(trial.price, academy.currency)}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </>
       )}
@@ -658,9 +786,19 @@ export default function PlansOffersSection({ user, academy, db }) {
       )}
       {/* Tier Form Modal */}
       {showTierModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4">{editingTier ? 'Edit Tier' : 'Add New Tier'}</h3>
+        <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-white md:bg-black md:bg-opacity-50 overflow-y-auto">
+          <div className="relative w-full h-full md:h-auto bg-white p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-xl font-bold">{editingTier ? 'Edit Tier' : 'Add New Tier'}</h3>
+              <button
+                type="button"
+                onClick={() => setShowTierModal(false)}
+                className="p-2 rounded-md hover:bg-gray-100"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
             <form onSubmit={handleAddOrUpdateTier}>
               <div className="space-y-4">
                 <div>
@@ -751,9 +889,9 @@ export default function PlansOffersSection({ user, academy, db }) {
 
               </div>
               {tierError && <p className="text-red-500 text-sm mt-4">{tierError}</p>}
-              <div className="mt-6 flex justify-end space-x-3">
-                <button type="button" onClick={() => setShowTierModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md">Cancel</button>
-                <button type="submit" disabled={loadingTiers} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md disabled:opacity-50">{loadingTiers ? 'Saving...' : 'Save'}</button>
+              <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-white py-3 md:bg-transparent md:py-0">
+                <button type="button" onClick={() => setShowTierModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
+                <button type="submit" disabled={loadingTiers} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md disabled:opacity-50 w-full md:w-auto">{loadingTiers ? 'Saving...' : 'Save'}</button>
               </div>
             </form>
           </div>
@@ -761,9 +899,19 @@ export default function PlansOffersSection({ user, academy, db }) {
       )}
       {/* One-time Product Form Modal */}
       {showProductModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4">{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
+        <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-white md:bg-black md:bg-opacity-50 overflow-y-auto">
+          <div className="relative w-full h-full md:h-auto bg-white p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-xl font-bold">{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
+              <button
+                type="button"
+                onClick={() => setShowProductModal(false)}
+                className="p-2 rounded-md hover:bg-gray-100"
+                aria-label="Close"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
             <form onSubmit={handleAddOrUpdateProduct} className="space-y-4">
               <div>
                 <label htmlFor="productName" className="block text-sm font-medium text-gray-700">Product Name</label>
@@ -803,9 +951,9 @@ export default function PlansOffersSection({ user, academy, db }) {
                 <input type="date" id="availableDate" value={availableDate} onChange={(e) => setAvailableDate(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
               </div>
               {productError && <p className="text-red-500 text-sm mt-4">{productError}</p>}
-              <div className="mt-6 flex justify-end space-x-3">
-                <button type="button" onClick={() => setShowProductModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md">Cancel</button>
-                <button type="submit" disabled={loadingProducts} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md disabled:opacity-50">{loadingProducts ? 'Saving...' : 'Save'}</button>
+              <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-white py-3 md:bg-transparent md:py-0">
+                <button type="button" onClick={() => setShowProductModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
+                <button type="submit" disabled={loadingProducts} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md disabled:opacity-50 w-full md:w-auto">{loadingProducts ? 'Saving...' : 'Save'}</button>
               </div>
             </form>
           </div>
@@ -813,9 +961,19 @@ export default function PlansOffersSection({ user, academy, db }) {
       )}
       {/* Trial Form Modal */}
       {showTrialModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4">{editingTrial ? 'Edit Trial' : 'Add New Trial'}</h3>
+        <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-white md:bg-black md:bg-opacity-50 overflow-y-auto">
+          <div className="relative w-full h-full md:h-auto bg-white p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-xl font-bold">{editingTrial ? 'Edit Trial' : 'Add New Trial'}</h3>
+              <button
+                type="button"
+                onClick={() => setShowTrialModal(false)}
+                className="p-2 rounded-md hover:bg-gray-100"
+                aria-label="Close"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
             <form onSubmit={handleAddOrUpdateTrial} className="space-y-4">
               <div><label htmlFor="trialName" className="block text-sm font-medium text-gray-700">Trial Name</label><input type="text" id="trialName" value={trialName} onChange={(e) => setTrialName(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
               <div><label htmlFor="durationInDays" className="block text-sm font-medium text-gray-700">Duration (in days)</label><input type="number" id="durationInDays" value={durationInDays} onChange={(e) => setDurationInDays(e.target.value)} required min="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
@@ -842,9 +1000,9 @@ export default function PlansOffersSection({ user, academy, db }) {
                 </div>
               </div>
               {trialError && <p className="text-red-500 text-sm mt-4">{trialError}</p>}
-              <div className="mt-6 flex justify-end space-x-3">
-                <button type="button" onClick={() => setShowTrialModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md">Cancel</button>
-                <button type="submit" disabled={loadingTrials} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md disabled:opacity-50">{loadingTrials ? 'Saving...' : 'Save'}</button>
+              <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-white py-3 md:bg-transparent md:py-0">
+                <button type="button" onClick={() => setShowTrialModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
+                <button type="submit" disabled={loadingTrials} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md disabled:opacity-50 w-full md:w-auto">{loadingTrials ? 'Saving...' : 'Save'}</button>
               </div>
             </form>
           </div>
