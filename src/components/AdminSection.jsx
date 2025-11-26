@@ -194,9 +194,13 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
   };
 
   return (
-    <div className="p-6 bg-white rounded-none shadow-none md:rounded-lg md:shadow-md">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Account & Preferences</h2>
-        <div className="space-y-8">
+    <div className="p-6">
+      <div className="w-full max-w-screen-xl mx-auto space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-800">Account & Preferences</h2>
+          <div />
+        </div>
+        <div className="bg-white rounded-none shadow-none md:rounded-lg md:shadow-md p-4 md:p-6 space-y-8">
           <form onSubmit={handleUpdateAcademySettings} className="space-y-4 max-w-3xl">
             <div className="flex flex-col items-start space-y-2">
               <input
@@ -323,6 +327,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
             </div>
           </form>
         </div>
+      </div>
     </div>
   );
 }

@@ -475,145 +475,148 @@ export default function PlansOffersSection({ user, academy, db }) {
   };
 
   return (
-    <div className="p-6 bg-white rounded-none shadow-none md:rounded-lg md:shadow-md">
-      <div className="flex justify-between items-center mb-2">
-        <h2 className="text-2xl font-bold text-gray-800">Plans & Offers</h2>
-      </div>
-
-      {/* Tabs */}
-      <div className="border-b border-gray-200 mb-4">
-        <div
-          className="relative w-full max-w-full overflow-x-auto no-scrollbar"
-          onTouchStart={handleTabTouchStart}
-          onTouchMove={handleTabTouchMove}
-        >
-          <nav
-            className="-mb-px flex space-x-6 w-max min-w-0"
-            aria-label="Tabs"
-            role="tablist"
-          >
-            <button role="tab" aria-selected={activeTab === 'tiers'} onClick={handleTabClick(() => setActiveTab('tiers'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'tiers' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-            <Zap className="mr-2 h-5 w-5" /> Membership Tiers
-          </button>
-            <button role="tab" aria-selected={activeTab === 'products'} onClick={handleTabClick(() => setActiveTab('products'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'products' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-            <Package className="mr-2 h-5 w-5" /> One-time Products
-          </button>
-            <button role="tab" aria-selected={activeTab === 'trials'} onClick={handleTabClick(() => setActiveTab('trials'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'trials' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-            <Tag className="mr-2 h-5 w-5" /> Trials
-          </button>
-        </nav>
-          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent md:hidden" aria-hidden />
+    <div className="p-6">
+      <div className="w-full max-w-screen-xl mx-auto space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-800">Plans & Offers</h2>
+          <div />
         </div>
-      </div>
 
-      {/* Content based on active tab */}
-      {activeTab === 'tiers' && (
-        <>
-          <div className="flex justify-end mb-4">
-            <button onClick={() => handleOpenTierModal()} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center">
-              <Plus className="mr-2 h-5 w-5" /> Add New Tier
-            </button>
-          </div>
-      {tiers.length === 0 ? (
-        <div className="text-center p-10 text-gray-500 border-2 border-dashed rounded-lg mt-4">
-          <p>No membership tiers registered yet.</p>
-          <p className="text-sm">Click "Add New Tier" to get started.</p>
-        </div>
-      ) : (
-        <>
-          <div className="overflow-x-auto hidden md:block">
-            <table className="min-w-full bg-white border border-gray-200">
-              <thead>
-                <tr>
-                  <th className="py-2 px-4 border-b text-left text-base">Name</th>
-                  <th className="py-2 px-4 border-b text-left text-base">Description</th>
-                  <th className="py-2 px-4 border-b text-left text-base">Price</th>
-                  <th className="py-2 px-4 border-b text-left text-base">Classes</th>
-                  <th className="py-2 px-4 border-b text-left text-base">Status</th>
-                  <th className="py-2 px-4 border-b text-right text-base">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tiers.map(tier => (
-                  <tr key={tier.id} className="hover:bg-gray-50">
-                    <td className="py-3 px-4 border-b text-base font-medium">{tier.name}</td>
-                    <td className="py-3 px-4 border-b text-sm text-gray-600 max-w-xs truncate">{tier.description}</td>
-                    <td className="py-3 px-4 border-b text-base">
-                      {tier.pricingModel === 'monthly' && `${formatCurrency(tier.price, academy.currency)}/mo`}
-                      {tier.pricingModel === 'semi-annual' && `${formatCurrency(tier.price, academy.currency)}/6mo`}
-                      {tier.pricingModel === 'annual' && `${formatCurrency(tier.price, academy.currency)}/yr`}
-                      {tier.pricingModel === 'term' && (
-                        <div>
-                          <p>{formatCurrency(tier.price, academy.currency)}/term</p>
-                          <p className="text-xs text-gray-500">{tier.termStartDate} - {tier.termEndDate}</p>
-                        </div>
-                      )}
-                      {!tier.pricingModel && `${formatCurrency(tier.price, academy.currency)}`}
-                    </td>
-                    <td className="py-3 px-4 border-b text-sm text-gray-600">{tier.classesPerWeek ? `${tier.classesPerWeek} per week` : 'N/A'}</td>
-                    <td className="py-3 px-4 border-b">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${tier.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                        {tier.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 border-b text-right">
-                        <button onClick={(e) => handleOpenActionsMenu(tier, e)} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none" aria-label={`Actions for tier ${tier.name}`}>
-                          <MoreVertical className="h-5 w-5 text-gray-500" />
-                        </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="grid gap-3 md:hidden">
-            {tiers.map(tier => (
-              <div key={tier.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm relative">
-                <button
-                  onClick={(e) => handleOpenActionsMenu(tier, e)}
-                  className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100"
-                  aria-label="More actions"
-                >
-                  <MoreVertical className="h-5 w-5 text-gray-600" />
+        <div className="bg-white rounded-none shadow-none md:rounded-lg md:shadow-md p-4 md:p-6">
+          {/* Tabs */}
+          <div className="border-b border-gray-200 mb-4">
+            <div
+              className="relative w-full max-w-full overflow-x-auto no-scrollbar"
+              onTouchStart={handleTabTouchStart}
+              onTouchMove={handleTabTouchMove}
+            >
+              <nav
+                className="-mb-px flex space-x-6 w-max min-w-0"
+                aria-label="Tabs"
+                role="tablist"
+              >
+                <button role="tab" aria-selected={activeTab === 'tiers'} onClick={handleTabClick(() => setActiveTab('tiers'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'tiers' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                  <Zap className="mr-2 h-5 w-5" /> Membership Tiers
                 </button>
-                <p className="font-semibold text-gray-900 text-lg">{tier.name}</p>
-                <p className="text-sm text-gray-600 mt-1 line-clamp-2">{tier.description}</p>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-700">
-                  <div className="bg-gray-50 rounded-md p-2">
-                    <p className="text-xs text-gray-500">Price</p>
-                    <p className="font-medium">
-                      {tier.pricingModel === 'monthly' && `${formatCurrency(tier.price, academy.currency)}/mo`}
-                      {tier.pricingModel === 'semi-annual' && `${formatCurrency(tier.price, academy.currency)}/6mo`}
-                      {tier.pricingModel === 'annual' && `${formatCurrency(tier.price, academy.currency)}/yr`}
-                      {tier.pricingModel === 'term' && `${formatCurrency(tier.price, academy.currency)}/term`}
-                      {!tier.pricingModel && `${formatCurrency(tier.price, academy.currency)}`}
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 rounded-md p-2">
-                    <p className="text-xs text-gray-500">Classes</p>
-                    <p className="font-medium">{tier.classesPerWeek ? `${tier.classesPerWeek}/week` : 'N/A'}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-md p-2">
-                    <p className="text-xs text-gray-500">Status</p>
-                    <p className="font-medium capitalize">{tier.status}</p>
-                  </div>
-                  {tier.pricingModel === 'term' && (
-                    <div className="bg-gray-50 rounded-md p-2 col-span-2">
-                      <p className="text-xs text-gray-500">Term</p>
-                      <p className="font-medium">{tier.termStartDate} - {tier.termEndDate}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+                <button role="tab" aria-selected={activeTab === 'products'} onClick={handleTabClick(() => setActiveTab('products'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'products' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                  <Package className="mr-2 h-5 w-5" /> One-time Products
+                </button>
+                <button role="tab" aria-selected={activeTab === 'trials'} onClick={handleTabClick(() => setActiveTab('trials'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'trials' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                  <Tag className="mr-2 h-5 w-5" /> Trials
+                </button>
+              </nav>
+              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent md:hidden" aria-hidden />
+            </div>
           </div>
-        </>
-      )
-      }
-      </>
-      )}
-      {activeTab === 'products' && (
-        <>
+
+          {/* Content based on active tab */}
+          {activeTab === 'tiers' && (
+            <>
+              <div className="flex justify-end mb-4">
+                <button onClick={() => handleOpenTierModal()} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center">
+                  <Plus className="mr-2 h-5 w-5" /> Add New Tier
+                </button>
+              </div>
+              {tiers.length === 0 ? (
+                <div className="text-center p-10 text-gray-500 border-2 border-dashed rounded-lg mt-4">
+                  <p>No membership tiers registered yet.</p>
+                  <p className="text-sm">Click "Add New Tier" to get started.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto hidden md:block">
+                    <table className="min-w-full bg-white border border-gray-200">
+                      <thead>
+                        <tr>
+                          <th className="py-2 px-4 border-b text-left text-base">Name</th>
+                          <th className="py-2 px-4 border-b text-left text-base">Description</th>
+                          <th className="py-2 px-4 border-b text-left text-base">Price</th>
+                          <th className="py-2 px-4 border-b text-left text-base">Classes</th>
+                          <th className="py-2 px-4 border-b text-left text-base">Status</th>
+                          <th className="py-2 px-4 border-b text-right text-base">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tiers.map(tier => (
+                          <tr key={tier.id} className="hover:bg-gray-50">
+                            <td className="py-3 px-4 border-b text-base font-medium">{tier.name}</td>
+                            <td className="py-3 px-4 border-b text-sm text-gray-600 max-w-xs truncate">{tier.description}</td>
+                            <td className="py-3 px-4 border-b text-base">
+                              {tier.pricingModel === 'monthly' && `${formatCurrency(tier.price, academy.currency)}/mo`}
+                              {tier.pricingModel === 'semi-annual' && `${formatCurrency(tier.price, academy.currency)}/6mo`}
+                              {tier.pricingModel === 'annual' && `${formatCurrency(tier.price, academy.currency)}/yr`}
+                              {tier.pricingModel === 'term' && (
+                                <div>
+                                  <p>{formatCurrency(tier.price, academy.currency)}/term</p>
+                                  <p className="text-xs text-gray-500">{tier.termStartDate} - {tier.termEndDate}</p>
+                                </div>
+                              )}
+                              {!tier.pricingModel && `${formatCurrency(tier.price, academy.currency)}`}
+                            </td>
+                            <td className="py-3 px-4 border-b text-sm text-gray-600">{tier.classesPerWeek ? `${tier.classesPerWeek} per week` : 'N/A'}</td>
+                            <td className="py-3 px-4 border-b">
+                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${tier.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                {tier.status}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 border-b text-right">
+                              <button onClick={(e) => handleOpenActionsMenu(tier, e)} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none" aria-label={`Actions for tier ${tier.name}`}>
+                                <MoreVertical className="h-5 w-5 text-gray-500" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="grid gap-3 md:hidden">
+                    {tiers.map(tier => (
+                      <div key={tier.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm relative">
+                        <button
+                          onClick={(e) => handleOpenActionsMenu(tier, e)}
+                          className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100"
+                          aria-label="More actions"
+                        >
+                          <MoreVertical className="h-5 w-5 text-gray-600" />
+                        </button>
+                        <p className="font-semibold text-gray-900 text-lg">{tier.name}</p>
+                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">{tier.description}</p>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-700">
+                          <div className="bg-gray-50 rounded-md p-2">
+                            <p className="text-xs text-gray-500">Price</p>
+                            <p className="font-medium">
+                              {tier.pricingModel === 'monthly' && `${formatCurrency(tier.price, academy.currency)}/mo`}
+                              {tier.pricingModel === 'semi-annual' && `${formatCurrency(tier.price, academy.currency)}/6mo`}
+                              {tier.pricingModel === 'annual' && `${formatCurrency(tier.price, academy.currency)}/yr`}
+                              {tier.pricingModel === 'term' && `${formatCurrency(tier.price, academy.currency)}/term`}
+                              {!tier.pricingModel && `${formatCurrency(tier.price, academy.currency)}`}
+                            </p>
+                          </div>
+                          <div className="bg-gray-50 rounded-md p-2">
+                            <p className="text-xs text-gray-500">Classes</p>
+                            <p className="font-medium">{tier.classesPerWeek ? `${tier.classesPerWeek}/week` : 'N/A'}</p>
+                          </div>
+                          <div className="bg-gray-50 rounded-md p-2">
+                            <p className="text-xs text-gray-500">Status</p>
+                            <p className="font-medium capitalize">{tier.status}</p>
+                          </div>
+                          {tier.pricingModel === 'term' && (
+                            <div className="bg-gray-50 rounded-md p-2 col-span-2">
+                              <p className="text-xs text-gray-500">Term</p>
+                              <p className="font-medium">{tier.termStartDate} - {tier.termEndDate}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )
+              }
+            </>
+          )}
+          {activeTab === 'products' && (
+            <>
           <div className="flex justify-end mb-4">
             <button onClick={() => handleOpenProductModal()} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center">
               <Plus className="mr-2 h-5 w-5" /> Add New Product
@@ -797,7 +800,7 @@ export default function PlansOffersSection({ user, academy, db }) {
                 className="p-2 rounded-md hover:bg-gray-100"
                 aria-label="Close"
               >
-                ×
+                <X className="h-6 w-6" />
               </button>
             </div>
             <form onSubmit={handleAddOrUpdateTier}>
@@ -1009,6 +1012,8 @@ export default function PlansOffersSection({ user, academy, db }) {
           </div>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }

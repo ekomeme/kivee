@@ -242,7 +242,7 @@ export default function PlayerDetailPage({ user, academy, db }) {
 
   return (
     <div className="p-6">
-      <div className="w-full max-w-7xl mx-auto">
+      <div className="w-full max-w-screen-xl mx-auto space-y-4">
         <div className="flex justify-between items-center mb-6">
           <div className="text-xl font-semibold text-gray-800">
             <Link to="/students" className="text-primary hover:underline">{studentLabelPlural}</Link>

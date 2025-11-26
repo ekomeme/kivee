@@ -246,8 +246,13 @@ export default function GroupsAndClassesSection({ user, academy, db }) {
   };
 
   return (
-    <div className="p-6 bg-white rounded-none shadow-none md:rounded-lg md:shadow-md">
-      <h2 className="text-2xl font-bold text-gray-800 mb-2">Groups & Classes</h2>
+    <div className="p-6">
+      <div className="w-full max-w-screen-xl mx-auto space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-800">Groups & Classes</h2>
+          <div />
+        </div>
+      <div className="bg-white rounded-none shadow-none md:rounded-lg md:shadow-md p-4 md:p-6">
       <div className="border-b border-gray-200 mb-4">
           <div
             className="relative w-full max-w-full overflow-x-auto no-scrollbar"
@@ -458,6 +463,8 @@ export default function GroupsAndClassesSection({ user, academy, db }) {
           </div>
         </div>
       )}
+    </div>
+      </div>
     </div>
   );
 }

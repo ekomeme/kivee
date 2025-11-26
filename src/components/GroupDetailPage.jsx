@@ -122,7 +122,7 @@ export default function GroupDetailPage({ user, academy, db }) {
 
   return (
     <div className="p-6">
-      <div className="w-full max-w-6xl mx-auto">
+      <div className="w-full max-w-screen-xl mx-auto space-y-4">
         <div className="flex justify-between items-center mb-6">
           <div className="text-xl font-semibold text-gray-800">
             <Link to="/groups" className="text-primary hover:underline">Groups & Classes</Link>

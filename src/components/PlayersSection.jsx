@@ -405,19 +405,21 @@ export default function PlayersSection({ user, academy, db }) {
 
 
   return (
-    <div className="p-6 bg-white rounded-none shadow-none md:rounded-lg md:shadow-md">
-      {/* Header with title and Add Player button */}
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">{studentLabelPlural} of {academy.name}</h2>
-        <button
-          onClick={handleAddPlayer}
-          className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center"
-        >
-          <Plus className="mr-2 h-5 w-5" />
-          <span>Add New {studentLabelSingular}</span>
-        </button>
-      </div>
+    <div className="p-6">
+      <div className="w-full max-w-screen-xl mx-auto space-y-4">
+        {/* Header with title and Add Player button */}
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-800">{studentLabelPlural} of {academy.name}</h2>
+          <button
+            onClick={handleAddPlayer}
+            className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center"
+          >
+            <Plus className="mr-2 h-5 w-5" />
+            <span>Add New {studentLabelSingular}</span>
+          </button>
+        </div>
 
+      <div className="bg-white rounded-none shadow-none md:rounded-lg md:shadow-md p-4 md:p-6">
       {/* Filters Section */}
       <div className="flex items-center space-x-4 mb-4 p-4 bg-gray-light rounded-lg">
         <div className="flex items-center space-x-4">
@@ -563,6 +565,8 @@ export default function PlayersSection({ user, academy, db }) {
           onClose={() => setShowActionsMenu(false)}
         />
       )}
+      </div>
+      </div>
     </div>
   );
 }

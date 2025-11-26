@@ -146,7 +146,7 @@ export default function Dashboard({ user, academy, db }) {
   }, [tiers, players]);
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6">
+    <div className="w-full max-w-screen-xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
 
       {/* Students */}
