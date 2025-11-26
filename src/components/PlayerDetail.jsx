@@ -48,13 +48,14 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
 
   const PaymentModal = ({ product, productIndex, onClose }) => {
     const [paymentMethod, setPaymentMethod] = useState('Cash');
+    const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
 
     const isSubscription = product.paymentFor === 'tier';
     const name = isSubscription ? product.itemName : product.productDetails?.name;
     const amount = isSubscription ? product.amount : product.productDetails?.price;
     const handleSubmit = (e) => {
       e.preventDefault();
-      onMarkAsPaid(productIndex, paymentMethod);
+      onMarkAsPaid(productIndex, paymentMethod, paymentDate);
       onClose();
     };
 
@@ -84,6 +85,16 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
                   <option>Bank Transfer</option>
                   <option>Other</option>
                 </select>
+              </div>
+              <div>
+                <label htmlFor="paymentDate" className="block text-sm font-medium text-gray-700">Payment Date</label>
+                <input
+                  type="date"
+                  id="paymentDate"
+                  value={paymentDate}
+                  onChange={(e) => setPaymentDate(e.target.value)}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                />
               </div>
             </div>
             <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-white py-3 md:bg-transparent md:py-0">

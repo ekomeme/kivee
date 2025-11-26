@@ -196,6 +196,7 @@ export default function PaymentsSection({ user, academy, db }) {
 
     const PaymentModal = ({ payment, onClose }) => {
         const [paymentMethod, setPaymentMethod] = useState('Cash');
+        const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
 
         const handleSubmit = async (e) => {
             e.preventDefault();
@@ -210,7 +211,7 @@ export default function PaymentsSection({ user, academy, db }) {
                 const playerData = playerDoc.data();
                 const updatedPayments = playerData.oneTimeProducts.map((p, idx) => {
                     if (idx === payment.originalIndex) {
-                        return { ...p, status: 'paid', paidAt: new Date(), paymentMethod: paymentMethod };
+                        return { ...p, status: 'paid', paidAt: new Date(paymentDate), paymentMethod: paymentMethod };
                     }
                     return p;
                 });
@@ -243,6 +244,7 @@ export default function PaymentsSection({ user, academy, db }) {
                     <p className="mb-4"><strong>Amount:</strong> {formatCurrency(payment.amount)}</p>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div><label htmlFor="paymentMethod" className="block text-sm font-medium text-gray-700">Payment Method</label><select id="paymentMethod" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option>Cash</option><option>Credit Card</option><option>Bank Transfer</option><option>Other</option></select></div>
+                        <div><label htmlFor="paymentDate" className="block text-sm font-medium text-gray-700">Payment Date</label><input type="date" id="paymentDate" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
                         <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-white py-3 md:bg-transparent md:py-0">
                             <button type="button" onClick={onClose} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
                             <button type="submit" className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md w-full md:w-auto">Confirm Payment</button>

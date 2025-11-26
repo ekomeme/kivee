@@ -171,13 +171,14 @@ export default function PlayerDetailPage({ user, academy, db }) {
     fetchPlayerDetails();
   }, [fetchPlayerDetails]);
 
-  const handleMarkProductAsPaid = async (productIndex, paymentMethod) => {
+  const handleMarkProductAsPaid = async (productIndex, paymentMethod, paymentDate) => {
+    const paidDate = paymentDate ? new Date(paymentDate) : new Date();
     const updatedProducts = [...player.oneTimeProducts];
     updatedProducts[productIndex] = {
       ...updatedProducts[productIndex],
       status: 'paid',
       paymentMethod: paymentMethod,
-      paidAt: new Date(),
+      paidAt: paidDate,
     };
 
     // This is the key fix: Clean the *entire* array before sending it to Firestore.
