@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import PlayerForm from '../components/PlayerForm.jsx';
 
-export default function EditPlayerPage({ user, academy, db }) {
+export default function EditPlayerPage({ user, academy, db, membership }) {
   const navigate = useNavigate();
   const { playerId } = useParams();
   const [playerToEdit, setPlayerToEdit] = useState(null);
@@ -12,12 +12,19 @@ export default function EditPlayerPage({ user, academy, db }) {
   const studentLabelSingular = academy?.studentLabelSingular || 'Student';
 
   useEffect(() => {
-    if (!user || !db || !playerId) return;
+    if (!user || !db || !playerId || !academy || !membership) return;
 
     const fetchPlayer = async () => {
       setLoading(true);
+      if (!['owner', 'admin', 'member'].includes(membership.role)) {
+        setError(`You don't have permission to edit this ${studentLabelSingular.toLowerCase()}.`);
+        setLoading(false);
+        return;
+      }
+
       try {
-        const playerRef = doc(db, `academies/${user.uid}/players`, playerId);
+        const academyId = academy.id;
+        const playerRef = doc(db, `academies/${academyId}/players`, playerId);
         const playerSnap = await getDoc(playerRef);
 
         if (playerSnap.exists()) {
@@ -25,7 +32,7 @@ export default function EditPlayerPage({ user, academy, db }) {
 
           // Fetch tutor details if tutorId exists
           if (playerData.tutorId) {
-            const tutorRef = doc(db, `academies/${user.uid}/tutors`, playerData.tutorId);
+            const tutorRef = doc(db, `academies/${academyId}/tutors`, playerData.tutorId);
             const tutorSnap = await getDoc(tutorRef);
             playerData.tutor = tutorSnap.exists() ? { id: tutorSnap.id, ...tutorSnap.data() } : null;
           }
@@ -42,7 +49,7 @@ export default function EditPlayerPage({ user, academy, db }) {
     };
 
     fetchPlayer();
-  }, [user, db, playerId]);
+  }, [user, db, playerId, academy, membership]);
 
   const handleComplete = () => {
     // Vuelve a la lista de estudiantes o a la ficha del estudiante
@@ -60,6 +67,7 @@ export default function EditPlayerPage({ user, academy, db }) {
           user={user}
           academy={academy}
           db={db}
+          membership={membership}
           onComplete={handleComplete}
           playerToEdit={playerToEdit}
         />

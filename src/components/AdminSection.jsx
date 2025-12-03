@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import Select from 'react-select';
 import toast from 'react-hot-toast';
@@ -21,6 +21,14 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
   const [studentLabelPlural, setStudentLabelPlural] = useState(academy.studentLabelPlural || 'Students');
   const logoInputRef = useRef(null);
   const ACADEMY_CATEGORIES = ['Soccer', 'Basketball', 'Tennis', 'Other'];
+  const [activeTab, setActiveTab] = useState('settings');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [teamInvites, setTeamInvites] = useState([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [isInviting, setIsInviting] = useState(false);
+  const academyId = academy.id || academy.ownerId || user?.uid;
+  const canManageTeam = academy.ownerId === user?.uid;
 
   useEffect(() => {
     const fetchCurrencies = async () => {
@@ -65,6 +73,102 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
     };
     fetchCountries();
   }, []);
+
+  const fetchTeamData = useCallback(async () => {
+    if (!user || !academyId) return;
+    setTeamLoading(true);
+    try {
+      const [membersSnap, invitesSnap] = await Promise.all([
+        getDocs(collection(db, `academies/${academyId}/members`)),
+        getDocs(collection(db, `academies/${academyId}/invites`)),
+      ]);
+      const members = membersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const invites = invitesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setTeamMembers(members);
+      setTeamInvites(invites);
+    } catch (error) {
+      console.error("Error fetching team data:", error);
+      toast.error("No se pudo cargar el equipo.");
+    } finally {
+      setTeamLoading(false);
+    }
+  }, [academyId, db, user]);
+
+  useEffect(() => {
+    fetchTeamData();
+  }, [fetchTeamData]);
+
+  const handleInviteSubmit = async (e) => {
+    e.preventDefault();
+    if (!canManageTeam || !inviteEmail.trim()) return;
+    const email = inviteEmail.trim().toLowerCase();
+
+    const isAlreadyMember = teamMembers.some(m => (m.email || '').toLowerCase() === email);
+    const isAlreadyInvited = teamInvites.some(i => (i.email || '').toLowerCase() === email && i.status === 'pending');
+    if (isAlreadyMember) {
+      toast.error("Ese usuario ya es parte del equipo.");
+      return;
+    }
+    if (isAlreadyInvited) {
+      toast.error("Ya existe una invitación pendiente para ese correo.");
+      return;
+    }
+
+    setIsInviting(true);
+    try {
+      await addDoc(collection(db, `academies/${academyId}/invites`), {
+        email,
+        status: 'pending',
+        invitedBy: user.uid,
+        role: 'admin',
+        invitedAt: serverTimestamp(),
+      });
+      toast.success("Invitación enviada.");
+      setInviteEmail('');
+      fetchTeamData();
+    } catch (err) {
+      console.error("Error inviting teammate:", err);
+      toast.error("No se pudo enviar la invitación.");
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  const handleRemoveMember = async (member) => {
+    if (!canManageTeam) return;
+    if (member.id === academy.ownerId || member.role === 'owner') {
+      toast.error("No puedes eliminar al owner.");
+      return;
+    }
+    try {
+      await deleteDoc(doc(db, `academies/${academyId}/members`, member.id));
+      if (member.userId || member.id) {
+        const targetUserId = member.userId || member.id;
+        try {
+          await deleteDoc(doc(db, `users/${targetUserId}/memberships`, academyId));
+        } catch (innerErr) {
+          console.warn("No se pudo limpiar el membership del usuario:", innerErr);
+        }
+      }
+      toast.success("Miembro eliminado.");
+      fetchTeamData();
+    } catch (err) {
+      console.error("Error removing member:", err);
+      toast.error("No se pudo eliminar al miembro.");
+    }
+  };
+
+  const handleCancelInvite = async (invite) => {
+    if (!canManageTeam) return;
+    try {
+      await updateDoc(doc(db, `academies/${academyId}/invites`, invite.id), { status: 'revoked', revokedAt: serverTimestamp() });
+      toast.success("Invitación revocada.");
+      fetchTeamData();
+    } catch (err) {
+      console.error("Error canceling invite:", err);
+      toast.error("No se pudo cancelar la invitación.");
+    }
+  };
 
   const findCurrencyOption = (currencyCode) => currencyOptions.find(option => option.value === currencyCode);
 
@@ -197,10 +301,26 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
     <div className="p-6">
       <div className="w-full max-w-screen-xl mx-auto space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-800">Account & Preferences</h2>
+          <h2 className="text-2xl font-bold text-gray-800">Settings</h2>
           <div />
         </div>
         <div className="bg-white rounded-none shadow-none md:rounded-lg md:shadow-md p-4 md:p-6 space-y-8">
+          <div className="flex border-b border-gray-200 space-x-6">
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`py-2 px-1 border-b-2 text-sm font-medium ${activeTab === 'settings' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            >
+              Preferences
+            </button>
+            <button
+              onClick={() => setActiveTab('team')}
+              className={`py-2 px-1 border-b-2 text-sm font-medium ${activeTab === 'team' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+            >
+              Team
+            </button>
+          </div>
+
+          {activeTab === 'settings' && (
           <form onSubmit={handleUpdateAcademySettings} className="space-y-4 max-w-3xl">
             <div className="flex flex-col items-start space-y-2">
               <input
@@ -326,6 +446,123 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
               </button>
             </div>
           </form>
+          )}
+
+          {activeTab === 'team' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-lg font-semibold text-gray-900">Team members</p>
+                  <p className="text-sm text-gray-600">Invita o gestiona a quienes pueden administrar la academia.</p>
+                </div>
+                {canManageTeam && (
+                  <form onSubmit={handleInviteSubmit} className="flex items-center space-x-2">
+                    <input
+                      type="email"
+                      placeholder="email@domain.com"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-md shadow-sm disabled:opacity-50"
+                      disabled={isInviting}
+                    >
+                      {isInviting ? 'Sending...' : 'Invite'}
+                    </button>
+                  </form>
+                )}
+              </div>
+
+              {teamLoading ? (
+                <p className="text-sm text-gray-600">Loading team...</p>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 mb-2">Members</p>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full bg-white border border-gray-200">
+                        <thead>
+                          <tr>
+                            <th className="py-2 px-4 border-b text-left">User</th>
+                            <th className="py-2 px-4 border-b text-left">Email</th>
+                            <th className="py-2 px-4 border-b text-left">Role</th>
+                            <th className="py-2 px-4 border-b text-left">Status</th>
+                            <th className="py-2 px-4 border-b text-left"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {teamMembers.length === 0 && (
+                            <tr><td className="py-3 px-4 text-sm text-gray-600" colSpan={5}>No team members yet.</td></tr>
+                          )}
+                          {teamMembers.map(member => (
+                            <tr key={member.id} className="hover:bg-gray-50">
+                              <td className="py-2 px-4 border-b font-medium text-gray-900">{member.name || 'Member'}</td>
+                              <td className="py-2 px-4 border-b text-gray-700">{member.email || 'N/A'}</td>
+                              <td className="py-2 px-4 border-b text-gray-700 capitalize">{member.role || 'admin'}</td>
+                              <td className="py-2 px-4 border-b text-gray-700 capitalize">{member.status || 'active'}</td>
+                              <td className="py-2 px-4 border-b text-right">
+                                {canManageTeam && member.id !== academy.ownerId && member.role !== 'owner' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveMember(member)}
+                                    className="text-sm text-red-600 hover:underline"
+                                  >
+                                    Remove
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 mb-2">Invitations</p>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full bg-white border border-gray-200">
+                        <thead>
+                          <tr>
+                            <th className="py-2 px-4 border-b text-left">Email</th>
+                            <th className="py-2 px-4 border-b text-left">Role</th>
+                            <th className="py-2 px-4 border-b text-left">Status</th>
+                            <th className="py-2 px-4 border-b text-left"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {teamInvites.length === 0 && (
+                            <tr><td className="py-3 px-4 text-sm text-gray-600" colSpan={4}>No invitations sent.</td></tr>
+                          )}
+                          {teamInvites.map(invite => (
+                            <tr key={invite.id} className="hover:bg-gray-50">
+                              <td className="py-2 px-4 border-b">{invite.email}</td>
+                              <td className="py-2 px-4 border-b capitalize">{invite.role || 'admin'}</td>
+                              <td className="py-2 px-4 border-b capitalize">{invite.status || 'pending'}</td>
+                              <td className="py-2 px-4 border-b text-right">
+                                {canManageTeam && invite.status === 'pending' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCancelInvite(invite)}
+                                    className="text-sm text-red-600 hover:underline"
+                                  >
+                                    Cancel
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -3,7 +3,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Users, Activity } from 'lucide-react';
 
-export default function Dashboard({ user, academy, db }) {
+export default function Dashboard({ user, academy, db, membership }) {
   const [loading, setLoading] = useState(true);
   const [players, setPlayers] = useState([]);
   const [productsMap, setProductsMap] = useState(new Map());
@@ -15,14 +15,22 @@ export default function Dashboard({ user, academy, db }) {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user || !db) return;
+      if (!user || !db || !academy || !membership) {
+        setLoading(false);
+        return;
+      }
+      if (!['owner', 'admin', 'member'].includes(membership.role)) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       try {
         const [productsSnap, playersSnap, trialsSnap, tiersSnap] = await Promise.all([
-          getDocs(collection(db, `academies/${user.uid}/products`)),
-          getDocs(collection(db, `academies/${user.uid}/players`)),
-          getDocs(collection(db, `academies/${user.uid}/trials`)),
-          getDocs(collection(db, `academies/${user.uid}/tiers`)),
+          getDocs(collection(db, `academies/${academy.id}/products`)),
+          getDocs(collection(db, `academies/${academy.id}/players`)),
+          getDocs(collection(db, `academies/${academy.id}/trials`)),
+          getDocs(collection(db, `academies/${academy.id}/tiers`)),
         ]);
 
         setProductsMap(new Map(productsSnap.docs.map(doc => [doc.id, doc.data()])));
@@ -37,7 +45,7 @@ export default function Dashboard({ user, academy, db }) {
     };
 
     fetchData();
-  }, [user, db]);
+  }, [user, db, academy, membership]);
 
   const formatCurrency = (value) => {
     try {

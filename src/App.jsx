@@ -1,8 +1,8 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Routes, Route, NavLink, Navigate } from "react-router-dom";
 import { onAuthStateChanged, signOut, getRedirectResult } from "firebase/auth"; // Import getRedirectResult
 import { auth, db, authReady } from "./firebase";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, collection, getDocs, query, where, collectionGroup, updateDoc } from "firebase/firestore";
 import GoogleSignIn from "./components/GoogleSignIn.jsx";
 import LandingPage from "./components/LandingPage.jsx";
 import PlayerDetailPage from "./components/PlayerDetailPage.jsx";
@@ -71,40 +71,221 @@ const UserMenu = ({ user, onSignOut, isSidebar = false }) => {
 export default function App() {
   const [user, setUser] = useState(null);
   const [academy, setAcademy] = useState(null);
+  const [membership, setMembership] = useState(null); // Nuevo estado para el rol
   const [loading, setLoading] = useState(true);
   const [creatingAcademy, setCreatingAcademy] = useState(false);
   const [error, setError] = useState(null);
+  const [pendingInvites, setPendingInvites] = useState([]);
+  const [isAcceptingInvite, setIsAcceptingInvite] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const nameInputRef = useRef(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const studentLabelSingular = academy?.studentLabelSingular || 'Student';
   const studentLabelPlural = academy?.studentLabelPlural || 'Students';
 
+  const loadAcademyById = useCallback(async (academyId) => {
+    const ref = doc(db, "academies", academyId);
+    const memberRef = doc(db, `academies/${academyId}/members`, auth.currentUser.uid);
+    try {
+      const [academySnap, memberSnap] = await Promise.all([getDoc(ref), getDoc(memberRef)]);
+      if (!academySnap.exists()) return null;
+      const academyData = { id: ref.id, ...academySnap.data() };
+      if (memberSnap.exists()) setMembership(memberSnap.data());
+      setAcademy(academyData);
+      return academyData;
+    } catch (err) {
+      if (err?.code === 'permission-denied') {
+        return null;
+      }
+      throw err;
+    }
+  }, [db]);
+
+  const ensureOwnerMembership = useCallback(async (academyId, currentUser) => {
+    const memberRef = doc(db, `academies/${academyId}/members`, currentUser.uid);
+    const membershipRef = doc(db, `users/${currentUser.uid}/memberships`, academyId);
+    const [memberSnap, userMembershipSnap] = await Promise.all([getDoc(memberRef), getDoc(membershipRef)]);
+    if (!memberSnap.exists()) {
+      setMembership({ role: 'owner', status: 'active' }); // Actualiza el estado del rol
+      await setDoc(memberRef, {
+        userId: currentUser.uid,
+        email: currentUser.email,
+        role: 'owner',
+        status: 'active',
+        joinedAt: serverTimestamp(),
+      });
+    } else {
+      setMembership(memberSnap.data());
+    }
+    if (!userMembershipSnap.exists()) {
+      await setDoc(membershipRef, {
+        academyId,
+        role: 'owner',
+        status: 'active',
+        ownerId: academyId,
+        joinedAt: serverTimestamp(),
+      });
+    }
+  }, [db]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.debugInvites = async (emailOverride) => {
+        const targetEmail = (emailOverride || auth.currentUser?.email || '').toLowerCase();
+        const q = query(collectionGroup(db, "invites"), where("email", "==", targetEmail));
+        try {
+          const snap = await getDocs(q);
+          const invites = snap.docs.map(d => ({
+            id: d.id,
+            academyId: d.ref.parent.parent.id,
+            ...d.data(),
+          }));
+          console.log('[debugInvites] email:', targetEmail, 'invites:', invites);
+          setPendingInvites(invites.filter(inv => inv.status === 'pending'));
+          return invites;
+        } catch (err) {
+          console.error('[debugInvites] error', err);
+          throw err;
+        }
+      };
+    }
+  }, []);
+
+  // Refetch invites proactively when no academy is loaded (e.g., after indexing changes)
+  useEffect(() => {
+    const fetchInvitesOnly = async () => {
+      if (!user || academy) return;
+      try {
+        const targetEmail = (user.email || '').toLowerCase();
+        const q = query(collectionGroup(db, "invites"), where("email", "==", targetEmail));
+        const snap = await getDocs(q);
+        const invites = snap.docs.map(d => ({
+          id: d.id,
+          academyId: d.ref.parent.parent.id,
+          ...d.data(),
+        })).filter(inv => inv.status === 'pending');
+        setPendingInvites(invites);
+      } catch (err) {
+        console.error("[fetchInvitesOnly] error", err);
+      }
+    };
+    fetchInvitesOnly();
+  }, [user, academy, db]);
+
   useEffect(() => {
     // Esta función unificada maneja todos los casos de autenticación.
-    const handleAuthFlow = async (user) => {
-      setUser(user);
-      if (!user) {
-        // Si no hay usuario, no hay academia y terminamos de cargar.
+    const handleAuthFlow = async (nextUser) => {
+      setUser(nextUser);
+
+      if (!nextUser) {
         setAcademy(null);
+        setMembership(null);
         setLoading(false);
+        setPendingInvites([]);
         return;
       }
 
-      // Si hay un usuario, buscamos su academia.
-      const ref = doc(db, "academies", user.uid);
       try {
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          setAcademy(snap.data());
-        } else {
-          setAcademy(null); // El usuario existe pero aún no ha creado una academia.
+        // 1) Owner path: academy doc keyed by user uid
+        const ownerRef = doc(db, "academies", nextUser.uid);
+        try {
+          const ownerSnap = await getDoc(ownerRef);
+          if (ownerSnap.exists()) {
+            const academyData = { id: ownerRef.id, ...ownerSnap.data() };
+            setAcademy(academyData);
+            await ensureOwnerMembership(ownerRef.id, nextUser);
+            setLoading(false);
+            return;
+          }
+        } catch (errOwner) {
+          // Si no es owner o no tiene permisos, seguimos con memberships/invites
+          if (errOwner?.code !== 'permission-denied') {
+            throw errOwner;
+          }
+        }
+
+        // 2) Member path: look up memberships stored for the user
+        try {
+          const membershipsRef = collection(db, "users", nextUser.uid, "memberships");
+          const membershipsSnap = await getDocs(membershipsRef);
+          const activeMembership = membershipsSnap.docs
+            .map(d => d.data())
+            .find(m => m.status === 'active');
+
+          if (activeMembership?.academyId) {
+            const loadedAcademy = await loadAcademyById(activeMembership.academyId);
+            if (loadedAcademy) {
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (memberErr) {
+          if (memberErr?.code !== 'permission-denied') {
+            throw memberErr;
+          }
+        }
+
+        // 3) Invitations for this email (pending or accepted)
+        try {
+          const invitesQuery = query(
+            collectionGroup(db, "invites"),
+            where("email", "==", (nextUser.email || "").toLowerCase())
+          );
+          const invitesSnap = await getDocs(invitesQuery);
+          const invites = invitesSnap.docs.map(d => ({
+            id: d.id,
+            academyId: d.ref.parent.parent.id,
+            ...d.data(),
+          }));
+
+          const acceptedInvite = invites.find(inv => inv.status === 'accepted');
+          if (acceptedInvite) {
+            // Asegura membership y carga la academia
+            try {
+              const memberRef = doc(db, `academies/${acceptedInvite.academyId}/members`, nextUser.uid);
+              const membershipRef = doc(db, `users/${nextUser.uid}/memberships`, acceptedInvite.academyId);
+              const [memberSnap, userMembershipSnap] = await Promise.all([getDoc(memberRef), getDoc(membershipRef)]);
+              if (!memberSnap.exists()) {
+                await setDoc(memberRef, {
+                  userId: nextUser.uid,
+                  email: nextUser.email,
+                  role: acceptedInvite.role || 'admin',
+                  status: 'active',
+                  joinedAt: serverTimestamp(),
+                  invitedBy: acceptedInvite.invitedBy || null,
+                });
+              }
+              if (!userMembershipSnap.exists()) {
+                await setDoc(membershipRef, {
+                  academyId: acceptedInvite.academyId,
+                  role: acceptedInvite.role || 'admin',
+                  status: 'active',
+                  ownerId: acceptedInvite.academyId,
+                  joinedAt: serverTimestamp(),
+                });
+              }
+              const loaded = await loadAcademyById(acceptedInvite.academyId);
+              if (loaded) {
+                setLoading(false);
+                return;
+              }
+            } catch (accErr) {
+              console.error("Error auto-joining from accepted invite:", accErr);
+            }
+          }
+
+          setPendingInvites(invites.filter(inv => inv.status === 'pending'));
+        } catch (invErr) {
+          if (invErr?.code !== 'permission-denied') {
+            throw invErr;
+          }
+          setPendingInvites([]);
         }
       } catch (e) {
         console.error("Firestore error", e);
         setError("Failed to fetch academy data");
       }
-      // Terminamos de cargar solo después de verificar la academia.
+
       setLoading(false);
     };
 
@@ -133,7 +314,7 @@ export default function App() {
         unsubscribe();
       }
     };
-  }, []);
+  }, [loadAcademyById, ensureOwnerMembership]);
          // La lógica de carga de la academia se maneja dentro del listener.
 
   useEffect(() => {
@@ -152,9 +333,10 @@ export default function App() {
       const ref = doc(db, "academies", user.uid);
       const data = { name: nameInput, ownerId: user.uid, createdAt: serverTimestamp(), studentLabelSingular: 'Student', studentLabelPlural: 'Students' };
       await setDoc(ref, data); // Escribe la academia en Firestore
+      await ensureOwnerMembership(ref.id, user);
 
       // Optimistically update academy state
-      setAcademy(data);
+      setAcademy({ id: ref.id, ...data });
       setError(null);
       setNameInput("");
 
@@ -165,9 +347,64 @@ export default function App() {
     }
   };
 
+  const handleAcceptInvite = async (inviteId) => {
+    if (!user) return;
+    const invite = pendingInvites.find(i => i.id === inviteId);
+    if (!invite) return;
+    setIsAcceptingInvite(true);
+    setError(null);
+    try {
+      const inviteRef = doc(db, `academies/${invite.academyId}/invites`, invite.id);
+      const memberRef = doc(db, `academies/${invite.academyId}/members`, user.uid);
+      const membershipRef = doc(db, `users/${user.uid}/memberships`, invite.academyId);
+
+      await Promise.all([
+        updateDoc(inviteRef, { status: 'accepted', acceptedAt: serverTimestamp(), acceptedBy: user.uid }),
+        setDoc(memberRef, {
+          userId: user.uid,
+          email: user.email,
+          role: invite.role || 'admin',
+          status: 'active',
+          joinedAt: serverTimestamp(),
+          invitedBy: invite.invitedBy || null,
+        }),
+        setDoc(membershipRef, {
+          academyId: invite.academyId,
+          role: invite.role || 'admin',
+          status: 'active',
+          ownerId: invite.academyId,
+          joinedAt: serverTimestamp(),
+        }),
+      ]);
+
+      await loadAcademyById(invite.academyId);
+      setPendingInvites(prev => prev.filter(i => i.id !== inviteId));
+    } catch (err) {
+      console.error("Error accepting invite:", err);
+      setError("Error al aceptar la invitación: " + err.message);
+    } finally {
+      setIsAcceptingInvite(false);
+    }
+  };
+
+  const handleDeclineInvite = async (inviteId) => {
+    if (!user) return;
+    const invite = pendingInvites.find(i => i.id === inviteId);
+    if (!invite) return;
+    try {
+      const inviteRef = doc(db, `academies/${invite.academyId}/invites`, invite.id);
+      await updateDoc(inviteRef, { status: 'declined', declinedAt: serverTimestamp(), declinedBy: user.uid });
+      setPendingInvites(prev => prev.filter(i => i.id !== inviteId));
+    } catch (err) {
+      console.error("Error declining invite:", err);
+      setError("No se pudo rechazar la invitación: " + err.message);
+    }
+  };
+
   const handleSignOut = async () => {
     try {
       await signOut(auth); // The onAuthStateChanged listener will handle navigation
+      setMembership(null);
       // After signing out, the onAuthStateChanged listener will update the user state
     } catch (error) {
       setError("Failed to sign out: " + error.message);
@@ -289,6 +526,39 @@ export default function App() {
               <h1 className="text-[24px] font-semibold text-black">Hi, {user.displayName}</h1>
               <h2 className="text-[24px] font-medium text-gray-dark mt-1">Let’s create your Academy</h2>
             </div>
+            {pendingInvites.length > 0 && (
+              <div className="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                <h3 className="text-lg font-semibold text-gray-900">You have been invited</h3>
+                <p className="text-sm text-gray-600">Accept an invitation to join an existing academy.</p>
+                <div className="space-y-3">
+                  {pendingInvites.map(invite => (
+                    <div key={invite.id} className="border border-gray-200 rounded-md p-3 bg-white flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-gray-900">Academy ID: {invite.academyId}</p>
+                        <p className="text-xs text-gray-500">Invited by {invite.invitedBy || 'owner'}</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => handleDeclineInvite(invite.id)}
+                          className="text-sm text-gray-600 hover:text-gray-800 px-3 py-1 rounded-md border border-gray-200"
+                        >
+                          Decline
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAcceptInvite(invite.id)}
+                          disabled={isAcceptingInvite}
+                          className="text-sm bg-primary hover:bg-primary-hover text-white px-3 py-1 rounded-md disabled:opacity-50"
+                        >
+                          {isAcceptingInvite ? 'Joining...' : 'Accept'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <form onSubmit={createAcademy} className="mt-12">
               <input
                 ref={nameInputRef}
@@ -382,16 +652,16 @@ export default function App() {
         <div className="flex-grow p-0 md:p-8 overflow-auto min-w-0"> {/* Added overflow-auto for scrollable content */}
           <Routes>
             <Route path="/sign-in" element={<Navigate to="/" replace />} />
-            <Route path="/students/new" element={<NewPlayerPage user={user} academy={academy} db={db} />} />
-            <Route path="/students" element={<PlayersSection user={user} academy={academy} db={db} />} />
-            <Route path="/students/:playerId" element={<PlayerDetailPage user={user} academy={academy} db={db} />} />
-            <Route path="/students/:playerId/edit" element={<EditPlayerPage user={user} academy={academy} db={db} />} />
-            <Route path="/plans" element={<PlansOffersSection user={user} academy={academy} db={db} />} />
-            <Route path="/payments" element={<PaymentsSection user={user} academy={academy} db={db} />} />
-            <Route path="/groups" element={<GroupsAndClassesSection user={user} academy={academy} db={db} />} />
-            <Route path="/groups/:groupId" element={<GroupDetailPage user={user} academy={academy} db={db} />} />
+            <Route path="/students/new" element={<NewPlayerPage user={user} academy={academy} db={db} membership={membership} />} />
+            <Route path="/students" element={<PlayersSection user={user} academy={academy} db={db} membership={membership} />} />
+            <Route path="/students/:playerId" element={<PlayerDetailPage user={user} academy={academy} db={db} membership={membership} />} />
+            <Route path="/students/:playerId/edit" element={<EditPlayerPage user={user} academy={academy} db={db} membership={membership} />} />
+            <Route path="/plans" element={<PlansOffersSection user={user} academy={academy} db={db} membership={membership} />} />
+            <Route path="/payments" element={<PaymentsSection user={user} academy={academy} db={db} membership={membership} />} />
+            <Route path="/groups" element={<GroupsAndClassesSection user={user} academy={academy} db={db} membership={membership} />} />
+            <Route path="/groups/:groupId" element={<GroupDetailPage user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/settings" element={<AdminSection user={user} academy={academy} db={db} onAcademyUpdate={async () => setAcademy((await getDoc(doc(db, "academies", user.uid))).data())} />} />
-            <Route path="/" element={<Dashboard user={user} academy={academy} db={db} />} />
+            <Route path="/" element={<Dashboard user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>

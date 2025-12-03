@@ -5,7 +5,7 @@ import PlayerDetail from '../components/PlayerDetail.jsx';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Edit } from 'lucide-react';
 
-export default function PlayerDetailPage({ user, academy, db }) {
+export default function PlayerDetailPage({ user, academy, db, membership }) {
   const { playerId } = useParams();
   const navigate = useNavigate();
   const [player, setPlayer] = useState(null);
@@ -92,28 +92,36 @@ export default function PlayerDetailPage({ user, academy, db }) {
   };
 
   const fetchPlayerDetails = React.useCallback(async () => {
-    if (!user || !db || !playerId) return;
+    if (!user || !db || !playerId || !academy || !membership) return;
     setLoading(true);
+
+    if (!['owner', 'admin', 'member'].includes(membership.role)) {
+      setError(`You don't have permission to view this ${studentLabelSingular.toLowerCase()}.`);
+      setLoading(false);
+      return;
+    }
+
     try {
       // Fetch Tiers, Trials, and Groups to create maps for names
-      const tiersRef = collection(db, `academies/${user.uid}/tiers`);
+      const academyId = academy.id;
+      const tiersRef = collection(db, `academies/${academyId}/tiers`);
       const tiersSnap = await getDocs(tiersRef);
       const tiersMap = new Map(tiersSnap.docs.map(doc => [doc.id, doc.data()]));
 
-      const trialsRef = collection(db, `academies/${user.uid}/trials`);
+      const trialsRef = collection(db, `academies/${academyId}/trials`);
       const trialsSnap = await getDocs(trialsRef);
       const trialsMap = new Map(trialsSnap.docs.map(doc => [doc.id, doc.data()]));
 
-      const productsRef = collection(db, `academies/${user.uid}/products`);
+      const productsRef = collection(db, `academies/${academyId}/products`);
       const productsSnap = await getDocs(productsRef);
       const productsMap = new Map(productsSnap.docs.map(doc => [doc.id, doc.data()]));
 
-      const groupsRef = collection(db, `academies/${user.uid}/groups`);
+      const groupsRef = collection(db, `academies/${academyId}/groups`);
       const groupsSnap = await getDocs(groupsRef);
       const groupsMap = new Map(groupsSnap.docs.map(doc => [doc.id, doc.data()]));
 
       // Fetch the specific player
-      const playerRef = doc(db, `academies/${user.uid}/players`, playerId);
+      const playerRef = doc(db, `academies/${academyId}/players`, playerId);
       const playerSnap = await getDoc(playerRef);
 
       if (playerSnap.exists()) {
@@ -121,7 +129,7 @@ export default function PlayerDetailPage({ user, academy, db }) {
 
         // Fetch tutor details if tutorId exists
         if (playerData.tutorId) {
-          const tutorRef = doc(db, `academies/${user.uid}/tutors`, playerData.tutorId);
+          const tutorRef = doc(db, `academies/${academyId}/tutors`, playerData.tutorId);
           const tutorSnap = await getDoc(tutorRef);
           playerData.tutor = tutorSnap.exists() ? { id: tutorSnap.id, ...tutorSnap.data() } : null;
         }
@@ -165,14 +173,14 @@ export default function PlayerDetailPage({ user, academy, db }) {
     } finally {
       setLoading(false);
     }
-  }, [user, db, playerId]);
+  }, [user, db, playerId, academy, membership]);
 
   const studentLabelPlural = academy?.studentLabelPlural || 'Students';
   const studentLabelSingular = academy?.studentLabelSingular || 'Student';
 
   useEffect(() => {
     fetchPlayerDetails();
-  }, [fetchPlayerDetails]);
+  }, [fetchPlayerDetails, membership]);
 
   const handleMarkProductAsPaid = async (productIndex, paymentMethod, paymentDate) => {
     const paidDate = paymentDate ? new Date(paymentDate) : new Date();
@@ -193,7 +201,7 @@ export default function PlayerDetailPage({ user, academy, db }) {
       return cleanProduct;
     });
 
-    const playerRef = doc(db, `academies/${user.uid}/players`, playerId);
+    const playerRef = doc(db, `academies/${academy.id}/players`, playerId);
     try {
       await updateDoc(playerRef, { oneTimeProducts: finalProductsForDB });
       setActiveTab('payments');
@@ -215,7 +223,7 @@ export default function PlayerDetailPage({ user, academy, db }) {
       return cleanProduct;
     });
 
-    const playerRef = doc(db, `academies/${user.uid}/players`, playerId);
+    const playerRef = doc(db, `academies/${academy.id}/players`, playerId);
 
     try {
       await updateDoc(playerRef, { oneTimeProducts: finalProductsForDB });

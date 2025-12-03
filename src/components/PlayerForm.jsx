@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import Select from 'react-select'; // Import Select for country codes
 import { Upload } from 'lucide-react'; // Import Upload icon
 
-export default function PlayerForm({ user, academy, db, onComplete, playerToEdit }) {
+export default function PlayerForm({ user, academy, db, membership, onComplete, playerToEdit }) {
   const studentLabelSingular = academy?.studentLabelSingular || 'Student';
   const studentLabelPlural = academy?.studentLabelPlural || 'Students';
   // Player Info
@@ -22,6 +22,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
   const [playerContactPhone, setPlayerContactPhone] = useState('');
   const [playerStatus, setPlayerStatus] = useState('active');
   const [groupId, setGroupId] = useState('');
+  const [studentId, setStudentId] = useState('');
 
   // Tutor Info
   const [hasTutor, setHasTutor] = useState(false);
@@ -53,29 +54,29 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
   };
   useEffect(() => {
     const fetchTiers = async () => {
-      if (!user || !academy) return;
-      const tiersRef = collection(db, `academies/${user.uid}/tiers`);
+      if (!user || !academy || !membership) return;
+      const tiersRef = collection(db, `academies/${academy.id}/tiers`);
       const querySnapshot = await getDocs(tiersRef);
       setTiers(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     };
 
     const fetchTrials = async () => {
-      if (!user || !academy) return;
-      const trialsRef = collection(db, `academies/${user.uid}/trials`);
+      if (!user || !academy || !membership) return;
+      const trialsRef = collection(db, `academies/${academy.id}/trials`);
       const querySnapshot = await getDocs(trialsRef);
       setTrials(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     };
 
     const fetchGroups = async () => {
-      if (!user || !academy) return;
-      const groupsRef = collection(db, `academies/${user.uid}/groups`);
+      if (!user || !academy || !membership) return;
+      const groupsRef = collection(db, `academies/${academy.id}/groups`);
       const querySnapshot = await getDocs(groupsRef);
       setGroups(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     };
 
     const fetchProducts = async () => {
-      if (!user || !academy) return;
-      const productsRef = collection(db, `academies/${user.uid}/products`);
+      if (!user || !academy || !membership) return;
+      const productsRef = collection(db, `academies/${academy.id}/products`);
       const querySnapshot = await getDocs(productsRef);
       setOneTimeProducts(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     };
@@ -84,7 +85,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
     fetchTrials();
     fetchGroups();
     fetchProducts();
-  }, [user, academy, db]);
+  }, [user, academy, db, membership]);
 
   // Fetch country codes for phone prefixes
   useEffect(() => {
@@ -145,6 +146,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       // Player Info
       setName(playerToEdit.name || '');
       setLastName(playerToEdit.lastName || '');
+      setStudentId(playerToEdit.studentId || '');
       setGender(playerToEdit.gender || '');
       setBirthday(playerToEdit.birthday || '');
       setPhotoURL(playerToEdit.photoURL || '');
@@ -272,6 +274,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
     let finalPhotoURL = playerToEdit?.photoURL || photoURL;
     let finalPhotoPath = playerToEdit?.photoPath || null;
     const previousPhotoPath = playerToEdit?.photoPath || null;
+    const academyId = academy.id;
 
     if (playerPhotoFile) {
       const storage = getStorage();
@@ -321,17 +324,17 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
         contactPhonePrefix: tutorContactPhone ? tutorPhonePrefix : null,
         contactPhoneNumber: tutorContactPhone ? tutorContactPhone : null,
         contactPhone: tutorContactPhone ? `${tutorPhonePrefix}${tutorContactPhone}` : null,
-        academyId: user.uid,
+        academyId: academyId,
         createdAt: playerToEdit?.tutor?.createdAt || new Date(),
         updatedAt: new Date(),
       };
 
       try {
         if (playerToEdit?.tutor) { // If editing an existing tutor
-          await updateDoc(doc(db, `academies/${user.uid}/tutors`, playerToEdit.tutor.id), tutorData);
+          await updateDoc(doc(db, `academies/${academyId}/tutors`, playerToEdit.tutor.id), tutorData);
           linkedTutorId = playerToEdit.tutor.id;
         } else { // Create a new tutor
-          const tutorRef = await addDoc(collection(db, `academies/${user.uid}/tutors`), tutorData);
+          const tutorRef = await addDoc(collection(db, `academies/${academyId}/tutors`), tutorData);
           linkedTutorId = tutorRef.id;
         }
       } catch (err) {
@@ -401,6 +404,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
     const playerData = {
       name,
       lastName,
+      studentId: studentId.trim() ? studentId.trim() : null,
       gender,
       birthday,
       photoURL: finalPhotoURL,
@@ -413,8 +417,8 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
       groupId: groupId || null,
       plan: planData,
       oneTimeProducts: finalProductsData,
-      notes,
-      academyId: user.uid,
+      notes,      
+      academyId: academyId,
       status: playerStatus || 'active',
       createdAt: playerToEdit ? playerToEdit.createdAt : serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -422,11 +426,11 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
 
     try {
       if (playerToEdit) {
-        const playerDocRef = doc(db, `academies/${user.uid}/players`, playerToEdit.id);
+        const playerDocRef = doc(db, `academies/${academyId}/players`, playerToEdit.id);
         await updateDoc(playerDocRef, playerData);
         toast.success("Player updated successfully.");
       } else {
-        const playersCollectionRef = collection(db, `academies/${user.uid}/players`);
+        const playersCollectionRef = collection(db, `academies/${academyId}/players`);
         await addDoc(playersCollectionRef, playerData);
         toast.success("Player added successfully.");
       }
@@ -470,6 +474,7 @@ export default function PlayerForm({ user, academy, db, onComplete, playerToEdit
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
             <div><label htmlFor="name" className="block text-sm font-medium text-gray-700">First Name</label><input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
             <div><label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Last Name</label><input type="text" id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
+            <div><label htmlFor="studentId" className="block text-sm font-medium text-gray-700">ID</label><input type="text" id="studentId" value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder="ID, matrícula o código" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
             <div><label htmlFor="birthday" className="block text-sm font-medium text-gray-700">Date of Birth</label><input type="date" id="birthday" value={birthday} onChange={(e) => setBirthday(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
             <div>
               <label htmlFor="gender" className="block text-sm font-medium text-gray-700">Gender</label>

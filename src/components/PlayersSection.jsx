@@ -6,35 +6,41 @@ import { storage } from '../firebase';
 import toast from 'react-hot-toast';
 
 import { Plus, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Filter, ChevronRight, Check, X } from 'lucide-react';
-export default function PlayersSection({ user, academy, db }) {
+export default function PlayersSection({ user, academy, db, membership }) { // 1. Recibir 'membership' como prop
   const studentLabelPlural = academy?.studentLabelPlural || 'Students';
   const studentLabelSingular = academy?.studentLabelSingular || 'Student';
   const [players, setPlayers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   // Fetches players and their tutors
   const fetchPlayers = async () => {
-    if (!user || !academy) return;
+    // La validación de permisos ya se hace en el useEffect
+    setLoading(true);
+    setError(null);
 
+    // 2. Usar 'academy.id' en lugar de 'user.uid' para que funcione para todos los miembros.
     // Fetch Tiers
-    const tiersRef = collection(db, `academies/${user.uid}/tiers`);
+    const tiersRef = collection(db, `academies/${academy.id}/tiers`);
     const tiersSnapshot = await getDocs(tiersRef);
     const tiersData = tiersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const tiersMap = new Map(tiersData.map(tier => [tier.id, tier.name]));
     setTiers(tiersData);
 
     // Fetch Groups
-    const groupsRef = collection(db, `academies/${user.uid}/groups`);
+    const groupsRef = collection(db, `academies/${academy.id}/groups`);
     const groupsSnapshot = await getDocs(groupsRef);
     const groupsData = groupsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const groupsMap = new Map(groupsData.map(group => [group.id, group.name]));
     setGroups(groupsData);
     // Fetch Players
-    const playersRef = collection(db, `academies/${user.uid}/players`);
+    const playersRef = collection(db, `academies/${academy.id}/players`);
     const q = query(playersRef);
     const querySnapshot = await getDocs(q);
     const playersData = await Promise.all(querySnapshot.docs.map(async playerDoc => {
       const player = { id: playerDoc.id, ...playerDoc.data() };
       if (player.tutorId) {
-        const tutorRef = doc(db, `academies/${user.uid}/tutors`, player.tutorId);
+        const tutorRef = doc(db, `academies/${academy.id}/tutors`, player.tutorId);
         const tutorSnap = await getDoc(tutorRef);
         player.tutor = tutorSnap.exists() ? { id: tutorSnap.id, ...tutorSnap.data() } : null;
       }
@@ -57,6 +63,7 @@ export default function PlayersSection({ user, academy, db }) {
       return player;
     }));
     setPlayers(playersData);
+    setLoading(false);
   };
 
   const [tiers, setTiers] = useState([]);
@@ -75,11 +82,13 @@ export default function PlayersSection({ user, academy, db }) {
 
   const filteredAndSortedPlayers = useMemo(() => {
     let filteredPlayers = [...players];
+    const normalizedQuery = searchQuery.trim().toLowerCase();
 
     // Apply search and multi-select filters
     filteredPlayers = filteredPlayers.filter(player => {
-      const searchMatch = searchQuery
-        ? `${player.name} ${player.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
+      const searchMatch = normalizedQuery
+        ? `${player.name} ${player.lastName}`.toLowerCase().includes(normalizedQuery) ||
+          (player.studentId || '').toLowerCase().includes(normalizedQuery)
         : true;
       
       const genderMatch = filters.gender.length > 0 ? filters.gender.includes(player.gender) : true;
@@ -92,10 +101,12 @@ export default function PlayersSection({ user, academy, db }) {
     // Apply sorting
     if (sortConfig.key !== null) {
         filteredPlayers.sort((a, b) => {
-            if (a[sortConfig.key] < b[sortConfig.key]) {
+            const aVal = (a[sortConfig.key] ?? '').toString().toLowerCase();
+            const bVal = (b[sortConfig.key] ?? '').toString().toLowerCase();
+            if (aVal < bVal) {
                 return sortConfig.direction === 'ascending' ? -1 : 1;
             }
-            if (a[sortConfig.key] > b[sortConfig.key]) {
+            if (aVal > bVal) {
                 return sortConfig.direction === 'ascending' ? 1 : -1;
             }
             return 0;
@@ -105,8 +116,22 @@ export default function PlayersSection({ user, academy, db }) {
   }, [players, filters, sortConfig, searchQuery]);
 
   useEffect(() => {
+    // 3. Lógica de permisos ANTES de llamar a fetchPlayers
+    if (!academy || !db || !membership) {
+      setLoading(false);
+      return;
+    }
+
+    // Si el rol del usuario no tiene permisos, no hacemos la consulta.
+    if (!['owner', 'admin', 'member'].includes(membership.role)) {
+      setError(`You don't have permission to view ${studentLabelPlural.toLowerCase()}.`);
+      setPlayers([]);
+      setLoading(false);
+      return;
+    }
+
     fetchPlayers();
-  }, [user, academy, db]); // Add db to dependencies
+  }, [user, academy, db, membership]); // 4. Añadir 'membership' a las dependencias
 
   const handleSort = (key) => {
     let direction = 'ascending';
@@ -141,10 +166,10 @@ export default function PlayersSection({ user, academy, db }) {
     const deleteAction = async () => {
       try {
         // Fetch latest player to get photoPath (if any)
-        const playerSnapshot = await getDoc(doc(db, `academies/${user.uid}/players`, playerId));
+        const playerSnapshot = await getDoc(doc(db, `academies/${academy.id}/players`, playerId));
         const playerData = playerSnapshot.exists() ? playerSnapshot.data() : null;
 
-        await deleteDoc(doc(db, `academies/${user.uid}/players`, playerId));
+        await deleteDoc(doc(db, `academies/${academy.id}/players`, playerId));
         if (playerData?.photoPath) {
           try {
             await deleteObject(storageRef(storage, playerData.photoPath));
@@ -376,8 +401,8 @@ export default function PlayersSection({ user, academy, db }) {
                   onClick={async (e) => {
                     e.stopPropagation();
                     try {
-                      const newStatus = player.status === 'inactive' ? 'active' : 'inactive';
-                      await updateDoc(doc(db, `academies/${user.uid}/players`, player.id), { status: newStatus });
+                      const newStatus = player.status === 'inactive' ? 'active' : 'inactive'; // Corregir la ruta aquí también
+                      await updateDoc(doc(db, `academies/${academy.id}/players`, player.id), { status: newStatus });
                       toast.success(`${studentLabelSingular} ${newStatus === 'inactive' ? 'deactivated' : 'activated'} successfully.`);
                       fetchPlayers();
                       onClose();
@@ -445,7 +470,11 @@ export default function PlayersSection({ user, academy, db }) {
           />
         </div>
       </div>
-      {filteredAndSortedPlayers.length === 0 ? (
+      {loading ? (
+        <p>Loading {studentLabelPlural.toLowerCase()}...</p>
+      ) : error ? (
+        <p className="text-red-500">{error}</p>
+      ) : filteredAndSortedPlayers.length === 0 ? (
         <p className="text-gray-600">No {studentLabelPlural.toLowerCase()} registered yet.</p>
       ) : (
         <>
@@ -454,6 +483,11 @@ export default function PlayersSection({ user, academy, db }) {
             <table className="min-w-full bg-white border border-gray-200">
               <thead>
                 <tr>
+                  <th className="py-2 px-4 border-b text-left">
+                    <button onClick={() => handleSort('studentId')} className="font-bold flex items-center">
+                      ID {sortConfig.key === 'studentId' && (sortConfig.direction === 'ascending' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />)}
+                    </button>
+                  </th>
                   <th className="py-2 px-4 border-b text-left">
                     <button onClick={() => handleSort('name')} className="font-bold flex items-center">
                       Name {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />)}
@@ -469,6 +503,9 @@ export default function PlayersSection({ user, academy, db }) {
               <tbody>
                 {filteredAndSortedPlayers.map(player => (
                   <tr key={player.id} className="group hover:bg-gray-100 cursor-pointer" onClick={() => handleRowClick(player)}>
+                    <td className="py-2 px-4 border-b">
+                      <span className="text-sm text-gray-600">{player.studentId || 'N/A'}</span>
+                    </td>
                     <td className="py-2 px-4 border-b">
                       <div className="flex items-center space-x-3">
                         <Avatar player={player} />
@@ -529,6 +566,7 @@ export default function PlayersSection({ user, academy, db }) {
                     <Avatar player={player} />
                     <div>
                       <p className="font-semibold text-gray-900">{player.name} {player.lastName}</p>
+                      <p className="text-xs text-gray-500">ID: {player.studentId || 'N/A'}</p>
                       <p className="text-sm text-gray-500">{player.email || 'No email'}</p>
                       {playerPhone && <p className="text-sm text-gray-500">{playerPhone}</p>}
                     </div>

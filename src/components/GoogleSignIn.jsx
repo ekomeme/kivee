@@ -10,6 +10,7 @@ export default function GoogleSignIn() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Detectar si es un dispositivo móvil para preferir la redirección
   const isMobile =
     typeof window !== "undefined" &&
     (navigator.userAgentData?.mobile ||
@@ -17,20 +18,24 @@ export default function GoogleSignIn() {
       window.matchMedia?.("(pointer:coarse)")?.matches ||
       /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
 
+  // Este useEffect se encarga de manejar el resultado de un signInWithRedirect
   useEffect(() => {
     const checkRedirectResult = async () => {
+      // No queremos mostrar 'loading' en la página de login si solo estamos
+      // verificando un posible resultado de redirección en segundo plano.
+      // Solo activamos 'loading' si realmente hay una operación en curso.
       try {
         await authReady;
         const result = await getRedirectResult(auth);
         if (result?.user) {
+          toast.dismiss("google-login");
           toast.success("Sesión iniciada");
           navigate("/", { replace: true });
         }
       } catch (err) {
         console.error("Redirect sign-in error", err);
+        toast.dismiss("google-login");
         toast.error(err?.message || "No se pudo completar el inicio de sesión");
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -39,41 +44,34 @@ export default function GoogleSignIn() {
 
   const onClick = async () => {
     if (loading) return;
+    setLoading(true);
     try {
       await authReady;
       const provider = new GoogleAuthProvider();
       provider.addScope('profile'); // Solicita explícitamente el perfil del usuario
       provider.setCustomParameters({ prompt: "select_account" });
-      setLoading(true);
 
+      // Usar redirección en móvil, popup en escritorio
       if (isMobile) {
         toast.loading("Redirigiendo a Google...", { id: "google-login" });
         await signInWithRedirect(auth, provider);
+        // La navegación la manejará el useEffect al volver a la página
         return;
       }
 
+      // Flujo de Popup para escritorio
       await signInWithPopup(auth, provider, browserPopupRedirectResolver);
-      navigate("/", { replace: true }); // Navega después del popup exitoso
+      navigate("/", { replace: true }); // Navega inmediatamente después del popup exitoso
       setLoading(false);
     } catch (err) {
-      toast.dismiss("google-login");
-      if (
-        err?.code === "auth/popup-blocked" ||
-        err?.code === "auth/popup-closed-by-user" ||
-        err?.code === "auth/operation-not-supported-in-this-environment"
-      ) {
-        try {
-          toast.loading("Redirigiendo (fallback)...", { id: "google-login" });
-          await signInWithRedirect(auth, new GoogleAuthProvider());
-          return;
-        } catch (redirectErr) {
-          toast.dismiss("google-login");
-          toast.error(redirectErr.message);
-          setLoading(false);
-          return;
-        }
+      console.error("Sign in failed:", err);
+      // Si el popup es bloqueado, intenta con redirección como fallback
+      if (err?.code === "auth/popup-blocked" || err?.code === "auth/popup-closed-by-user") {
+        toast.loading("Popup bloqueado. Redirigiendo...", { id: "google-login" });
+        await signInWithRedirect(auth, new GoogleAuthProvider());
+        return;
       }
-      toast.error(err.message || "Sign in failed");
+      toast.error(err.message || "No se pudo iniciar sesión.");
       setLoading(false);
     }
   };
