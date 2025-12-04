@@ -20,10 +20,10 @@ import { LogOut, Home, Users, Layers, Tags, CreditCard, Settings, Menu, X } from
 import loginIllustration from "./assets/login-ilustration.svg";
 import logoKivee from "./assets/logo-kivee.svg";
 
-const UserMenu = ({ user, onSignOut, isSidebar = false }) => {
+const AcademySelector = ({ availableAcademies, currentAcademy, onSwitch }) => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
- 
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -35,7 +35,70 @@ const UserMenu = ({ user, onSignOut, isSidebar = false }) => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [menuRef]);
- 
+
+  if (!availableAcademies || availableAcademies.length <= 1) {
+    return null; // No mostrar si solo hay una academia o ninguna
+  }
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setShowMenu(!showMenu)}
+        className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium"
+        title="Cambiar academia"
+      >
+        <span className="truncate max-w-[150px]">{currentAcademy?.name || 'Seleccionar academia'}</span>
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {showMenu && (
+        <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-2">
+          <div className="px-4 py-2 text-xs text-gray-500 font-semibold uppercase">Tus academias</div>
+          {availableAcademies.map((academy) => (
+            <button
+              key={academy.id}
+              onClick={() => {
+                onSwitch(academy.id);
+                setShowMenu(false);
+              }}
+              className={`w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center justify-between ${
+                currentAcademy?.id === academy.id ? 'bg-primary/10' : ''
+              }`}
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">{academy.name}</p>
+                <p className="text-xs text-gray-500 capitalize">{academy.userRole}</p>
+              </div>
+              {currentAcademy?.id === academy.id && (
+                <svg className="w-5 h-5 text-primary flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const UserMenu = ({ user, onSignOut, isSidebar = false }) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [menuRef]);
+
   return (
     <div className="relative" ref={menuRef}>
       <button
@@ -71,6 +134,7 @@ const UserMenu = ({ user, onSignOut, isSidebar = false }) => {
 export default function App() {
   const [user, setUser] = useState(null);
   const [academy, setAcademy] = useState(null);
+  const [availableAcademies, setAvailableAcademies] = useState([]); // Nuevo: todas las academias disponibles
   const [membership, setMembership] = useState(null); // Nuevo estado para el rol
   const [loading, setLoading] = useState(true);
   const [creatingAcademy, setCreatingAcademy] = useState(false);
@@ -99,7 +163,80 @@ export default function App() {
       }
       throw err;
     }
-  }, [db]);
+  }, []);
+
+  // Nueva función para cargar todas las academias disponibles
+  const loadAllAcademies = useCallback(async (userId) => {
+    const academies = [];
+
+    try {
+      // 1. Cargar academia propia (como owner)
+      try {
+        const ownerRef = doc(db, "academies", userId);
+        const ownerSnap = await getDoc(ownerRef);
+        if (ownerSnap.exists()) {
+          academies.push({
+            id: ownerRef.id,
+            ...ownerSnap.data(),
+            userRole: 'owner'
+          });
+        }
+      } catch (err) {
+        if (err?.code !== 'permission-denied') {
+          console.error('Error loading owner academy:', err);
+        }
+      }
+
+      // 2. Cargar academias donde es miembro
+      try {
+        const membershipsRef = collection(db, "users", userId, "memberships");
+        const membershipsSnap = await getDocs(membershipsRef);
+
+        for (const membershipDoc of membershipsSnap.docs) {
+          const membershipData = membershipDoc.data();
+          if (membershipData.status === 'active' && membershipData.academyId) {
+            try {
+              const academyRef = doc(db, "academies", membershipData.academyId);
+              const academySnap = await getDoc(academyRef);
+              if (academySnap.exists()) {
+                // Evitar duplicados si ya se cargó como owner
+                if (!academies.find(a => a.id === membershipData.academyId)) {
+                  academies.push({
+                    id: academySnap.id,
+                    ...academySnap.data(),
+                    userRole: membershipData.role || 'admin'
+                  });
+                }
+              }
+            } catch (err) {
+              console.error(`Error loading academy ${membershipData.academyId}:`, err);
+            }
+          }
+        }
+      } catch (err) {
+        if (err?.code !== 'permission-denied') {
+          console.error('Error loading memberships:', err);
+        }
+      }
+
+      setAvailableAcademies(academies);
+      return academies;
+    } catch (err) {
+      console.error('Error in loadAllAcademies:', err);
+      return [];
+    }
+  }, []);
+
+  // Función para cambiar de academia
+  const switchAcademy = useCallback(async (academyId) => {
+    if (!user) return;
+
+    // Guardar en localStorage
+    localStorage.setItem(`lastAcademy_${user.uid}`, academyId);
+
+    // Cargar la academia seleccionada
+    await loadAcademyById(academyId);
+  }, [user, loadAcademyById]);
 
   const ensureOwnerMembership = useCallback(async (academyId, currentUser) => {
     const memberRef = doc(db, `academies/${academyId}/members`, currentUser.uid);
@@ -126,7 +263,7 @@ export default function App() {
         joinedAt: serverTimestamp(),
       });
     }
-  }, [db]);
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -151,10 +288,10 @@ export default function App() {
     }
   }, []);
 
-  // Refetch invites proactively when no academy is loaded (e.g., after indexing changes)
+  // Refetch invites proactively (including for users who already have an academy)
   useEffect(() => {
     const fetchInvitesOnly = async () => {
-      if (!user || academy) return;
+      if (!user) return;
       try {
         const targetEmail = (user.email || '').toLowerCase();
         const q = query(collectionGroup(db, "invites"), where("email", "==", targetEmail));
@@ -170,7 +307,7 @@ export default function App() {
       }
     };
     fetchInvitesOnly();
-  }, [user, academy, db]);
+  }, [user, db]);
 
   useEffect(() => {
     // Esta función unificada maneja todos los casos de autenticación.
@@ -179,6 +316,7 @@ export default function App() {
 
       if (!nextUser) {
         setAcademy(null);
+        setAvailableAcademies([]);
         setMembership(null);
         setLoading(false);
         setPendingInvites([]);
@@ -186,46 +324,10 @@ export default function App() {
       }
 
       try {
-        // 1) Owner path: academy doc keyed by user uid
-        const ownerRef = doc(db, "academies", nextUser.uid);
-        try {
-          const ownerSnap = await getDoc(ownerRef);
-          if (ownerSnap.exists()) {
-            const academyData = { id: ownerRef.id, ...ownerSnap.data() };
-            setAcademy(academyData);
-            await ensureOwnerMembership(ownerRef.id, nextUser);
-            setLoading(false);
-            return;
-          }
-        } catch (errOwner) {
-          // Si no es owner o no tiene permisos, seguimos con memberships/invites
-          if (errOwner?.code !== 'permission-denied') {
-            throw errOwner;
-          }
-        }
+        // 1) Cargar TODAS las academias disponibles
+        const allAcademies = await loadAllAcademies(nextUser.uid);
 
-        // 2) Member path: look up memberships stored for the user
-        try {
-          const membershipsRef = collection(db, "users", nextUser.uid, "memberships");
-          const membershipsSnap = await getDocs(membershipsRef);
-          const activeMembership = membershipsSnap.docs
-            .map(d => d.data())
-            .find(m => m.status === 'active');
-
-          if (activeMembership?.academyId) {
-            const loadedAcademy = await loadAcademyById(activeMembership.academyId);
-            if (loadedAcademy) {
-              setLoading(false);
-              return;
-            }
-          }
-        } catch (memberErr) {
-          if (memberErr?.code !== 'permission-denied') {
-            throw memberErr;
-          }
-        }
-
-        // 3) Invitations for this email (pending or accepted)
+        // 2) Verificar si hay invitaciones aceptadas y crear memberships si es necesario
         try {
           const invitesQuery = query(
             collectionGroup(db, "invites"),
@@ -264,11 +366,8 @@ export default function App() {
                   joinedAt: serverTimestamp(),
                 });
               }
-              const loaded = await loadAcademyById(acceptedInvite.academyId);
-              if (loaded) {
-                setLoading(false);
-                return;
-              }
+              // Recargar academias para incluir la nueva
+              await loadAllAcademies(nextUser.uid);
             } catch (accErr) {
               console.error("Error auto-joining from accepted invite:", accErr);
             }
@@ -281,6 +380,26 @@ export default function App() {
           }
           setPendingInvites([]);
         }
+
+        // 3) Determinar qué academia cargar
+        if (allAcademies.length > 0) {
+          // Intentar cargar la última academia usada desde localStorage
+          const lastAcademyId = localStorage.getItem(`lastAcademy_${nextUser.uid}`);
+          let academyToLoad = allAcademies.find(a => a.id === lastAcademyId);
+
+          // Si no hay última academia o no existe, cargar la primera disponible
+          if (!academyToLoad) {
+            academyToLoad = allAcademies[0];
+          }
+
+          // Asegurar membership si es owner
+          if (academyToLoad.userRole === 'owner') {
+            await ensureOwnerMembership(academyToLoad.id, nextUser);
+          }
+
+          await loadAcademyById(academyToLoad.id);
+        }
+
       } catch (e) {
         console.error("Firestore error", e);
         setError("Failed to fetch academy data");
@@ -314,7 +433,7 @@ export default function App() {
         unsubscribe();
       }
     };
-  }, [loadAcademyById, ensureOwnerMembership]);
+  }, [loadAcademyById, loadAllAcademies, ensureOwnerMembership]);
          // La lógica de carga de la academia se maneja dentro del listener.
 
   useEffect(() => {
@@ -377,6 +496,8 @@ export default function App() {
         }),
       ]);
 
+      // Reload all academies to include the new one
+      await loadAllAcademies(user.uid);
       await loadAcademyById(invite.academyId);
       setPendingInvites(prev => prev.filter(i => i.id !== inviteId));
     } catch (err) {
@@ -414,15 +535,27 @@ export default function App() {
   const SidebarContent = ({ onNavigate, showHeader = true, className = "" }) => (
     <div className={`flex flex-col h-full ${className}`}>
       {showHeader && (
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="h-12 w-12 rounded-full border-2 border-dashed border-gray-300 overflow-hidden flex items-center justify-center">
-            {academy.logoUrl ? (
-              <img src={academy.logoUrl} alt="Academy logo" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-gray-600 font-semibold uppercase">{academy.name?.charAt(0) || '?'}</span>
-            )}
+        <div className="mb-4">
+          <div className="flex items-center space-x-3">
+            <div className="h-12 w-12 rounded-full border-2 border-dashed border-gray-300 overflow-hidden flex items-center justify-center flex-shrink-0">
+              {academy.logoUrl ? (
+                <img src={academy.logoUrl} alt="Academy logo" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-gray-600 font-semibold uppercase">{academy.name?.charAt(0) || '?'}</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              {availableAcademies.length <= 1 ? (
+                <h2 className="text-xl font-semibold truncate">{academy.name}</h2>
+              ) : (
+                <AcademySelector
+                  availableAcademies={availableAcademies}
+                  currentAcademy={academy}
+                  onSwitch={switchAcademy}
+                />
+              )}
+            </div>
           </div>
-          <h2 className="text-xl font-semibold">{academy.name}</h2>
         </div>
       )}
       <nav className="flex-grow">
@@ -486,6 +619,11 @@ export default function App() {
             >
               <Settings className="h-4 w-4" />
               <span>Settings</span>
+              {pendingInvites.length > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold">
+                  {pendingInvites.length}
+                </span>
+              )}
             </NavLink>
           </li>
         </ul>
@@ -639,7 +777,15 @@ export default function App() {
                 <span className="text-gray-600 font-semibold uppercase text-sm">{academy.name?.charAt(0) || '?'}</span>
               )}
             </div>
-            <span className="text-base font-semibold">{academy.name}</span>
+            {availableAcademies.length <= 1 ? (
+              <span className="text-base font-semibold">{academy.name}</span>
+            ) : (
+              <AcademySelector
+                availableAcademies={availableAcademies}
+                currentAcademy={academy}
+                onSwitch={switchAcademy}
+              />
+            )}
           </div>
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -660,11 +806,29 @@ export default function App() {
             <Route path="/payments" element={<PaymentsSection user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/groups" element={<GroupsAndClassesSection user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/groups/:groupId" element={<GroupDetailPage user={user} academy={academy} db={db} membership={membership} />} />
-            <Route path="/settings" element={<AdminSection user={user} academy={academy} db={db} onAcademyUpdate={async () => {
-              const snap = await getDoc(doc(db, "academies", user.uid));
-              setAcademy({ id: snap.id, ...snap.data() });
-            }} />} />
-            <Route path="/" element={<Dashboard user={user} academy={academy} db={db} membership={membership} />} />
+            <Route path="/settings" element={<AdminSection
+              user={user}
+              academy={academy}
+              db={db}
+              pendingInvites={pendingInvites}
+              onAcceptInvite={handleAcceptInvite}
+              onDeclineInvite={handleDeclineInvite}
+              isAcceptingInvite={isAcceptingInvite}
+              onAcademyUpdate={async () => {
+                const snap = await getDoc(doc(db, "academies", academy.id));
+                setAcademy({ id: snap.id, ...snap.data() });
+              }}
+            />} />
+            <Route path="/" element={<Dashboard
+              user={user}
+              academy={academy}
+              db={db}
+              membership={membership}
+              pendingInvites={pendingInvites}
+              onAcceptInvite={handleAcceptInvite}
+              onDeclineInvite={handleDeclineInvite}
+              isAcceptingInvite={isAcceptingInvite}
+            />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>

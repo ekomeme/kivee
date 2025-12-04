@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import Select from 'react-select';
 import toast from 'react-hot-toast';
 import { Upload } from 'lucide-react';
-export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
+export default function AdminSection({ user, academy, db, onAcademyUpdate, pendingInvites = [], onAcceptInvite, onDeclineInvite, isAcceptingInvite }) {
   // States for Academy Settings
   const [currencyOptions, setCurrencyOptions] = useState([]);
   const [countryOptions, setCountryOptions] = useState([]);
@@ -27,6 +27,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
   const [teamInvites, setTeamInvites] = useState([]);
   const [teamLoading, setTeamLoading] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
+  const [inviteAcademyNames, setInviteAcademyNames] = useState({});
   const academyId = academy.id || academy.ownerId || user?.uid;
   const canManageTeam = academy.ownerId === user?.uid;
 
@@ -98,6 +99,32 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
     fetchTeamData();
   }, [fetchTeamData]);
 
+  // Fetch academy names for pending invites
+  useEffect(() => {
+    const fetchInviteAcademyNames = async () => {
+      if (!pendingInvites || pendingInvites.length === 0) return;
+
+      const names = {};
+      for (const invite of pendingInvites) {
+        try {
+          const academyRef = doc(db, 'academies', invite.academyId);
+          const academySnap = await getDoc(academyRef);
+          if (academySnap.exists()) {
+            names[invite.academyId] = academySnap.data().name || invite.academyId;
+          } else {
+            names[invite.academyId] = invite.academyId;
+          }
+        } catch (err) {
+          console.error(`Error fetching academy name for ${invite.academyId}:`, err);
+          names[invite.academyId] = invite.academyId;
+        }
+      }
+      setInviteAcademyNames(names);
+    };
+
+    fetchInviteAcademyNames();
+  }, [pendingInvites, db]);
+
   const handleInviteSubmit = async (e) => {
     e.preventDefault();
     if (!canManageTeam || !inviteEmail.trim()) return;
@@ -140,6 +167,10 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
       toast.error("No puedes eliminar al owner.");
       return;
     }
+
+    const confirmed = window.confirm(`¿Estás seguro de que quieres eliminar a ${member.email || 'este miembro'}? Perderán acceso a la academia.`);
+    if (!confirmed) return;
+
     try {
       await deleteDoc(doc(db, `academies/${academyId}/members`, member.id));
       if (member.userId || member.id) {
@@ -150,7 +181,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
           console.warn("No se pudo limpiar el membership del usuario:", innerErr);
         }
       }
-      toast.success("Miembro eliminado.");
+      toast.success("Miembro eliminado exitosamente.");
       fetchTeamData();
     } catch (err) {
       console.error("Error removing member:", err);
@@ -450,6 +481,41 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
 
           {activeTab === 'team' && (
             <div className="space-y-6">
+              {/* Invitaciones pendientes recibidas por el usuario */}
+              {pendingInvites && pendingInvites.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-blue-900 mb-2">Academy Invitations</h3>
+                  <p className="text-sm text-blue-700 mb-4">You have been invited to join other academies.</p>
+                  <div className="space-y-3">
+                    {pendingInvites.map(invite => (
+                      <div key={invite.id} className="bg-white border border-blue-200 rounded-md p-3 flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-gray-900">{inviteAcademyNames[invite.academyId] || 'Loading...'}</p>
+                          <p className="text-xs text-gray-500">Role: {invite.role || 'admin'} · Invited by {invite.invitedBy || 'owner'}</p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => onDeclineInvite && onDeclineInvite(invite.id)}
+                            className="text-sm text-gray-600 hover:text-gray-800 px-3 py-1 rounded-md border border-gray-200"
+                          >
+                            Decline
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onAcceptInvite && onAcceptInvite(invite.id)}
+                            disabled={isAcceptingInvite}
+                            className="text-sm bg-primary hover:bg-primary-hover text-white px-3 py-1 rounded-md disabled:opacity-50"
+                          >
+                            {isAcceptingInvite ? 'Joining...' : 'Accept'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-lg font-semibold text-gray-900">Team members</p>
@@ -534,16 +600,16 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate }) {
                           </tr>
                         </thead>
                         <tbody>
-                          {teamInvites.length === 0 && (
-                            <tr><td className="py-3 px-4 text-sm text-gray-600" colSpan={4}>No invitations sent.</td></tr>
+                          {teamInvites.filter(invite => invite.status === 'pending').length === 0 && (
+                            <tr><td className="py-3 px-4 text-sm text-gray-600" colSpan={4}>No pending invitations.</td></tr>
                           )}
-                          {teamInvites.map(invite => (
+                          {teamInvites.filter(invite => invite.status === 'pending').map(invite => (
                             <tr key={invite.id} className="hover:bg-gray-50">
                               <td className="py-2 px-4 border-b">{invite.email}</td>
                               <td className="py-2 px-4 border-b capitalize">{invite.role || 'admin'}</td>
-                              <td className="py-2 px-4 border-b capitalize">{invite.status || 'pending'}</td>
+                              <td className="py-2 px-4 border-b capitalize">{invite.status}</td>
                               <td className="py-2 px-4 border-b text-right">
-                                {canManageTeam && invite.status === 'pending' && (
+                                {canManageTeam && (
                                   <button
                                     type="button"
                                     onClick={() => handleCancelInvite(invite)}
