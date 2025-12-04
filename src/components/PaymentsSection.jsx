@@ -5,22 +5,30 @@ import { CheckCircle, Clock, Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingBar from './LoadingBar.jsx';
 
-export default function PaymentsSection({ user, academy, db }) {
+export default function PaymentsSection({ user, academy, db, membership }) {
     const [allPayments, setAllPayments] = useState([]);
     const [showPaymentModalFor, setShowPaymentModalFor] = useState(null);
     const touchStartX = useRef(0);
     const touchMoved = useRef(false);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('unpaid');
+    const academyId = academy?.id;
 
     const fetchAllPayments = useCallback(async () => {
-        if (!user) return;
+        if (!user || !academyId || !membership) {
+            setLoading(false);
+            return;
+        }
+        if (!['owner', 'admin', 'member'].includes(membership.role)) {
+            setLoading(false);
+            return;
+        }
         setLoading(true);
 
         try {
             // Fetch all necessary data in parallel 
-            const productsRef = collection(db, `academies/${user.uid}/products`);
-            const playersRef = collection(db, `academies/${user.uid}/players`);
+            const productsRef = collection(db, `academies/${academyId}/products`);
+            const playersRef = collection(db, `academies/${academyId}/players`);
 
             const [productsSnap, playersSnap] = await Promise.all([
                 getDocs(productsRef),
@@ -69,7 +77,7 @@ export default function PaymentsSection({ user, academy, db }) {
         } finally {
             setLoading(false);
         }
-    }, [user, db]);
+    }, [user, db, academyId, membership]);
 
     useEffect(() => {
         fetchAllPayments();
@@ -219,7 +227,7 @@ export default function PaymentsSection({ user, academy, db }) {
                     return;
                 }
                 setIsSubmitting(true);
-                const playerRef = doc(db, `academies/${user.uid}/players`, payment.studentId);
+                const playerRef = doc(db, `academies/${academyId}/players`, payment.studentId);
                 const playerDoc = await getDoc(playerRef);
                 if (!playerDoc.exists()) {
                     toast.error(`${academy?.studentLabelSingular || 'Student'} not found.`);

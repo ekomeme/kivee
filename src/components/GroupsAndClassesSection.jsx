@@ -21,7 +21,8 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
 
   // States for Schedule
   const [schedules, setSchedules] = useState({}); // { groupId: [scheduleItem, ...] }
-  const [loadingSchedules, setLoadingSchedules] = useState(false);
+  const [loadingSchedules, setLoadingSchedules] = useState(false); // fetch state
+  const [scheduleSaving, setScheduleSaving] = useState(false); // save state
   const [selectedGroupIdForSchedule, setSelectedGroupIdForSchedule] = useState('');
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
@@ -116,6 +117,15 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
   const handleAddOrUpdateGroup = async (e) => {
     e.preventDefault();
     if (!user || loadingGroups) return;
+    
+    // Lógica de permisos corregida
+    const userIsOwner = academy?.ownerId === user.uid;
+    const userIsAdmin = membership?.role === 'admin';
+
+    if (!userIsOwner && !userIsAdmin) {
+      toast.error("You don't have permission to modify groups.");
+      return;
+    }
 
     setLoadingGroups(true);
     setGroupError(null);
@@ -184,14 +194,24 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
       setScheduleForm({ day: 'Monday', startTime: '', endTime: '' });
       setScheduleError(null);
     }
+    setScheduleSaving(false);
     setShowScheduleModal(true);
   };
 
   const handleAddOrUpdateSchedule = async (e) => {
     e.preventDefault();
-    if (!selectedGroupIdForSchedule || loadingSchedules) return;
+    if (!selectedGroupIdForSchedule || scheduleSaving) return;
+    
+    // Lógica de permisos corregida
+    const userIsOwner = academy?.ownerId === user.uid;
+    const userIsAdmin = membership?.role === 'admin';
 
-    setLoadingSchedules(true);
+    if (!userIsOwner && !userIsAdmin) {
+      toast.error("You don't have permission to modify schedules.");
+      return;
+    }
+
+    setScheduleSaving(true);
     setScheduleError(null);
 
     const scheduleData = { ...scheduleForm };
@@ -212,7 +232,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
       setScheduleError("Error saving session: " + err.message);
       toast.error("Error saving session.");
     } finally {
-      setLoadingSchedules(false);
+      setScheduleSaving(false);
     }
   };
 
@@ -468,7 +488,13 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
               {scheduleError && <p className="text-red-500 text-sm mt-4">{scheduleError}</p>}
               <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-white py-3 md:bg-transparent md:py-0">
                 <button type="button" onClick={() => setShowScheduleModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
-                <button type="submit" disabled={loadingSchedules} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md disabled:opacity-50 w-full md:w-auto">{loadingSchedules ? 'Saving...' : 'Save'}</button>
+                <button
+                  type="submit"
+                  disabled={scheduleSaving} // Corregido el estado de carga
+                  className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md disabled:opacity-50 w-full md:w-auto"
+                >
+                  {scheduleSaving ? 'Saving...' : 'Save'}
+                </button>
               </div>
             </form>
           </div>

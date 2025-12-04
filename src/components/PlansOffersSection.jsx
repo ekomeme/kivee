@@ -3,7 +3,7 @@ import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc } from 'f
 import { Plus, Edit, Trash2, MoreVertical, Package, Tag, Zap, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-export default function PlansOffersSection({ user, academy, db }) {
+export default function PlansOffersSection({ user, academy, db, membership }) {
   const [tiers, setTiers] = useState([]);
   const [oneTimeProducts, setOneTimeProducts] = useState([]);
   const [trials, setTrials] = useState([]);
@@ -59,8 +59,11 @@ export default function PlansOffersSection({ user, academy, db }) {
   const [actionsMenuPosition, setActionsMenuPosition] = useState({ x: 0, y: 0 });
 
   const fetchTiers = async () => {
-    if (!user || !academy) return;
-    const tiersRef = collection(db, `academies/${user.uid}/tiers`);
+    if (!user || !academy || !membership) return;
+    if (!['owner', 'admin', 'member'].includes(membership.role)) {
+      return;
+    }
+    const tiersRef = collection(db, `academies/${academy.id}/tiers`);
     const q = query(tiersRef);
     const querySnapshot = await getDocs(q);
     const tiersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -68,8 +71,11 @@ export default function PlansOffersSection({ user, academy, db }) {
   };
 
   const fetchProducts = async () => {
-    if (!user || !academy) return;
-    const productsRef = collection(db, `academies/${user.uid}/products`);
+    if (!user || !academy || !membership) return;
+    if (!['owner', 'admin', 'member'].includes(membership.role)) {
+      return;
+    }
+    const productsRef = collection(db, `academies/${academy.id}/products`);
     const q = query(productsRef);
     const querySnapshot = await getDocs(q);
     const productsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -77,8 +83,11 @@ export default function PlansOffersSection({ user, academy, db }) {
   };
 
   const fetchTrials = async () => {
-    if (!user || !academy) return;
-    const trialsRef = collection(db, `academies/${user.uid}/trials`);
+    if (!user || !academy || !membership) return;
+    if (!['owner', 'admin', 'member'].includes(membership.role)) {
+      return;
+    }
+    const trialsRef = collection(db, `academies/${academy.id}/trials`);
     const q = query(trialsRef);
     const querySnapshot = await getDocs(q);
     const trialsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -89,11 +98,17 @@ export default function PlansOffersSection({ user, academy, db }) {
     fetchTiers();
     fetchProducts();
     fetchTrials();
-  }, [user, academy]);
+  }, [user, academy, membership]);
 
   const handleAddOrUpdateTier = async (e) => {
     e.preventDefault();
-    if (!user || !academy || loadingTiers) return;
+    if (!user || !academy || loadingTiers || !membership) return;
+    
+    const userIsOwner = academy?.ownerId === user.uid;
+    if (!userIsOwner && !['admin'].includes(membership?.role)) {
+      toast.error("You don't have permission to modify tiers.");
+      return;
+    }
 
     setLoadingTiers(true);
     setTierError(null);
@@ -110,7 +125,7 @@ export default function PlansOffersSection({ user, academy, db }) {
       autoRenew,
       requiresEnrollmentFee,
       status,
-      academyId: user.uid,
+      academyId: academy.id,
       createdAt: editingTier ? editingTier.createdAt : new Date(),
       updatedAt: new Date(),
     };
@@ -118,12 +133,12 @@ export default function PlansOffersSection({ user, academy, db }) {
     try {
       if (editingTier) {
         // Update existing tier
-        const tierDocRef = doc(db, `academies/${user.uid}/tiers`, editingTier.id);
+        const tierDocRef = doc(db, `academies/${academy.id}/tiers`, editingTier.id);
         await updateDoc(tierDocRef, tierData);
         toast.success("Tier updated successfully.");
       } else {
         // Add new tier
-        const tiersCollectionRef = collection(db, `academies/${user.uid}/tiers`);
+        const tiersCollectionRef = collection(db, `academies/${academy.id}/tiers`);
         await addDoc(tiersCollectionRef, tierData);
         toast.success("Tier added successfully.");
       }
@@ -189,7 +204,13 @@ export default function PlansOffersSection({ user, academy, db }) {
 
   const handleAddOrUpdateProduct = async (e) => {
     e.preventDefault();
-    if (!user || !academy || loadingProducts) return;
+    if (!user || !academy || loadingProducts || !membership) return;
+    
+    const userIsOwner = academy?.ownerId === user.uid;
+    if (!userIsOwner && !['admin'].includes(membership?.role)) {
+      toast.error("You don't have permission to modify products.");
+      return;
+    }
 
     setLoadingProducts(true);
     setProductError(null);
@@ -201,18 +222,18 @@ export default function PlansOffersSection({ user, academy, db }) {
       price: Number(productPrice) || 0,
       availableDate: availableDate || null,
       inventory: inventory ? Number(inventory) : null,
-      academyId: user.uid,
+      academyId: academy.id,
       createdAt: editingProduct ? editingProduct.createdAt : new Date(),
       updatedAt: new Date(),
     };
 
     try {
       if (editingProduct) {
-        const productDocRef = doc(db, `academies/${user.uid}/products`, editingProduct.id);
+        const productDocRef = doc(db, `academies/${academy.id}/products`, editingProduct.id);
         await updateDoc(productDocRef, productData);
         toast.success("Product updated successfully.");
       } else {
-        const productsCollectionRef = collection(db, `academies/${user.uid}/products`);
+        const productsCollectionRef = collection(db, `academies/${academy.id}/products`);
         await addDoc(productsCollectionRef, productData);
         toast.success("Product added successfully.");
       }
@@ -250,7 +271,13 @@ export default function PlansOffersSection({ user, academy, db }) {
 
   const handleAddOrUpdateTrial = async (e) => {
     e.preventDefault();
-    if (!user || !academy || loadingTrials) return;
+    if (!user || !academy || loadingTrials || !membership) return;
+    
+    const userIsOwner = academy?.ownerId === user.uid;
+    if (!userIsOwner && !['admin'].includes(membership?.role)) {
+      toast.error("You don't have permission to modify trials.");
+      return;
+    }
 
     setLoadingTrials(true);
     setTrialError(null);
@@ -262,18 +289,18 @@ export default function PlansOffersSection({ user, academy, db }) {
       price: Number(trialPrice) || 0,
       convertsToTierId: convertsToTierId || null,
       autoRenew: false, // Trials never auto-renew
-      academyId: user.uid,
+      academyId: academy.id,
       createdAt: editingTrial ? editingTrial.createdAt : new Date(),
       updatedAt: new Date(),
     };
 
     try {
       if (editingTrial) {
-        const trialDocRef = doc(db, `academies/${user.uid}/trials`, editingTrial.id);
+        const trialDocRef = doc(db, `academies/${academy.id}/trials`, editingTrial.id);
         await updateDoc(trialDocRef, trialData);
         toast.success("Trial updated successfully.");
       } else {
-        const trialsCollectionRef = collection(db, `academies/${user.uid}/trials`);
+        const trialsCollectionRef = collection(db, `academies/${academy.id}/trials`);
         await addDoc(trialsCollectionRef, trialData);
         toast.success("Trial added successfully.");
       }
@@ -310,7 +337,7 @@ export default function PlansOffersSection({ user, academy, db }) {
   const handleDeleteTier = async (tierId) => {
     const deleteAction = async () => {
       try {
-        await deleteDoc(doc(db, `academies/${user.uid}/tiers`, tierId));
+        await deleteDoc(doc(db, `academies/${academy.id}/tiers`, tierId));
         fetchTiers();
         toast.success("Tier deleted successfully.");
       } catch (error) {
@@ -342,7 +369,7 @@ export default function PlansOffersSection({ user, academy, db }) {
   const handleDeleteProduct = async (productId) => {
     const deleteAction = async () => {
       try {
-        await deleteDoc(doc(db, `academies/${user.uid}/products`, productId));
+        await deleteDoc(doc(db, `academies/${academy.id}/products`, productId));
         fetchProducts();
         toast.success("Product deleted successfully.");
       } catch (error) {
@@ -365,7 +392,7 @@ export default function PlansOffersSection({ user, academy, db }) {
   const handleDeleteTrial = async (trialId) => {
     const deleteAction = async () => {
       try {
-        await deleteDoc(doc(db, `academies/${user.uid}/trials`, trialId));
+        await deleteDoc(doc(db, `academies/${academy.id}/trials`, trialId));
         fetchTrials();
         toast.success("Trial deleted successfully.");
       } catch (error) {

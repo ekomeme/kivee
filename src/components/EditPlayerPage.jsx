@@ -16,7 +16,9 @@ export default function EditPlayerPage({ user, academy, db, membership }) {
 
     const fetchPlayer = async () => {
       setLoading(true);
-      if (!['owner', 'admin', 'member'].includes(membership.role)) {
+
+      const userIsOwner = academy?.ownerId === user.uid;
+      if (!userIsOwner && !['admin', 'member'].includes(membership?.role)) {
         setError(`You don't have permission to edit this ${studentLabelSingular.toLowerCase()}.`);
         setLoading(false);
         return;
