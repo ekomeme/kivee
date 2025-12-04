@@ -16,6 +16,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
   const [editingGroup, setEditingGroup] = useState(null);
   const [activeGroupMenu, setActiveGroupMenu] = useState(null);
   const [actionsMenuPosition, setActionsMenuPosition] = useState({ x: 0, y: 0 });
+  const actionsMenuRef = useRef(null);
   const [groupForm, setGroupForm] = useState({ name: '', description: '', minAge: '', maxAge: '', coach: '', maxCapacity: '', status: 'active' });
   const [groupError, setGroupError] = useState(null);
 
@@ -23,13 +24,14 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
   const [schedules, setSchedules] = useState({}); // { groupId: [scheduleItem, ...] }
   const [loadingSchedules, setLoadingSchedules] = useState(false); // fetch state
   const [scheduleSaving, setScheduleSaving] = useState(false); // save state
-  const [selectedGroupIdForSchedule, setSelectedGroupIdForSchedule] = useState('');
+  const [activeScheduleGroupId, setActiveScheduleGroupId] = useState('');
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [scheduleForm, setScheduleForm] = useState({ day: 'Monday', startTime: '', endTime: '' });
   const [scheduleError, setScheduleError] = useState(null);
   const [groupMembers, setGroupMembers] = useState({}); // { groupId: [players] }
   const [selectedGroupId, setSelectedGroupId] = useState(null);
+  const [expandedGroups, setExpandedGroups] = useState({});
   const navigate = useNavigate();
 
   const fetchGroups = async () => {
@@ -44,12 +46,40 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
     const querySnapshot = await getDocs(q);
     const groupsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     setGroups(groupsData);
+    setExpandedGroups(prev => {
+      const next = { ...prev };
+      groupsData.forEach(g => {
+        if (next[g.id] === undefined) next[g.id] = true;
+      });
+      return next;
+    });
+    // Preload schedules for all groups
+    setLoadingSchedules(true);
+    for (const g of groupsData) {
+      await fetchSchedulesForGroup(g.id);
+    }
+    setLoadingSchedules(false);
     setLoadingGroups(false);
   };
 
   useEffect(() => {
     fetchGroups();
   }, [user, academy, membership]);
+
+  // Close actions menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(e.target)) {
+        setActiveGroupMenu(null);
+      }
+    };
+    if (activeGroupMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [activeGroupMenu]);
 
   const fetchSchedulesForGroup = async (groupId) => {
     if (!groupId || !academy || !membership) return;
@@ -65,10 +95,6 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
     setSchedules(prev => ({ ...prev, [groupId]: scheduleData }));
     setLoadingSchedules(false);
   };
-
-  useEffect(() => {
-    if (selectedGroupIdForSchedule) fetchSchedulesForGroup(selectedGroupIdForSchedule);
-  }, [selectedGroupIdForSchedule]);
 
   useEffect(() => {
     if (selectedGroupId) {
@@ -181,7 +207,8 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
     ), { duration: 6000 });
   };
 
-  const handleOpenScheduleModal = (scheduleItem = null) => {
+  const handleOpenScheduleModal = (groupId, scheduleItem = null) => {
+    setActiveScheduleGroupId(groupId);
     if (scheduleItem) {
       setEditingSchedule(scheduleItem);
       setScheduleForm({
@@ -200,7 +227,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
 
   const handleAddOrUpdateSchedule = async (e) => {
     e.preventDefault();
-    if (!selectedGroupIdForSchedule || scheduleSaving) return;
+    if (!activeScheduleGroupId || scheduleSaving) return;
     
     // Lógica de permisos corregida
     const userIsOwner = academy?.ownerId === user.uid;
@@ -218,16 +245,16 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
 
     try {
       if (editingSchedule) {
-        const scheduleDocRef = doc(db, `academies/${academy.id}/groups/${selectedGroupIdForSchedule}/schedule`, editingSchedule.id);
+        const scheduleDocRef = doc(db, `academies/${academy.id}/groups/${activeScheduleGroupId}/schedule`, editingSchedule.id);
         await updateDoc(scheduleDocRef, scheduleData);
         toast.success("Session updated successfully.");
       } else {
-        const scheduleCollectionRef = collection(db, `academies/${academy.id}/groups/${selectedGroupIdForSchedule}/schedule`);
+        const scheduleCollectionRef = collection(db, `academies/${academy.id}/groups/${activeScheduleGroupId}/schedule`);
         await addDoc(scheduleCollectionRef, scheduleData);
         toast.success("Session added successfully.");
       }
       setShowScheduleModal(false);
-      fetchSchedulesForGroup(selectedGroupIdForSchedule);
+      fetchSchedulesForGroup(activeScheduleGroupId);
     } catch (err) {
       setScheduleError("Error saving session: " + err.message);
       toast.error("Error saving session.");
@@ -236,7 +263,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
     }
   };
 
-  const handleDeleteSchedule = async (scheduleId) => {
+  const handleDeleteSchedule = async (groupId, scheduleId) => {
     toast((t) => (
       <div className="bg-white p-4 rounded-lg shadow-lg flex flex-col items-center">
         <p className="text-center mb-4">Are you sure you want to delete this session?</p>
@@ -244,8 +271,8 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
           <button onClick={async () => {
             toast.dismiss(t.id);
             try {
-              await deleteDoc(doc(db, `academies/${academy.id}/groups/${selectedGroupIdForSchedule}/schedule`, scheduleId));
-              fetchSchedulesForGroup(selectedGroupIdForSchedule);
+              await deleteDoc(doc(db, `academies/${academy.id}/groups/${groupId}/schedule`, scheduleId));
+              fetchSchedulesForGroup(groupId);
               toast.success("Session deleted successfully.");
             } catch (error) {
               toast.error("Error deleting session.");
@@ -378,46 +405,66 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
         </>
       )}
       {activeGroupTab === 'schedule' && (
-        <div>
-          <div className="mb-4 max-w-sm">
-            <label htmlFor="group-select" className="block text-sm font-medium text-gray-700">Select a Group to Manage Schedule</label>
-            <select id="group-select" value={selectedGroupIdForSchedule} onChange={(e) => setSelectedGroupIdForSchedule(e.target.value)} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md">
-              <option value="">-- Select a Group --</option>
-              {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
-          </div>
-
-          {selectedGroupIdForSchedule && (
-            <div>
-              <div className="flex justify-end mb-4">
-                <button onClick={() => handleOpenScheduleModal()} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center">
-                  <Plus className="mr-2 h-5 w-5" /> Add Session
+        <div className="space-y-3">
+          {groups.map(group => {
+            const isOpen = expandedGroups[group.id] ?? true;
+            const groupSchedules = schedules[group.id] || [];
+            return (
+              <div key={group.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100"
+                  onClick={() => setExpandedGroups(prev => ({ ...prev, [group.id]: !isOpen }))}
+                >
+                  <div className="text-left">
+                    <p className="font-semibold text-gray-900">{group.name}</p>
+                    <p className="text-xs text-gray-500">{group.minAge}-{group.maxAge} yrs • Coach: {group.coach || 'N/A'}</p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleOpenScheduleModal(group.id); }}
+                      className="bg-primary hover:bg-primary-hover text-white text-xs font-bold py-1 px-3 rounded-md flex items-center"
+                    >
+                      <Plus className="mr-1 h-4 w-4" /> Add Session
+                    </button>
+                    <span className="text-sm text-gray-500">{isOpen ? '▾' : '▸'}</span>
+                  </div>
                 </button>
-              </div>
-              <div className="space-y-2">
-                {schedules[selectedGroupIdForSchedule]?.length > 0 ? (
-                  schedules[selectedGroupIdForSchedule].map(session => (
-                    <div key={session.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md border">
-                      <p className="font-medium">{session.day}: <span className="font-normal">{session.startTime} - {session.endTime}</span></p>
-                      <div className="space-x-2">
-                        <button onClick={() => handleOpenScheduleModal(session)} className="p-1 text-gray-500 hover:text-primary"><Edit size={18} /></button>
-                        <button onClick={() => handleDeleteSchedule(session.id)} className="p-1 text-gray-500 hover:text-red-600"><Trash2 size={18} /></button>
+                {isOpen && (
+                  <div className="p-4 space-y-2">
+                    {groupSchedules.length > 0 ? (
+                      groupSchedules.map(session => (
+                        <div key={session.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md border">
+                          <p className="font-medium">{session.day}: <span className="font-normal">{session.startTime} - {session.endTime}</span></p>
+                          <div className="space-x-2">
+                            <button onClick={() => handleOpenScheduleModal(group.id, session)} className="p-1 text-gray-500 hover:text-primary"><Edit size={18} /></button>
+                            <button onClick={() => handleDeleteSchedule(group.id, session.id)} className="p-1 text-gray-500 hover:text-red-600"><Trash2 size={18} /></button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="border-2 border-dashed border-gray-300 rounded-md p-4 text-center text-gray-500">
+                        Empty
                       </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-500">No sessions scheduled for this group yet.</p>
+                    )}
+                  </div>
                 )}
               </div>
-            </div>
-          )}
+            );
+          })}
+          {groups.length === 0 && <p className="text-gray-500">No groups available.</p>}
         </div>
       )}
       {activeGroupTab === 'transfers' && <div className="text-center p-10 text-gray-500 border-2 border-dashed rounded-lg mt-4"><p>Module for moving students between groups coming soon.</p></div>}
 
       {/* Group Actions Menu */}
       {activeGroupMenu && (
-        <div className="fixed bg-white border border-gray-border rounded-md shadow-lg z-50" style={{ top: `${actionsMenuPosition.y}px`, left: `${actionsMenuPosition.x}px`, transform: 'translateX(-100%)' }}>
+        <div
+          ref={actionsMenuRef}
+          className="fixed bg-white border border-gray-border rounded-md shadow-lg z-50"
+          style={{ top: `${actionsMenuPosition.y}px`, left: `${actionsMenuPosition.x}px`, transform: 'translateX(-100%)' }}
+        >
           <ul className="py-1">
             <li className="text-base w-32"><button onClick={() => { handleOpenGroupModal(activeGroupMenu); setActiveGroupMenu(null); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center"><Edit className="mr-3 h-4 w-4" /><span>Edit</span></button></li>
             <li className="text-base"><button onClick={() => { handleDeleteGroup(activeGroupMenu.id); setActiveGroupMenu(null); }} className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center"><Trash2 className="mr-3 h-4 w-4" /><span>Delete</span></button></li>

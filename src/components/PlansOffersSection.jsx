@@ -57,6 +57,8 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
 
 
   const [actionsMenuPosition, setActionsMenuPosition] = useState({ x: 0, y: 0 });
+  const productMenuRef = useRef(null);
+  const trialMenuRef = useRef(null);
 
   const fetchTiers = async () => {
     if (!user || !academy || !membership) return;
@@ -472,6 +474,24 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
     );
   };
 
+  // Close product/trial menus on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (activeProductMenu && productMenuRef.current && !productMenuRef.current.contains(e.target)) {
+        setActiveProductMenu(null);
+      }
+      if (activeTrialMenu && trialMenuRef.current && !trialMenuRef.current.contains(e.target)) {
+        setActiveTrialMenu(null);
+      }
+    };
+    if (activeProductMenu || activeTrialMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [activeProductMenu, activeTrialMenu]);
+
   const handleOpenActionsMenu = (tier, event) => {
     event.stopPropagation(); // Prevent row click
     const rect = event.currentTarget.getBoundingClientRect();
@@ -792,7 +812,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
         />
       )}
       {activeProductMenu && (
-        <div className="fixed bg-white border border-gray-border rounded-md shadow-lg z-50" style={{ top: `${actionsMenuPosition.y}px`, left: `${actionsMenuPosition.x}px`, transform: 'translateX(-100%)' }}>
+        <div ref={productMenuRef} className="fixed bg-white border border-gray-border rounded-md shadow-lg z-50" style={{ top: `${actionsMenuPosition.y}px`, left: `${actionsMenuPosition.x}px`, transform: 'translateX(-100%)' }}>
           <ul className="py-1">
             <li className="text-base w-32">
               <button onClick={() => { handleOpenProductModal(activeProductMenu); setActiveProductMenu(null); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center"><Edit className="mr-3 h-4 w-4" /><span>Edit</span></button>
@@ -804,7 +824,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
         </div>
       )}
       {activeTrialMenu && (
-        <div className="fixed bg-white border border-gray-border rounded-md shadow-lg z-50" style={{ top: `${actionsMenuPosition.y}px`, left: `${actionsMenuPosition.x}px`, transform: 'translateX(-100%)' }}>
+        <div ref={trialMenuRef} className="fixed bg-white border border-gray-border rounded-md shadow-lg z-50" style={{ top: `${actionsMenuPosition.y}px`, left: `${actionsMenuPosition.x}px`, transform: 'translateX(-100%)' }}>
           <ul className="py-1">
             <li className="text-base w-32">
               <button onClick={() => { handleOpenTrialModal(activeTrialMenu); setActiveTrialMenu(null); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center"><Edit className="mr-3 h-4 w-4" /><span>Edit</span></button>
