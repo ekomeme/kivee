@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import PlayerForm from './PlayerForm.jsx';
 
-export default function NewPlayerPage({ user, academy, db }) {
+export default function NewPlayerPage({ user, academy, db, membership }) {
   const navigate = useNavigate();
   const handlePlayerAdded = () => {
     navigate('/students'); // Navigate back to the students list after adding
@@ -16,6 +16,7 @@ export default function NewPlayerPage({ user, academy, db }) {
         user={user}
         academy={academy}
         db={db}
+        membership={membership}
         onComplete={handlePlayerAdded}
       />
     </div>

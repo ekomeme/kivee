@@ -660,7 +660,10 @@ export default function App() {
             <Route path="/payments" element={<PaymentsSection user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/groups" element={<GroupsAndClassesSection user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/groups/:groupId" element={<GroupDetailPage user={user} academy={academy} db={db} membership={membership} />} />
-            <Route path="/settings" element={<AdminSection user={user} academy={academy} db={db} onAcademyUpdate={async () => setAcademy((await getDoc(doc(db, "academies", user.uid))).data())} />} />
+            <Route path="/settings" element={<AdminSection user={user} academy={academy} db={db} onAcademyUpdate={async () => {
+              const snap = await getDoc(doc(db, "academies", user.uid));
+              setAcademy({ id: snap.id, ...snap.data() });
+            }} />} />
             <Route path="/" element={<Dashboard user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

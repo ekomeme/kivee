@@ -55,30 +55,46 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
   useEffect(() => {
     const fetchTiers = async () => {
       if (!user || !academy || !membership) return;
-      const tiersRef = collection(db, `academies/${academy.id}/tiers`);
-      const querySnapshot = await getDocs(tiersRef);
-      setTiers(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      try {
+        const tiersRef = collection(db, `academies/${academy.id}/tiers`);
+        const querySnapshot = await getDocs(tiersRef);
+        setTiers(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (err) {
+        console.error('Error fetching tiers:', err);
+      }
     };
 
     const fetchTrials = async () => {
       if (!user || !academy || !membership) return;
-      const trialsRef = collection(db, `academies/${academy.id}/trials`);
-      const querySnapshot = await getDocs(trialsRef);
-      setTrials(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      try {
+        const trialsRef = collection(db, `academies/${academy.id}/trials`);
+        const querySnapshot = await getDocs(trialsRef);
+        setTrials(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (err) {
+        console.error('Error fetching trials:', err);
+      }
     };
 
     const fetchGroups = async () => {
       if (!user || !academy || !membership) return;
-      const groupsRef = collection(db, `academies/${academy.id}/groups`);
-      const querySnapshot = await getDocs(groupsRef);
-      setGroups(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      try {
+        const groupsRef = collection(db, `academies/${academy.id}/groups`);
+        const querySnapshot = await getDocs(groupsRef);
+        setGroups(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (err) {
+        console.error('Error fetching groups:', err);
+      }
     };
 
     const fetchProducts = async () => {
       if (!user || !academy || !membership) return;
-      const productsRef = collection(db, `academies/${academy.id}/products`);
-      const querySnapshot = await getDocs(productsRef);
-      setOneTimeProducts(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      try {
+        const productsRef = collection(db, `academies/${academy.id}/products`);
+        const querySnapshot = await getDocs(productsRef);
+        setOneTimeProducts(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (err) {
+        console.error('Error fetching products:', err);
+      }
     };
 
     fetchTiers();
