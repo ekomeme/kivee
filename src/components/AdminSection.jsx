@@ -257,7 +257,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
     setIsUpdatingSettings(true);
     setUpdateSettingsError(null);
 
-    const academyRef = doc(db, "academies", user.uid);
+    const academyRef = doc(db, "academies", academyId);
     const previousLogoPath = academy.logoPath || null;
 
     try {
@@ -290,7 +290,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
 
         const storage = getStorage();
         const sanitizedFilename = sanitizeFilename(logoFile.name);
-        const newLogoPath = `academies/${user.uid}/branding/logo_${Date.now()}_${sanitizedFilename}`;
+        const newLogoPath = `academies/${academyId}/branding/logo_${Date.now()}_${sanitizedFilename}`;
         const logoRef = ref(storage, newLogoPath);
         const snap = await uploadBytes(logoRef, logoFile);
         logoUrl = await getDownloadURL(snap.ref);
