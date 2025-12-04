@@ -32,6 +32,18 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
   const academyId = academy.id || academy.ownerId || user?.uid;
   const canManageTeam = academy.ownerId === user?.uid;
 
+  // Sync form state when academy changes (e.g., switching dropdown)
+  useEffect(() => {
+    setAcademyNameInput(academy.name || '');
+    setSelectedAcademyCategory(academy.category || '');
+    setOtherCategory(academy.otherCategory || '');
+    setLogoPreview(academy.logoUrl || '');
+    setLogoFile(null);
+    setStudentLabelSingular(academy.studentLabelSingular || 'Student');
+    setStudentLabelPlural(academy.studentLabelPlural || 'Students');
+    setInviteEmail('');
+  }, [academy]);
+
   useEffect(() => {
     const fetchCurrencies = async () => {
       try {

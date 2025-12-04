@@ -4,7 +4,7 @@ import { doc, getDoc, collection, query, where, getDocs, updateDoc, addDoc, dele
 import { Users, Calendar, Edit3, Save, X, Trash2, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-export default function GroupDetailPage({ user, academy, db }) {
+export default function GroupDetailPage({ user, academy, db, membership }) {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const [group, setGroup] = useState(null);
@@ -21,10 +21,10 @@ export default function GroupDetailPage({ user, academy, db }) {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user || !db || !groupId) return;
+      if (!user || !db || !groupId || !academy?.id || !membership) return;
       setLoading(true);
       try {
-        const groupRef = doc(db, `academies/${user.uid}/groups`, groupId);
+        const groupRef = doc(db, `academies/${academy.id}/groups`, groupId);
         const groupSnap = await getDoc(groupRef);
         if (!groupSnap.exists()) {
           setError('Group not found');
@@ -35,12 +35,12 @@ export default function GroupDetailPage({ user, academy, db }) {
         setGroup(groupData);
         setCoachDraft(groupData.coach || '');
 
-        const playersRef = collection(db, `academies/${user.uid}/players`);
+        const playersRef = collection(db, `academies/${academy.id}/players`);
         const playersQ = query(playersRef, where('groupId', '==', groupId));
         const playersSnap = await getDocs(playersQ);
         setStudents(playersSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-        const scheduleRef = collection(db, `academies/${user.uid}/groups/${groupId}/schedule`);
+        const scheduleRef = collection(db, `academies/${academy.id}/groups/${groupId}/schedule`);
         const scheduleSnap = await getDocs(scheduleRef);
         setSchedule(scheduleSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (err) {
@@ -51,7 +51,7 @@ export default function GroupDetailPage({ user, academy, db }) {
       }
     };
     fetchData();
-  }, [user, db, groupId]);
+  }, [user, db, groupId, academy, membership]);
 
   if (loading) return <div className="p-6">Loading group...</div>;
   if (error) return <div className="p-6 text-red-600">{error}</div>;
@@ -59,7 +59,7 @@ export default function GroupDetailPage({ user, academy, db }) {
 
   const handleSaveGroup = async () => {
     try {
-      const groupRef = doc(db, `academies/${user.uid}/groups`, groupId);
+      const groupRef = doc(db, `academies/${academy.id}/groups`, groupId);
       await updateDoc(groupRef, { coach: coachDraft });
       setGroup(prev => ({ ...prev, coach: coachDraft }));
       setEditing(false);
@@ -89,15 +89,15 @@ export default function GroupDetailPage({ user, academy, db }) {
     e.preventDefault();
     try {
       if (editingSession) {
-        const ref = doc(db, `academies/${user.uid}/groups/${groupId}/schedule`, editingSession.id);
+        const ref = doc(db, `academies/${academy.id}/groups/${groupId}/schedule`, editingSession.id);
         await updateDoc(ref, scheduleForm);
         toast.success('Session updated');
       } else {
-        const ref = collection(db, `academies/${user.uid}/groups/${groupId}/schedule`);
+        const ref = collection(db, `academies/${academy.id}/groups/${groupId}/schedule`);
         await addDoc(ref, scheduleForm);
         toast.success('Session added');
       }
-      const scheduleRef = collection(db, `academies/${user.uid}/groups/${groupId}/schedule`);
+      const scheduleRef = collection(db, `academies/${academy.id}/groups/${groupId}/schedule`);
       const snap = await getDocs(scheduleRef);
       setSchedule(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setEditingSession(null);
@@ -110,7 +110,7 @@ export default function GroupDetailPage({ user, academy, db }) {
 
   const handleDeleteSession = async (sessionId) => {
     try {
-      const ref = doc(db, `academies/${user.uid}/groups/${groupId}/schedule`, sessionId);
+      const ref = doc(db, `academies/${academy.id}/groups/${groupId}/schedule`, sessionId);
       await deleteDoc(ref);
       setSchedule(prev => prev.filter(s => s.id !== sessionId));
       toast.success('Session deleted');

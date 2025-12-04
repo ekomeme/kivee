@@ -54,7 +54,7 @@ const AcademySelector = ({ availableAcademies, currentAcademy, onSwitch }) => {
         </svg>
       </button>
       {showMenu && (
-        <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-2">
+        <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-2">
           <div className="px-4 py-2 text-xs text-gray-500 font-semibold uppercase">Tus academias</div>
           {availableAcademies.map((academy) => (
             <button
@@ -63,7 +63,7 @@ const AcademySelector = ({ availableAcademies, currentAcademy, onSwitch }) => {
                 onSwitch(academy.id);
                 setShowMenu(false);
               }}
-              className={`w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center justify-between ${
+              className={`w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center justify-between transition ${
                 currentAcademy?.id === academy.id ? 'bg-primary/10' : ''
               }`}
             >
@@ -227,6 +227,23 @@ export default function App() {
       return [];
     }
   }, []);
+
+  const handleAcademyUpdated = useCallback(async (academyId) => {
+    try {
+      const snap = await getDoc(doc(db, "academies", academyId));
+      if (snap.exists()) {
+        const updated = { id: snap.id, ...snap.data() };
+        setAcademy(updated);
+        setAvailableAcademies(prev => {
+          if (!prev || prev.length === 0) return prev;
+          const next = prev.map(a => a.id === academyId ? { ...a, ...updated } : a);
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error('Error refreshing academy after update:', err);
+    }
+  }, [db]);
 
   // Función para cambiar de academia
   const switchAcademy = useCallback(async (academyId) => {
@@ -836,8 +853,11 @@ export default function App() {
               onDeclineInvite={handleDeclineInvite}
               isAcceptingInvite={isAcceptingInvite}
               onAcademyUpdate={async () => {
-                const snap = await getDoc(doc(db, "academies", academy.id));
-                setAcademy({ id: snap.id, ...snap.data() });
+                if (academy?.id) {
+                  await handleAcademyUpdated(academy.id);
+                  // refrescar lista de academias disponibles para dropdown
+                  await loadAllAcademies(user.uid);
+                }
               }}
             />} />
             <Route path="/" element={<Dashboard
