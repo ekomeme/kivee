@@ -4,6 +4,7 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } f
 import toast from 'react-hot-toast';
 import Select from 'react-select'; // Import Select for country codes
 import { Upload } from 'lucide-react'; // Import Upload icon
+import { sanitizeText, sanitizeEmail, sanitizePhone, sanitizeNotes, sanitizeFilename, validateFileType } from '../utils/validators';
 
 export default function PlayerForm({ user, academy, db, membership, onComplete, playerToEdit }) {
   const studentLabelSingular = academy?.studentLabelSingular || 'Student';
@@ -272,17 +273,46 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Basic phone number length validation
-    if (playerContactPhone && (playerContactPhone.length < 6 || playerContactPhone.length > 15)) {
-      toast.error(`${studentLabelSingular}'s phone number has an invalid length.`);
-      return;
-    }
-    if (hasTutor && tutorContactPhone && (tutorContactPhone.length < 6 || tutorContactPhone.length > 15)) {
-      toast.error("Tutor's phone number has an invalid length.");
+    if (!user || !academy || loading) return;
+
+    // Sanitize all text inputs
+    const sanitizedName = sanitizeText(name, 50);
+    const sanitizedLastName = sanitizeText(lastName, 50);
+    const sanitizedStudentId = sanitizeText(studentId, 50);
+    const sanitizedPlayerEmail = sanitizeEmail(playerEmail);
+    const sanitizedPlayerPhone = sanitizePhone(playerContactPhone);
+    const sanitizedTutorName = sanitizeText(tutorName, 50);
+    const sanitizedTutorLastName = sanitizeText(tutorLastName, 50);
+    const sanitizedTutorEmail = sanitizeEmail(tutorEmail);
+    const sanitizedTutorPhone = sanitizePhone(tutorContactPhone);
+    const sanitizedNotes = sanitizeNotes(notes, 5000);
+
+    // Validate required fields
+    if (!sanitizedName) {
+      toast.error(`${studentLabelSingular}'s name is required.`);
       return;
     }
 
-    if (!user || !academy || loading) return;
+    // Validate emails if provided
+    if (playerEmail && !sanitizedPlayerEmail) {
+      toast.error(`${studentLabelSingular}'s email is invalid.`);
+      return;
+    }
+
+    if (hasTutor && tutorEmail && !sanitizedTutorEmail) {
+      toast.error("Tutor's email is invalid.");
+      return;
+    }
+
+    // Validate phone lengths
+    if (sanitizedPlayerPhone && (sanitizedPlayerPhone.length < 6 || sanitizedPlayerPhone.length > 20)) {
+      toast.error(`${studentLabelSingular}'s phone number has an invalid length.`);
+      return;
+    }
+    if (hasTutor && sanitizedTutorPhone && (sanitizedTutorPhone.length < 6 || sanitizedTutorPhone.length > 20)) {
+      toast.error("Tutor's phone number has an invalid length.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -293,8 +323,32 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
     const academyId = academy.id;
 
     if (playerPhotoFile) {
+      // Validate file type using magic bytes
+      const buffer = await playerPhotoFile.arrayBuffer();
+      const mimeType = playerPhotoFile.type;
+
+      if (!['image/jpeg', 'image/png', 'image/gif'].includes(mimeType)) {
+        toast.error("Solo se permiten imágenes (JPG, PNG, GIF).");
+        setLoading(false);
+        return;
+      }
+
+      if (!validateFileType(buffer, mimeType)) {
+        toast.error("El archivo no coincide con el tipo de imagen declarado.");
+        setLoading(false);
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (playerPhotoFile.size > 5 * 1024 * 1024) {
+        toast.error("La foto debe ser menor a 5MB.");
+        setLoading(false);
+        return;
+      }
+
       const storage = getStorage();
-      const storagePath = `academies/${user.uid}/player_photos/${Date.now()}_${playerPhotoFile.name}`;
+      const sanitizedFilenameStr = sanitizeFilename(playerPhotoFile.name);
+      const storagePath = `academies/${user.uid}/player_photos/${Date.now()}_${sanitizedFilenameStr}`;
       const storageRef = ref(storage, storagePath);
       const uploadTask = uploadBytesResumable(storageRef, playerPhotoFile);
 
@@ -334,12 +388,12 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
 
     if (hasTutor) {
       const tutorData = {
-        name: tutorName,
-        lastName: tutorLastName,
-        email: tutorEmail,
-        contactPhonePrefix: tutorContactPhone ? tutorPhonePrefix : null,
-        contactPhoneNumber: tutorContactPhone ? tutorContactPhone : null,
-        contactPhone: tutorContactPhone ? `${tutorPhonePrefix}${tutorContactPhone}` : null,
+        name: sanitizedTutorName,
+        lastName: sanitizedTutorLastName,
+        email: sanitizedTutorEmail || null,
+        contactPhonePrefix: sanitizedTutorPhone ? tutorPhonePrefix : null,
+        contactPhoneNumber: sanitizedTutorPhone ? sanitizedTutorPhone : null,
+        contactPhone: sanitizedTutorPhone ? `${tutorPhonePrefix}${sanitizedTutorPhone}` : null,
         academyId: academyId,
         createdAt: playerToEdit?.tutor?.createdAt || new Date(),
         updatedAt: new Date(),
@@ -418,22 +472,22 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
     }
 
     const playerData = {
-      name,
-      lastName,
-      studentId: studentId.trim() ? studentId.trim() : null,
+      name: sanitizedName,
+      lastName: sanitizedLastName,
+      studentId: sanitizedStudentId || null,
       gender,
       birthday,
       photoURL: finalPhotoURL,
-      email: playerEmail || null,
+      email: sanitizedPlayerEmail || null,
       photoPath: finalPhotoPath || null,
-      contactPhonePrefix: playerContactPhone ? playerPhonePrefix : null,
-      contactPhoneNumber: playerContactPhone ? playerContactPhone : null,
-      contactPhone: playerContactPhone ? `${playerPhonePrefix}${playerContactPhone}` : null,
+      contactPhonePrefix: sanitizedPlayerPhone ? playerPhonePrefix : null,
+      contactPhoneNumber: sanitizedPlayerPhone ? sanitizedPlayerPhone : null,
+      contactPhone: sanitizedPlayerPhone ? `${playerPhonePrefix}${sanitizedPlayerPhone}` : null,
       tutorId: hasTutor ? linkedTutorId : null,
       groupId: groupId || null,
       plan: planData,
       oneTimeProducts: finalProductsData,
-      notes,      
+      notes: sanitizedNotes,
       academyId: academyId,
       status: playerStatus || 'active',
       createdAt: playerToEdit ? playerToEdit.createdAt : serverTimestamp(),

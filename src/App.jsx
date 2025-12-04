@@ -18,6 +18,7 @@ import GroupDetailPage from "./components/GroupDetailPage.jsx";
 import { Toaster } from "react-hot-toast";
 import { LogOut, Home, Users, Layers, Tags, CreditCard, Settings, Menu, X } from "lucide-react";
 import loginIllustration from "./assets/login-ilustration.svg";
+import { isValidAcademyId, getValidatedLocalStorage } from "./utils/validators";
 import logoKivee from "./assets/logo-kivee.svg";
 
 const AcademySelector = ({ availableAcademies, currentAcademy, onSwitch }) => {
@@ -231,12 +232,29 @@ export default function App() {
   const switchAcademy = useCallback(async (academyId) => {
     if (!user) return;
 
+    // Validate academyId format
+    if (!isValidAcademyId(academyId)) {
+      console.error('Invalid academy ID format');
+      return;
+    }
+
+    // Verify user has access to this academy
+    const hasAccess = availableAcademies.some(a => a.id === academyId);
+    if (!hasAccess) {
+      console.error('User does not have access to this academy');
+      return;
+    }
+
     // Guardar en localStorage
-    localStorage.setItem(`lastAcademy_${user.uid}`, academyId);
+    try {
+      localStorage.setItem(`lastAcademy_${user.uid}`, academyId);
+    } catch (err) {
+      console.error('Failed to save to localStorage:', err);
+    }
 
     // Cargar la academia seleccionada
     await loadAcademyById(academyId);
-  }, [user, loadAcademyById]);
+  }, [user, loadAcademyById, availableAcademies]);
 
   const ensureOwnerMembership = useCallback(async (academyId, currentUser) => {
     const memberRef = doc(db, `academies/${academyId}/members`, currentUser.uid);
@@ -383,8 +401,11 @@ export default function App() {
 
         // 3) Determinar qué academia cargar
         if (allAcademies.length > 0) {
-          // Intentar cargar la última academia usada desde localStorage
-          const lastAcademyId = localStorage.getItem(`lastAcademy_${nextUser.uid}`);
+          // Intentar cargar la última academia usada desde localStorage (con validación)
+          const lastAcademyId = getValidatedLocalStorage(
+            `lastAcademy_${nextUser.uid}`,
+            (id) => isValidAcademyId(id) && allAcademies.some(a => a.id === id)
+          );
           let academyToLoad = allAcademies.find(a => a.id === lastAcademyId);
 
           // Si no hay última academia o no existe, cargar la primera disponible

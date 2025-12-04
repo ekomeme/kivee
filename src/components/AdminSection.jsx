@@ -4,6 +4,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "fire
 import Select from 'react-select';
 import toast from 'react-hot-toast';
 import { Upload } from 'lucide-react';
+import { sanitizeEmail, sanitizeText, sanitizeFilename, validateFileType } from '../utils/validators';
 export default function AdminSection({ user, academy, db, onAcademyUpdate, pendingInvites = [], onAcceptInvite, onDeclineInvite, isAcceptingInvite }) {
   // States for Academy Settings
   const [currencyOptions, setCurrencyOptions] = useState([]);
@@ -128,10 +129,16 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
   const handleInviteSubmit = async (e) => {
     e.preventDefault();
     if (!canManageTeam || !inviteEmail.trim()) return;
-    const email = inviteEmail.trim().toLowerCase();
 
-    const isAlreadyMember = teamMembers.some(m => (m.email || '').toLowerCase() === email);
-    const isAlreadyInvited = teamInvites.some(i => (i.email || '').toLowerCase() === email && i.status === 'pending');
+    // Validate and sanitize email
+    const sanitizedEmail = sanitizeEmail(inviteEmail);
+    if (!sanitizedEmail) {
+      toast.error("Por favor ingresa un correo electrónico válido.");
+      return;
+    }
+
+    const isAlreadyMember = teamMembers.some(m => (m.email || '').toLowerCase() === sanitizedEmail);
+    const isAlreadyInvited = teamInvites.some(i => (i.email || '').toLowerCase() === sanitizedEmail && i.status === 'pending');
     if (isAlreadyMember) {
       toast.error("Ese usuario ya es parte del equipo.");
       return;
@@ -144,7 +151,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
     setIsInviting(true);
     try {
       await addDoc(collection(db, `academies/${academyId}/invites`), {
-        email,
+        email: sanitizedEmail,
         status: 'pending',
         invitedBy: user.uid,
         role: 'admin',
@@ -224,6 +231,17 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
     e.preventDefault();
     if (!user || !academyNameInput.trim() || !selectedCurrency?.value) return;
 
+    // Sanitize text inputs
+    const sanitizedName = sanitizeText(academyNameInput, 100);
+    const sanitizedOtherCategory = sanitizeText(otherCategory, 100);
+    const sanitizedStudentSingular = sanitizeText(studentLabelSingular, 50) || 'Student';
+    const sanitizedStudentPlural = sanitizeText(studentLabelPlural, 50) || 'Students';
+
+    if (!sanitizedName) {
+      toast.error("El nombre de la academia no puede estar vacío.");
+      return;
+    }
+
     setIsUpdatingSettings(true);
     setUpdateSettingsError(null);
 
@@ -233,9 +251,34 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
     try {
       let logoUrl = academy.logoUrl || null;
       let logoPath = academy.logoPath || null;
+
       if (logoFile) {
+        // Validate file type using magic bytes
+        const buffer = await logoFile.arrayBuffer();
+        const mimeType = logoFile.type;
+
+        if (!['image/jpeg', 'image/png', 'image/gif'].includes(mimeType)) {
+          toast.error("Solo se permiten imágenes (JPG, PNG, GIF).");
+          setIsUpdatingSettings(false);
+          return;
+        }
+
+        if (!validateFileType(buffer, mimeType)) {
+          toast.error("El archivo no coincide con el tipo de imagen declarado.");
+          setIsUpdatingSettings(false);
+          return;
+        }
+
+        // Validate file size (max 5MB)
+        if (logoFile.size > 5 * 1024 * 1024) {
+          toast.error("El archivo debe ser menor a 5MB.");
+          setIsUpdatingSettings(false);
+          return;
+        }
+
         const storage = getStorage();
-        const newLogoPath = `academies/${user.uid}/branding/logo_${Date.now()}_${logoFile.name}`;
+        const sanitizedFilename = sanitizeFilename(logoFile.name);
+        const newLogoPath = `academies/${user.uid}/branding/logo_${Date.now()}_${sanitizedFilename}`;
         const logoRef = ref(storage, newLogoPath);
         const snap = await uploadBytes(logoRef, logoFile);
         logoUrl = await getDownloadURL(snap.ref);
@@ -251,16 +294,16 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
       }
 
       await updateDoc(academyRef, {
-        name: academyNameInput.trim(),
+        name: sanitizedName,
         category: selectedAcademyCategory,
-        otherCategory: selectedAcademyCategory === 'Other' ? otherCategory : '',
+        otherCategory: selectedAcademyCategory === 'Other' ? sanitizedOtherCategory : '',
         currency: selectedCurrency.value,
         country: selectedCountry?.value || null,
         countryCode: selectedCountry?.countryCode || null,
         logoUrl: logoUrl || null,
         logoPath: logoPath || null,
-        studentLabelSingular: studentLabelSingular.trim() || 'Student',
-        studentLabelPlural: studentLabelPlural.trim() || 'Students',
+        studentLabelSingular: sanitizedStudentSingular,
+        studentLabelPlural: sanitizedStudentPlural,
       });
       await onAcademyUpdate(); // Llama a la función para refrescar los datos en App.jsx
       toast.success("Academy settings updated successfully.");
