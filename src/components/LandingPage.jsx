@@ -11,8 +11,8 @@ const highlights = [
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white text-black flex flex-col">
-      <header className="fixed inset-x-0 top-0 z-30 bg-white/80 backdrop-blur border-b border-gray-200">
+    <div className="min-h-screen bg-section text-black flex flex-col">
+      <header className="fixed inset-x-0 top-0 z-30 bg-section/80 backdrop-blur border-b border-gray-200">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src={logoKivee} alt="Kivee" className="h-6 w-auto" />
@@ -33,7 +33,7 @@ export default function LandingPage() {
           <div className="relative mx-auto max-w-6xl px-6 py-16 lg:py-16 grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
               <p className="inline-flex items-center gap-2 rounded-full bg-[#564FA8] text-white px-3 py-1 text-xs font-semibold">
-                <span className="h-2 w-2 rounded-full bg-white" aria-hidden="true" />
+                <span className="h-2 w-2 rounded-full bg-section" aria-hidden="true" />
                 Built for academies that are growing
               </p>
               <h1 className="text-4xl lg:text-5xl font-semibold leading-tight">
@@ -59,7 +59,7 @@ export default function LandingPage() {
         <section className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
           <div className="grid md:grid-cols-3 gap-6">
             {highlights.map((item) => (
-              <div key={item.title} className="p-6 border border-gray-200 rounded-2xl bg-white shadow-sm">
+              <div key={item.title} className="p-6 border border-gray-200 rounded-2xl bg-section shadow-sm">
                 <div className="flex items-start gap-3">
                   <span className="mt-1 h-9 w-9 rounded-full bg-[#E4F3F3] flex items-center justify-center">
                     <CheckCircle className="h-5 w-5 text-[#3B989A]" strokeWidth={2.5} />
@@ -84,7 +84,7 @@ export default function LandingPage() {
               </p>
             </div>
             <div className="flex items-center">
-              <Link to="/sign-in" className="inline-flex items-center justify-center px-7 py-3.5 bg-white text-black font-semibold rounded-md hover:bg-gray-100 transition-colors">
+              <Link to="/sign-in" className="inline-flex items-center justify-center px-7 py-3.5 bg-section text-black font-semibold rounded-md hover:bg-gray-100 transition-colors">
                 Get started now, it's free
               </Link>
             </div>

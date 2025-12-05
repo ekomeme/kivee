@@ -515,7 +515,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
   };
 
   return (
-    <div className="bg-white p-0 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl w-full max-w-4xl mx-auto">
+    <div className="bg-section p-0 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl w-full max-w-4xl mx-auto">
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Student Photo Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">

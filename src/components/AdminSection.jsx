@@ -390,7 +390,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
           <h2 className="text-2xl font-bold text-gray-800">Settings</h2>
           <div />
         </div>
-        <div className="bg-white rounded-none shadow-none md:rounded-lg md:shadow-md p-4 md:p-6 space-y-8">
+        <div className="bg-section rounded-none shadow-none md:rounded-lg md:shadow-md p-4 md:p-6 space-y-8">
           <div className="flex border-b border-gray-200 space-x-6">
             <button
               onClick={() => setActiveTab('settings')}
@@ -543,7 +543,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
                   <p className="text-sm text-blue-700 mb-4">You have been invited to join other academies.</p>
                   <div className="space-y-3">
                     {pendingInvites.map(invite => (
-                      <div key={invite.id} className="bg-white border border-blue-200 rounded-md p-3 flex items-center justify-between">
+                      <div key={invite.id} className="bg-section border border-blue-200 rounded-md p-3 flex items-center justify-between">
                         <div>
                           <p className="font-medium text-gray-900">{inviteAcademyNames[invite.academyId] || 'Loading...'}</p>
                           <p className="text-xs text-gray-500">Role: {invite.role || 'admin'} · Invited by {invite.invitedBy || 'owner'}</p>
@@ -604,7 +604,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
                   <div>
                     <p className="text-sm font-semibold text-gray-800 mb-2">Members</p>
                     <div className="overflow-x-auto">
-                      <table className="min-w-full bg-white border border-gray-200">
+                      <table className="min-w-full bg-section border border-gray-200">
                         <thead>
                           <tr>
                             <th className="py-2 px-4 border-b text-left">User</th>
@@ -645,7 +645,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
                   <div>
                     <p className="text-sm font-semibold text-gray-800 mb-2">Invitations</p>
                     <div className="overflow-x-auto">
-                      <table className="min-w-full bg-white border border-gray-200">
+                      <table className="min-w-full bg-section border border-gray-200">
                         <thead>
                           <tr>
                             <th className="py-2 px-4 border-b text-left">Email</th>

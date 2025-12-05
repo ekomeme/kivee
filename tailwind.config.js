@@ -24,6 +24,10 @@ export default {
           hover: '#4F5354',
         },
       },
+      backgroundColor: {
+        'app': 'var(--app-bg)',
+        'section': 'var(--section-bg)',
+      },
     },
   },
   plugins: [],

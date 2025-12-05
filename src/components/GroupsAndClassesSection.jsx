@@ -188,7 +188,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
 
   const handleDeleteGroup = async (groupId) => {
     toast((t) => (
-      <div className="bg-white p-4 rounded-lg shadow-lg flex flex-col items-center">
+      <div className="bg-section p-4 rounded-lg shadow-lg flex flex-col items-center">
         <p className="text-center mb-4">Are you sure you want to delete this group?</p>
         <div className="flex space-x-2 text-base">
           <button onClick={async () => {
@@ -265,7 +265,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
 
   const handleDeleteSchedule = async (groupId, scheduleId) => {
     toast((t) => (
-      <div className="bg-white p-4 rounded-lg shadow-lg flex flex-col items-center">
+      <div className="bg-section p-4 rounded-lg shadow-lg flex flex-col items-center">
         <p className="text-center mb-4">Are you sure you want to delete this session?</p>
         <div className="flex space-x-2 text-base">
           <button onClick={async () => {
@@ -310,7 +310,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
           <h2 className="text-2xl font-bold text-gray-800">Groups & Classes</h2>
           <div />
         </div>
-      <div className="bg-white rounded-none shadow-none md:rounded-lg md:shadow-md p-4 md:p-6">
+      <div className="bg-section rounded-none shadow-none md:rounded-lg md:shadow-md p-4 md:p-6">
       <div className="border-b border-gray-200 mb-4">
           <div
             className="relative w-full max-w-full overflow-x-auto no-scrollbar"
@@ -347,7 +347,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
           ) : (
             <>
               <div className="overflow-x-auto hidden md:block">
-                <table className="min-w-full bg-white border border-gray-200">
+                <table className="min-w-full bg-section border border-gray-200">
                   <thead><tr><th className="py-2 px-4 border-b text-left">Name</th><th className="py-2 px-4 border-b text-left">Age Range</th><th className="py-2 px-4 border-b text-left">Coach</th><th className="py-2 px-4 border-b text-left">Capacity</th><th className="py-2 px-4 border-b text-left">Status</th><th className="py-2 px-4 border-b text-right">Actions</th></tr></thead>
                   <tbody>
                     {groups.map(group => (
@@ -373,7 +373,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
                 {groups.map(group => (
                   <div
                     key={group.id}
-                    className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm relative"
+                    className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm relative"
                     onClick={() => navigate(`/groups/${group.id}`)}
                   >
                     <button
@@ -462,7 +462,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
       {activeGroupMenu && (
         <div
           ref={actionsMenuRef}
-          className="fixed bg-white border border-gray-border rounded-md shadow-lg z-50"
+          className="fixed bg-section border border-gray-border rounded-md shadow-lg z-50"
           style={{ top: `${actionsMenuPosition.y}px`, left: `${actionsMenuPosition.x}px`, transform: 'translateX(-100%)' }}
         >
           <ul className="py-1">
@@ -474,8 +474,8 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
 
       {/* Group Form Modal */}
       {showGroupModal && (
-        <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-white md:bg-black md:bg-opacity-50 overflow-y-auto">
-          <div className="relative w-full h-full md:h-auto bg-white p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-section md:bg-black md:bg-opacity-50 overflow-y-auto">
+          <div className="relative w-full h-full md:h-auto bg-section p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between mb-4">
               <h3 className="text-xl font-bold">{editingGroup ? 'Edit Group' : 'Add New Group'}</h3>
               <button
@@ -500,7 +500,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
               </div>
               <div><label htmlFor="status" className="block text-sm font-medium text-gray-700">Status</label><select name="status" value={groupForm.status} onChange={handleGroupFormChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
               {groupError && <p className="text-red-500 text-sm mt-4">{groupError}</p>}
-              <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-white py-3 md:bg-transparent md:py-0">
+              <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-section py-3 md:bg-transparent md:py-0">
                 <button type="button" onClick={() => setShowGroupModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
                 <button type="submit" disabled={loadingGroups} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md disabled:opacity-50 w-full md:w-auto">{loadingGroups ? 'Saving...' : 'Save'}</button>
               </div>
@@ -511,8 +511,8 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
 
       {/* Schedule Form Modal */}
       {showScheduleModal && (
-        <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-white md:bg-black md:bg-opacity-50 overflow-y-auto">
-          <div className="relative w-full h-full md:h-auto bg-white p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-md">
+        <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-section md:bg-black md:bg-opacity-50 overflow-y-auto">
+          <div className="relative w-full h-full md:h-auto bg-section p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-md">
             <div className="flex items-start justify-between mb-4">
               <h3 className="text-xl font-bold">{editingSchedule ? 'Edit Session' : 'Add New Session'}</h3>
               <button
@@ -533,7 +533,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
                 <div><label htmlFor="endTime" className="block text-sm font-medium text-gray-700">End Time</label><input type="time" name="endTime" id="endTime" value={scheduleForm.endTime} onChange={(e) => setScheduleForm(prev => ({ ...prev, endTime: e.target.value }))} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
               </div>
               {scheduleError && <p className="text-red-500 text-sm mt-4">{scheduleError}</p>}
-              <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-white py-3 md:bg-transparent md:py-0">
+              <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-section py-3 md:bg-transparent md:py-0">
                 <button type="button" onClick={() => setShowScheduleModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
                 <button
                   type="submit"

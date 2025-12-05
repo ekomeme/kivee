@@ -349,7 +349,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
     };
 
     toast((t) => (
-      <div className="bg-white p-4 rounded-lg shadow-lg flex flex-col items-center">
+      <div className="bg-section p-4 rounded-lg shadow-lg flex flex-col items-center">
         <p className="text-center mb-4">Are you sure you want to delete this tier?</p>
         <div className="flex space-x-2 text-base">
           <button
@@ -379,7 +379,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
       }
     };
     toast((t) => (
-      <div className="bg-white p-4 rounded-lg shadow-lg flex flex-col items-center">
+      <div className="bg-section p-4 rounded-lg shadow-lg flex flex-col items-center">
         <p className="text-center mb-4">Are you sure you want to delete this product?</p>
         <div className="flex space-x-2 text-base">
           <button onClick={() => { toast.dismiss(t.id); deleteAction(); }} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Confirm</button>
@@ -402,7 +402,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
       }
     };
     toast((t) => (
-      <div className="bg-white p-4 rounded-lg shadow-lg flex flex-col items-center">
+      <div className="bg-section p-4 rounded-lg shadow-lg flex flex-col items-center">
         <p className="text-center mb-4">Are you sure you want to delete this trial?</p>
         <div className="flex space-x-2 text-base">
           <button onClick={() => { toast.dismiss(t.id); deleteAction(); }} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Confirm</button>
@@ -455,7 +455,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
 
 
     return (
-      <div className="fixed bg-white border border-gray-border rounded-md shadow-lg z-50" ref={menuRef} style={style}>
+      <div className="fixed bg-section border border-gray-border rounded-md shadow-lg z-50" ref={menuRef} style={style}>
         <ul className="py-1">
           <li className="text-base w-32">
             <button onClick={(e) => { e.stopPropagation(); handleOpenTierModal(tier); onClose(); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center">
@@ -529,7 +529,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
           <div />
         </div>
 
-        <div className="bg-white rounded-none shadow-none md:rounded-lg md:shadow-md p-4 md:p-6">
+        <div className="bg-section rounded-none shadow-none md:rounded-lg md:shadow-md p-4 md:p-6">
           {/* Tabs */}
           <div className="border-b border-gray-200 mb-4">
             <div
@@ -572,7 +572,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
               ) : (
                 <>
                   <div className="overflow-x-auto hidden md:block">
-                    <table className="min-w-full bg-white border border-gray-200">
+                    <table className="min-w-full bg-section border border-gray-200">
                       <thead>
                         <tr>
                           <th className="py-2 px-4 border-b text-left text-base">Name</th>
@@ -618,7 +618,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
                   </div>
                   <div className="grid gap-3 md:hidden">
                     {tiers.map(tier => (
-                      <div key={tier.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm relative">
+                      <div key={tier.id} className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm relative">
                         <button
                           onClick={(e) => handleOpenActionsMenu(tier, e)}
                           className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100"
@@ -677,7 +677,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
           ) : (
             <>
               <div className="overflow-x-auto hidden md:block">
-                <table className="min-w-full bg-white border border-gray-200">
+                <table className="min-w-full bg-section border border-gray-200">
                   <thead>
                     <tr>
                       <th className="py-2 px-4 border-b text-left text-base">Name</th>
@@ -706,7 +706,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
               </div>
               <div className="grid gap-3 md:hidden">
                 {oneTimeProducts.map(product => (
-                  <div key={product.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm relative">
+                  <div key={product.id} className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm relative">
                     <button
                       onClick={(e) => { e.stopPropagation(); setActiveProductMenu(product); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }}
                       className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100"
@@ -748,7 +748,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
           ) : (
             <>
               <div className="overflow-x-auto hidden md:block">
-                <table className="min-w-full bg-white border border-gray-200">
+                <table className="min-w-full bg-section border border-gray-200">
                   <thead>
                     <tr>
                       <th className="py-2 px-4 border-b text-left text-base">Name</th>
@@ -777,7 +777,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
               </div>
               <div className="grid gap-3 md:hidden">
                 {trials.map(trial => (
-                  <div key={trial.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm relative">
+                  <div key={trial.id} className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm relative">
                     <button
                       onClick={(e) => { e.stopPropagation(); setActiveTrialMenu(trial); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }}
                       className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100"
@@ -812,7 +812,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
         />
       )}
       {activeProductMenu && (
-        <div ref={productMenuRef} className="fixed bg-white border border-gray-border rounded-md shadow-lg z-50" style={{ top: `${actionsMenuPosition.y}px`, left: `${actionsMenuPosition.x}px`, transform: 'translateX(-100%)' }}>
+        <div ref={productMenuRef} className="fixed bg-section border border-gray-border rounded-md shadow-lg z-50" style={{ top: `${actionsMenuPosition.y}px`, left: `${actionsMenuPosition.x}px`, transform: 'translateX(-100%)' }}>
           <ul className="py-1">
             <li className="text-base w-32">
               <button onClick={() => { handleOpenProductModal(activeProductMenu); setActiveProductMenu(null); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center"><Edit className="mr-3 h-4 w-4" /><span>Edit</span></button>
@@ -824,7 +824,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
         </div>
       )}
       {activeTrialMenu && (
-        <div ref={trialMenuRef} className="fixed bg-white border border-gray-border rounded-md shadow-lg z-50" style={{ top: `${actionsMenuPosition.y}px`, left: `${actionsMenuPosition.x}px`, transform: 'translateX(-100%)' }}>
+        <div ref={trialMenuRef} className="fixed bg-section border border-gray-border rounded-md shadow-lg z-50" style={{ top: `${actionsMenuPosition.y}px`, left: `${actionsMenuPosition.x}px`, transform: 'translateX(-100%)' }}>
           <ul className="py-1">
             <li className="text-base w-32">
               <button onClick={() => { handleOpenTrialModal(activeTrialMenu); setActiveTrialMenu(null); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center"><Edit className="mr-3 h-4 w-4" /><span>Edit</span></button>
@@ -837,8 +837,8 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
       )}
       {/* Tier Form Modal */}
       {showTierModal && (
-        <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-white md:bg-black md:bg-opacity-50 overflow-y-auto">
-          <div className="relative w-full h-full md:h-auto bg-white p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-section md:bg-black md:bg-opacity-50 overflow-y-auto">
+          <div className="relative w-full h-full md:h-auto bg-section p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between mb-4">
               <h3 className="text-xl font-bold">{editingTier ? 'Edit Tier' : 'Add New Tier'}</h3>
               <button
@@ -940,7 +940,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
 
               </div>
               {tierError && <p className="text-red-500 text-sm mt-4">{tierError}</p>}
-              <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-white py-3 md:bg-transparent md:py-0">
+              <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-section py-3 md:bg-transparent md:py-0">
                 <button type="button" onClick={() => setShowTierModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
                 <button type="submit" disabled={loadingTiers} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md disabled:opacity-50 w-full md:w-auto">{loadingTiers ? 'Saving...' : 'Save'}</button>
               </div>
@@ -950,8 +950,8 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
       )}
       {/* One-time Product Form Modal */}
       {showProductModal && (
-        <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-white md:bg-black md:bg-opacity-50 overflow-y-auto">
-          <div className="relative w-full h-full md:h-auto bg-white p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-section md:bg-black md:bg-opacity-50 overflow-y-auto">
+          <div className="relative w-full h-full md:h-auto bg-section p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between mb-4">
               <h3 className="text-xl font-bold">{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
               <button
@@ -1002,7 +1002,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
                 <input type="date" id="availableDate" value={availableDate} onChange={(e) => setAvailableDate(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
               </div>
               {productError && <p className="text-red-500 text-sm mt-4">{productError}</p>}
-              <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-white py-3 md:bg-transparent md:py-0">
+              <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-section py-3 md:bg-transparent md:py-0">
                 <button type="button" onClick={() => setShowProductModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
                 <button type="submit" disabled={loadingProducts} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md disabled:opacity-50 w-full md:w-auto">{loadingProducts ? 'Saving...' : 'Save'}</button>
               </div>
@@ -1012,8 +1012,8 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
       )}
       {/* Trial Form Modal */}
       {showTrialModal && (
-        <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-white md:bg-black md:bg-opacity-50 overflow-y-auto">
-          <div className="relative w-full h-full md:h-auto bg-white p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-section md:bg-black md:bg-opacity-50 overflow-y-auto">
+          <div className="relative w-full h-full md:h-auto bg-section p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between mb-4">
               <h3 className="text-xl font-bold">{editingTrial ? 'Edit Trial' : 'Add New Trial'}</h3>
               <button
@@ -1051,7 +1051,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
                 </div>
               </div>
               {trialError && <p className="text-red-500 text-sm mt-4">{trialError}</p>}
-              <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-white py-3 md:bg-transparent md:py-0">
+              <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-section py-3 md:bg-transparent md:py-0">
                 <button type="button" onClick={() => setShowTrialModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
                 <button type="submit" disabled={loadingTrials} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md disabled:opacity-50 w-full md:w-auto">{loadingTrials ? 'Saving...' : 'Save'}</button>
               </div>

@@ -121,7 +121,7 @@ export default function PaymentsSection({ user, academy, db, membership }) {
     const renderTable = (payments, isPaidTab = false, onPay = null) => ( 
         <>
             <div className="overflow-x-auto hidden md:block">
-                <table className="min-w-full bg-white border border-gray-200">
+                <table className="min-w-full bg-section border border-gray-200">
                     <thead>
                         <tr>
                         <th className="py-2 px-4 border-b text-left">{academy?.studentLabelSingular || 'Student'}</th>
@@ -166,7 +166,7 @@ export default function PaymentsSection({ user, academy, db, membership }) {
             </div>
             <div className="grid gap-3 md:hidden">
                 {payments.map((payment, index) => (
-                    <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                    <div key={index} className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm">
                         <div className="flex items-start justify-between">
                             <div>
                                 <p className="text-xs text-gray-500">{academy?.studentLabelSingular || 'Student'}</p>
@@ -255,8 +255,8 @@ export default function PaymentsSection({ user, academy, db, membership }) {
         };
 
         return (
-            <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-white md:bg-black md:bg-opacity-50 overflow-y-auto">
-                <div className="relative w-full h-full md:h-auto bg-white p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-sm md:max-w-sm">
+            <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-section md:bg-black md:bg-opacity-50 overflow-y-auto">
+                <div className="relative w-full h-full md:h-auto bg-section p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-sm md:max-w-sm">
                     <div className="flex items-start justify-between mb-4">
                         <h3 className="text-xl font-bold">Register Payment</h3>
                         <button
@@ -273,7 +273,7 @@ export default function PaymentsSection({ user, academy, db, membership }) {
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div><label htmlFor="paymentMethod" className="block text-sm font-medium text-gray-700">Payment Method</label><select id="paymentMethod" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option>Cash</option><option>Credit Card</option><option>Bank Transfer</option><option>Other</option></select></div>
                         <div><label htmlFor="paymentDate" className="block text-sm font-medium text-gray-700">Payment Date</label><input type="date" id="paymentDate" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
-                        <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-white py-3 md:bg-transparent md:py-0">
+                        <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-section py-3 md:bg-transparent md:py-0">
                             <button type="button" onClick={onClose} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
                             <button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md w-full md:w-auto disabled:opacity-50">{isSubmitting ? 'Saving...' : 'Confirm Payment'}</button>
                         </div>
@@ -309,7 +309,7 @@ export default function PaymentsSection({ user, academy, db, membership }) {
           <h2 className="text-2xl font-bold text-gray-800">Payments</h2>
           <div />
         </div>
-      <div className="bg-white rounded-none shadow-none md:rounded-lg md:shadow-md p-4 md:p-6">
+      <div className="bg-section rounded-none shadow-none md:rounded-lg md:shadow-md p-4 md:p-6">
       <LoadingBar loading={loading} />
 
             <div className="border-b border-gray-200 mb-4">

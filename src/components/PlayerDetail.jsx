@@ -74,8 +74,8 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
     };
 
     return (
-      <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-white md:bg-black md:bg-opacity-50 overflow-y-auto">
-        <div className="relative w-full h-full md:h-auto bg-white p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-sm md:max-w-sm">
+      <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-section md:bg-black md:bg-opacity-50 overflow-y-auto">
+        <div className="relative w-full h-full md:h-auto bg-section p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-sm md:max-w-sm">
           <div className="flex items-start justify-between mb-4">
             <h3 className="text-xl font-bold">Register Payment</h3>
             <button
@@ -111,7 +111,7 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
                 />
               </div>
             </div>
-            <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-white py-3 md:bg-transparent md:py-0">
+            <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-section py-3 md:bg-transparent md:py-0">
               <button type="button" onClick={onClose} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
               <button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md w-full md:w-auto disabled:opacity-50">{isSubmitting ? 'Saving...' : 'Confirm Payment'}</button>
             </div>
@@ -179,7 +179,7 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
   };
 
   return (
-    <div className="bg-white p-4 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl w-full max-w-7xl mx-auto">
+    <div className="bg-section p-4 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl w-full max-w-7xl mx-auto">
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-8" aria-label="Tabs">
           <button onClick={() => changeTab('details')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'details' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>

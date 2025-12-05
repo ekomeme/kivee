@@ -55,7 +55,7 @@ const AcademySelector = ({ availableAcademies, currentAcademy, onSwitch }) => {
         </svg>
       </button>
       {showMenu && (
-        <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-2">
+        <div className="absolute top-full left-0 mt-2 w-64 bg-section border border-gray-200 rounded-lg shadow-lg z-50 py-2">
           <div className="px-4 py-2 text-xs text-gray-500 font-semibold uppercase">Tus academias</div>
           {availableAcademies.map((academy) => (
             <button
@@ -119,7 +119,7 @@ const UserMenu = ({ user, onSignOut, isSidebar = false }) => {
         <span className="font-medium truncate hidden md:block">{user.displayName || user.email}</span>
       </button>
       {showMenu && (
-        <div className={`absolute ${isSidebar ? 'bottom-full left-0 mb-2' : 'top-full right-0 mt-2'} w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10 p-4`}>
+        <div className={`absolute ${isSidebar ? 'bottom-full left-0 mb-2' : 'top-full right-0 mt-2'} w-64 bg-section border border-gray-200 rounded-lg shadow-lg z-10 p-4`}>
           <p className="text-sm font-bold truncate">{user.displayName}</p>
           <p className="text-xs text-gray-500 truncate mb-3">{user.email}</p>
           <hr className="my-2" />
@@ -590,7 +590,7 @@ export default function App() {
     return (
       <div className="flex h-screen w-screen font-sans">
         {/* Left Side */}
-        <div className="w-1/2 bg-white flex flex-col justify-center items-center p-12 relative">
+        <div className="w-1/2 bg-section flex flex-col justify-center items-center p-12 relative">
           <div className="absolute top-8 left-8 right-8 flex justify-between items-center">
             <img src={logoKivee} alt="Kivee Logo" className="h-5 w-auto"  />
             <UserMenu user={user} onSignOut={handleSignOut} />
@@ -606,7 +606,7 @@ export default function App() {
                 <p className="text-sm text-gray-600">Accept an invitation to join an existing academy.</p>
                 <div className="space-y-3">
                   {pendingInvites.map(invite => (
-                    <div key={invite.id} className="border border-gray-200 rounded-md p-3 bg-white flex items-center justify-between">
+                    <div key={invite.id} className="border border-gray-200 rounded-md p-3 bg-section flex items-center justify-between">
                       <div>
                         <p className="font-medium text-gray-900">Academy ID: {invite.academyId}</p>
                         <p className="text-xs text-gray-500">Invited by {invite.invitedBy || 'owner'}</p>
@@ -653,7 +653,7 @@ export default function App() {
           </div>
         </div>
         {/* Right Side */}
-        <div className="w-1/2 bg-gray-light flex justify-center items-center p-12">
+        <div className="w-1/2 bg-app flex justify-center items-center p-12">
           <div className="w-full max-w-md">
             <img src={loginIllustration} alt="Kivee Illustration" className="w-full h-auto" />
           </div>
@@ -663,7 +663,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-light font-sans relative overflow-x-hidden">
+    <div className="flex h-screen bg-app font-sans relative overflow-x-hidden">
       {/* Desktop Sidebar */}
       <div className="bg-white text-gray-800 w-64 p-4 border-r border-gray-border hidden md:flex md:flex-col md:h-full">
         <Sidebar
@@ -679,7 +679,7 @@ export default function App() {
 
       {/* Mobile full-screen menu */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-30 bg-white p-6 overflow-y-auto flex flex-col">
+        <div className="fixed inset-0 z-30 bg-section p-6 overflow-y-auto flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-3">
               <div className="h-10 w-10 rounded-full border-2 border-dashed border-gray-300 overflow-hidden flex items-center justify-center">
@@ -718,7 +718,7 @@ export default function App() {
 
       {/* Main Content */}
       <div className="flex-grow flex flex-col min-w-0">
-        <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-gray-border">
+        <div className="md:hidden flex items-center justify-between px-4 py-3 bg-section border-b border-gray-border">
           <div className="flex items-center space-x-2">
             <div className="h-9 w-9 rounded-full border border-gray-200 overflow-hidden flex items-center justify-center">
               {academy.logoUrl ? (

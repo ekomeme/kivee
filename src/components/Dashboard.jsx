@@ -188,7 +188,7 @@ export default function Dashboard({ user, academy, db, membership, pendingInvite
       {pendingInvites && pendingInvites.length > 0 && (
         <div className="bg-gradient-to-r from-blue-500 to-blue-600 border border-blue-700 rounded-lg p-5 shadow-lg">
           <div className="flex items-start gap-4">
-            <div className="bg-white rounded-full p-2 flex-shrink-0">
+            <div className="bg-section rounded-full p-2 flex-shrink-0">
               <Mail className="h-6 w-6 text-blue-600" />
             </div>
             <div className="flex-1">
@@ -196,7 +196,7 @@ export default function Dashboard({ user, academy, db, membership, pendingInvite
               <p className="text-blue-50 mb-4">You've been invited to join {pendingInvites.length > 1 ? 'other academies' : 'another academy'}. Accept to switch between multiple academies.</p>
               <div className="space-y-3">
                 {pendingInvites.map(invite => (
-                  <div key={invite.id} className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-md p-3 flex items-center justify-between">
+                  <div key={invite.id} className="bg-section/10 backdrop-blur-sm border border-white/20 rounded-md p-3 flex items-center justify-between">
                     <div>
                       <p className="font-semibold text-white">{inviteAcademyNames[invite.academyId] || 'Loading...'}</p>
                       <p className="text-sm text-blue-100">Role: {invite.role || 'admin'}</p>
@@ -213,7 +213,7 @@ export default function Dashboard({ user, academy, db, membership, pendingInvite
                         type="button"
                         onClick={() => onAcceptInvite && onAcceptInvite(invite.id)}
                         disabled={isAcceptingInvite}
-                        className="text-sm bg-white text-blue-600 hover:bg-blue-50 font-medium px-4 py-1.5 rounded-md disabled:opacity-50 transition shadow-sm"
+                        className="text-sm bg-section text-blue-600 hover:bg-blue-50 font-medium px-4 py-1.5 rounded-md disabled:opacity-50 transition shadow-sm"
                       >
                         {isAcceptingInvite ? 'Joining...' : 'Accept'}
                       </button>
@@ -227,7 +227,7 @@ export default function Dashboard({ user, academy, db, membership, pendingInvite
       )}
 
       {/* Students */}
-      <section className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm space-y-3">
+      <section className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm space-y-3">
         <h2 className="text-lg font-semibold text-gray-900">{studentLabelPlural}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -246,7 +246,7 @@ export default function Dashboard({ user, academy, db, membership, pendingInvite
       </section>
 
       {/* Subscriptions */}
-      <section className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm space-y-3">
+      <section className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm space-y-3">
         <h2 className="text-lg font-semibold text-gray-900">Subscriptions</h2>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
@@ -279,7 +279,7 @@ export default function Dashboard({ user, academy, db, membership, pendingInvite
       </section>
 
       {/* Finance */}
-      <section className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm space-y-4">
+      <section className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm space-y-4">
         <h2 className="text-lg font-semibold text-gray-900">Finance</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>

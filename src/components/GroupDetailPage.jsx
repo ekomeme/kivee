@@ -149,7 +149,7 @@ export default function GroupDetailPage({ user, academy, db, membership }) {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow border border-gray-200 space-y-6">
+        <div className="bg-section p-6 rounded-lg shadow border border-gray-200 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <p className="text-sm text-gray-600">Group</p>
@@ -244,8 +244,8 @@ export default function GroupDetailPage({ user, academy, db, membership }) {
         </div>
 
         {editingSession !== null && (
-          <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-white md:bg-black md:bg-opacity-50 overflow-y-auto">
-            <div className="relative w-full h-full md:h-auto bg-white p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-md">
+          <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-section md:bg-black md:bg-opacity-50 overflow-y-auto">
+            <div className="relative w-full h-full md:h-auto bg-section p-6 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl max-w-md">
               <div className="flex items-start justify-between mb-4">
                 <h3 className="text-lg font-semibold">{editingSession ? 'Edit Session' : 'Add Session'}</h3>
                 <button

@@ -77,7 +77,7 @@ export default function GoogleSignIn() {
   };
 
   return (
-    <div className="flex min-h-screen w-full font-sans bg-white">
+    <div className="flex min-h-screen w-full font-sans bg-section">
       <div className="flex flex-col lg:flex-row w-full">
         {/* Left / Form */}
         <div className="w-full lg:w-1/2 flex flex-col px-6 py-8 sm:px-10 lg:px-14 lg:py-12">
@@ -111,7 +111,7 @@ export default function GoogleSignIn() {
         </div>
 
         {/* Right / Illustration */}
-        <div className="w-full lg:w-1/2 bg-gray-light flex items-center justify-center px-6 py-10 sm:px-10 lg:px-14 lg:py-12">
+        <div className="w-full lg:w-1/2 bg-app flex items-center justify-center px-6 py-10 sm:px-10 lg:px-14 lg:py-12">
           <div className="w-full max-w-xl">
             <img src={loginIllustration} alt="Kivee Illustration" className="w-full h-auto object-contain" />
           </div>
