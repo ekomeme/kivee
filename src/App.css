@@ -7,3 +7,9 @@
 .animate-loading-bar {
   animation: loading-bar 1s ease-in-out infinite;
 }
+
+:root {
+  color: var(--color-black, #03090A);
+  font-family: var(--font-base, 'Figtree', system-ui, -apple-system, sans-serif);
+  background-color: var(--color-white, #FFFFFF);
+}

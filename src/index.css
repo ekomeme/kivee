@@ -4,6 +4,17 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-primary: #03090A;
+  --color-primary-hover: #4F5354;
+  --color-gray-light: #F2F3F3;
+  --color-gray-border: #E6E6E6;
+  --color-gray-dark: #4F5354;
+  --color-white: #FFFFFF;
+  --color-black: #03090A;
+  --font-base: 'Figtree', system-ui, -apple-system, sans-serif;
+}
+
 .no-scrollbar {
   scrollbar-width: none;
 }

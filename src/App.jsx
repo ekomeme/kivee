@@ -20,6 +20,7 @@ import { LogOut, Home, Users, Layers, Tags, CreditCard, Settings, Menu, X } from
 import loginIllustration from "./assets/login-ilustration.svg";
 import { isValidAcademyId, getValidatedLocalStorage } from "./utils/validators";
 import logoKivee from "./assets/logo-kivee.svg";
+import Sidebar from "./components/Sidebar.jsx";
 
 const AcademySelector = ({ availableAcademies, currentAcademy, onSwitch }) => {
   const [showMenu, setShowMenu] = useState(false);
@@ -570,109 +571,6 @@ export default function App() {
     }
   };
 
-  const SidebarContent = ({ onNavigate, showHeader = true, className = "" }) => (
-    <div className={`flex flex-col h-full ${className}`}>
-      {showHeader && (
-        <div className="mb-4">
-          <div className="flex items-center space-x-3">
-            <div className="h-12 w-12 rounded-full border-2 border-dashed border-gray-300 overflow-hidden flex items-center justify-center flex-shrink-0">
-              {academy.logoUrl ? (
-                <img src={academy.logoUrl} alt="Academy logo" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-gray-600 font-semibold uppercase">{academy.name?.charAt(0) || '?'}</span>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              {availableAcademies.length <= 1 ? (
-                <h2 className="text-xl font-semibold truncate">{academy.name}</h2>
-              ) : (
-                <AcademySelector
-                  availableAcademies={availableAcademies}
-                  currentAcademy={academy}
-                  onSwitch={switchAcademy}
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-      <nav className="flex-grow">
-        <ul className="space-y-2">
-          <li className="relative">
-            <NavLink
-              to="/"
-              end
-              onClick={onNavigate}
-              className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}
-            >
-              <Home className="h-4 w-4" />
-              <span>Dashboard</span>
-            </NavLink>
-          </li>
-          <li className="relative">
-            <NavLink
-              to="/students"
-              onClick={onNavigate}
-              className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}
-            >
-              <Users className="h-4 w-4" />
-              <span>{studentLabelPlural}</span>
-            </NavLink>
-          </li>
-          <li className="relative">
-            <NavLink
-              to="/groups"
-              onClick={onNavigate}
-              className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}
-            >
-              <Layers className="h-4 w-4" />
-              <span>Groups & Classes</span>
-            </NavLink>
-          </li>
-          <li className="relative">
-            <NavLink
-              to="/plans"
-              onClick={onNavigate}
-              className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}
-            >
-              <Tags className="h-4 w-4" />
-              <span>Plans & Offers</span>
-            </NavLink>
-          </li>
-          <li className="relative">
-            <NavLink
-              to="/payments"
-              onClick={onNavigate}
-              className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}
-            >
-              <CreditCard className="h-4 w-4" />
-              <span>Payments</span>
-            </NavLink>
-          </li>
-          <li className="relative">
-            <NavLink
-              to="/settings"
-              onClick={onNavigate}
-              className={({ isActive }) => `flex items-center gap-2 w-full text-left py-2 px-4 rounded ${isActive ? "bg-gray-100 font-semibold" : "hover:bg-gray-100"} ${isActive ? 'border-l-[3px] border-black pl-[13px]' : 'pl-4'}`}
-            >
-              <Settings className="h-4 w-4" />
-              <span>Settings</span>
-              {pendingInvites.length > 0 && (
-                <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold">
-                  {pendingInvites.length}
-                </span>
-              )}
-            </NavLink>
-          </li>
-        </ul>
-      </nav>
-
-      <div className="mt-auto pt-4 border-t border-gray-border relative">
-        <UserMenu user={user} onSignOut={handleSignOut} isSidebar={true} />
-      </div>
-    </div>
-  );
-
   // Conditional rendering based on app state
   if (loading) {
     return <div className="flex items-center justify-center h-screen bg-gray-100 text-gray-800"><p className="text-lg font-medium">Cargando...</p></div>;
@@ -768,7 +666,15 @@ export default function App() {
     <div className="flex h-screen bg-gray-light font-sans relative overflow-x-hidden">
       {/* Desktop Sidebar */}
       <div className="bg-white text-gray-800 w-64 p-4 border-r border-gray-border hidden md:flex md:flex-col md:h-full">
-        <SidebarContent />
+        <Sidebar
+          academy={academy}
+          availableAcademies={availableAcademies}
+          onSwitchAcademy={switchAcademy}
+          studentLabelPlural={studentLabelPlural}
+          pendingInvites={pendingInvites}
+          onNavigate={() => setIsMobileMenuOpen(false)}
+          userMenu={<UserMenu user={user} onSignOut={handleSignOut} isSidebar={true} />}
+        />
       </div>
 
       {/* Mobile full-screen menu */}
@@ -796,10 +702,16 @@ export default function App() {
               <X className="h-6 w-6" />
             </button>
           </div>
-          <SidebarContent
+          <Sidebar
+            academy={academy}
+            availableAcademies={availableAcademies}
+            onSwitchAcademy={(id) => { switchAcademy(id); setIsMobileMenuOpen(false); }}
+            studentLabelPlural={studentLabelPlural}
+            pendingInvites={pendingInvites}
             onNavigate={() => setIsMobileMenuOpen(false)}
             showHeader={false}
             className="flex-1"
+            userMenu={<UserMenu user={user} onSignOut={handleSignOut} isSidebar={true} />}
           />
         </div>
       )}
