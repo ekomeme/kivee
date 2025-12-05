@@ -25,27 +25,67 @@
   margin-bottom: 1rem; /* 16px */
 }
 
+.sidebar__header-container {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 0.5rem; /* 8px */
+  border: 1px solid var(--color-gray-border, #e5e7eb);
+  overflow: hidden;
+}
+
 .sidebar__header-button {
   display: flex;
   align-items: center;
   width: 100%;
   gap: 0.75rem; /* 12px separación entre logo y texto */
-  padding: 0.75rem 0.5rem; /* 12px superior/inferior, 8px izquierda/derecha */
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 0.5rem; /* 8px */
-  border: 1px solid var(--color-gray-border, #e5e7eb);
+  padding: 0 0.5rem; /* 0 superior/inferior, 8px izquierda/derecha */
+  height: 3.75rem; /* 60px altura total */
+  background: transparent;
+  border: none;
   cursor: pointer;
   text-align: left;
   transition: all 0.2s;
 }
 
 .sidebar__header-button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.98);
-  border-color: var(--color-gray-border, #e5e7eb);
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .sidebar__header-button:disabled {
   cursor: default;
+}
+
+.sidebar__header-divider {
+  height: 1px;
+  background: var(--color-gray-border, #e5e7eb);
+  margin: 0;
+}
+
+.sidebar__invite-link {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0 1.125rem; /* 0 superior/inferior, 18px izquierda/derecha */
+  height: 2.75rem; /* 44px altura total */
+  background: transparent;
+  border: none;
+  text-align: left;
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 500;
+  color: var(--color-gray-dark, #4F5354);
+  cursor: pointer;
+  transition: all 0.2s;
+  gap: 0.625rem; /* 10px entre icono y texto */
+}
+
+.sidebar__invite-link:hover {
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--color-accent, #5436EC);
+}
+
+.sidebar__invite-icon {
+  width: 1rem; /* 16px */
+  height: 1rem; /* 16px */
+  flex-shrink: 0;
 }
 
 .sidebar__logo {
@@ -182,21 +222,22 @@
   border-radius: 0.5rem; /* 8px */
   color: var(--color-gray-dark, #374151);
   text-decoration: none;
-  font-weight: 500;
+  font-size: 0.9375rem; /* 15px */
+  font-weight: 500; /* medium */
   background: transparent;
   border: 1px solid transparent;
-  transition: all 0.3s ease;
+  transition: all 0.4s ease-out;
 }
 
 .sidebar__link:hover {
   background: rgba(255, 255, 255, 0.9);
-  border-color: var(--color-gray-border, #e5e7eb);
 }
 
 .sidebar__link.is-active {
   background: rgba(255, 255, 255, 0.95);
   border-color: var(--color-gray-border, #e5e7eb);
-  font-weight: 600;
+  font-weight: 500;
+  color: var(--color-accent, #5436EC);
 }
 
 .sidebar__icon {

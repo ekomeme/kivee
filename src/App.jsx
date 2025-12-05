@@ -12,7 +12,7 @@ import PlansOffersSection from "./components/PlansOffersSection.jsx";
 import NewPlayerPage from "./components/NewPlayerPage.jsx"; // Import the new page
 import GroupsAndClassesSection from "./components/GroupsAndClassesSection.jsx";
 import AdminSection from "./components/AdminSection.jsx";
-import PaymentsSection from "./components/PaymentsSection.jsx";
+import FinancesSection from "./components/FinancesSection.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 import GroupDetailPage from "./components/GroupDetailPage.jsx";
 import { Toaster } from "react-hot-toast";
@@ -758,7 +758,7 @@ export default function App() {
             <Route path="/students/:playerId" element={<PlayerDetailPage user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/students/:playerId/edit" element={<EditPlayerPage user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/plans" element={<PlansOffersSection user={user} academy={academy} db={db} membership={membership} />} />
-            <Route path="/payments" element={<PaymentsSection user={user} academy={academy} db={db} membership={membership} />} />
+            <Route path="/finances" element={<FinancesSection user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/groups" element={<GroupsAndClassesSection user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/groups/:groupId" element={<GroupDetailPage user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/settings" element={<AdminSection

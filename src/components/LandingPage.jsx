@@ -40,7 +40,7 @@ export default function LandingPage() {
                 Run your academy with clarity and without endless spreadsheets.
               </h1>
               <p className="text-base text-gray-700 max-w-xl">
-                Kivee brings students, groups, plans, and payments into a simple dashboard. Less operational friction, more time to coach and grow your community.
+                Kivee brings students, groups, plans, and finances into a simple dashboard. Less operational friction, more time to coach and grow your community.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Link to="/sign-in" className="inline-flex items-center justify-center px-7 py-3.5 bg-primary text-white font-semibold rounded-md shadow-sm hover:bg-primary-hover transition-colors">
@@ -80,7 +80,7 @@ export default function LandingPage() {
               <p className="text-sm font-semibold text-white/80">Checklist ready</p>
               <h2 className="text-3xl font-semibold">Set up your academy in minutes.</h2>
               <p className="text-sm text-white/80 max-w-xl">
-                Invite your team, preconfigure groups and classes, set plans for your students, and keep payments on track without headaches.
+                Invite your team, preconfigure groups and classes, set plans for your students, and keep finances on track without headaches.
               </p>
             </div>
             <div className="flex items-center">

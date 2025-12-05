@@ -291,7 +291,7 @@ export default function Dashboard({ user, academy, db, membership, pendingInvite
             <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(financeStats.unpaidAmount)}</p>
           </div>
           <button
-            onClick={() => navigate('/payments')}
+            onClick={() => navigate('/finances')}
             className="text-left bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow transition"
           >
             <p className="text-sm text-gray-600">Unpaid invoices</p>

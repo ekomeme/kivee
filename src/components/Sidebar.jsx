@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Users, Layers, Tags, CreditCard, Settings, ChevronsUpDown } from 'lucide-react';
+import { LayoutDashboard, Users, GalleryVerticalEnd, PackageOpen, ChartLine, Settings, ChevronsUpDown, UserPlus } from 'lucide-react';
 import logoKivee from '../assets/logo-kivee.svg';
 import './Sidebar.css';
 
@@ -24,22 +24,29 @@ const AcademySelector = ({ availableAcademies, currentAcademy, onSwitch, academy
 
   return (
     <div className="sidebar__academy-selector" ref={menuRef}>
-      <button
-        onClick={() => hasMultipleAcademies && setShowMenu(!showMenu)}
-        className="sidebar__header-button"
-        title={hasMultipleAcademies ? "Cambiar academia" : academy.name}
-        disabled={!hasMultipleAcademies}
-      >
-        <div className="sidebar__logo">
-          {academy.logoUrl ? (
-            <img src={academy.logoUrl} alt="Academy logo" />
-          ) : (
-            <span>{academy.name?.charAt(0) || '?'}</span>
-          )}
-        </div>
-        <h2 className="sidebar__academy-name">{currentAcademy?.name || academy.name}</h2>
-        {hasMultipleAcademies && <ChevronsUpDown className="sidebar__chevron" />}
-      </button>
+      <div className="sidebar__header-container">
+        <button
+          onClick={() => hasMultipleAcademies && setShowMenu(!showMenu)}
+          className="sidebar__header-button"
+          title={hasMultipleAcademies ? "Cambiar academia" : academy.name}
+          disabled={!hasMultipleAcademies}
+        >
+          <div className="sidebar__logo">
+            {academy.logoUrl ? (
+              <img src={academy.logoUrl} alt="Academy logo" />
+            ) : (
+              <span>{academy.name?.charAt(0) || '?'}</span>
+            )}
+          </div>
+          <h2 className="sidebar__academy-name">{currentAcademy?.name || academy.name}</h2>
+          {hasMultipleAcademies && <ChevronsUpDown className="sidebar__chevron" />}
+        </button>
+        <div className="sidebar__header-divider"></div>
+        <button className="sidebar__invite-link">
+          <UserPlus className="sidebar__invite-icon" />
+          <span>Invite teammates</span>
+        </button>
+      </div>
       {showMenu && hasMultipleAcademies && (
         <div className="sidebar__academy-menu">
           <div className="sidebar__academy-menu-header">Tus academias</div>
@@ -103,7 +110,7 @@ export default function Sidebar({
                 `sidebar__link ${isActive ? 'is-active' : ''}`
               }
             >
-              <Home className="sidebar__icon" />
+              <LayoutDashboard className="sidebar__icon" />
               <span>Dashboard</span>
             </NavLink>
           </li>
@@ -127,7 +134,7 @@ export default function Sidebar({
                 `sidebar__link ${isActive ? 'is-active' : ''}`
               }
             >
-              <Layers className="sidebar__icon" />
+              <GalleryVerticalEnd className="sidebar__icon" />
               <span>Groups & Classes</span>
             </NavLink>
           </li>
@@ -139,20 +146,20 @@ export default function Sidebar({
                 `sidebar__link ${isActive ? 'is-active' : ''}`
               }
             >
-              <Tags className="sidebar__icon" />
+              <PackageOpen className="sidebar__icon" />
               <span>Plans & Offers</span>
             </NavLink>
           </li>
           <li>
             <NavLink
-              to="/payments"
+              to="/finances"
               onClick={onNavigate}
               className={({ isActive }) =>
                 `sidebar__link ${isActive ? 'is-active' : ''}`
               }
             >
-              <CreditCard className="sidebar__icon" />
-              <span>Payments</span>
+              <ChartLine className="sidebar__icon" />
+              <span>Finances</span>
             </NavLink>
           </li>
           <li>

@@ -204,7 +204,7 @@ export default function PlayerDetailPage({ user, academy, db, membership }) {
     const playerRef = doc(db, `academies/${academy.id}/players`, playerId);
     try {
       await updateDoc(playerRef, { oneTimeProducts: finalProductsForDB });
-      setActiveTab('payments');
+      setActiveTab('finances');
       await fetchPlayerDetails(); // reload to keep derived fields/product details in sync
       toast.success('Payment registered successfully!');
     } catch (error) {
@@ -227,7 +227,7 @@ export default function PlayerDetailPage({ user, academy, db, membership }) {
 
     try {
       await updateDoc(playerRef, { oneTimeProducts: finalProductsForDB });
-      setActiveTab('payments');
+      setActiveTab('finances');
       await fetchPlayerDetails(); // reload to keep derived fields in sync
       toast.success('Item removed successfully!');
     } catch (error) {

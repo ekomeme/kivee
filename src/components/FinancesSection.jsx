@@ -5,7 +5,7 @@ import { CheckCircle, Clock, Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingBar from './LoadingBar.jsx';
 
-export default function PaymentsSection({ user, academy, db, membership }) {
+export default function FinancesSection({ user, academy, db, membership }) {
     const [allPayments, setAllPayments] = useState([]);
     const [showPaymentModalFor, setShowPaymentModalFor] = useState(null);
     const touchStartX = useRef(0);
