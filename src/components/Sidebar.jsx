@@ -1,9 +1,10 @@
 import React, { useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Users, Layers, Tags, CreditCard, Settings } from 'lucide-react';
+import { Home, Users, Layers, Tags, CreditCard, Settings, ChevronsUpDown } from 'lucide-react';
+import logoKivee from '../assets/logo-kivee.svg';
 import './Sidebar.css';
 
-const AcademySelector = ({ availableAcademies, currentAcademy, onSwitch }) => {
+const AcademySelector = ({ availableAcademies, currentAcademy, onSwitch, academy }) => {
   const menuRef = useRef(null);
   const [showMenu, setShowMenu] = React.useState(false);
 
@@ -19,35 +20,43 @@ const AcademySelector = ({ availableAcademies, currentAcademy, onSwitch }) => {
     };
   }, []);
 
-  if (!availableAcademies || availableAcademies.length <= 1) return null;
+  const hasMultipleAcademies = availableAcademies && availableAcademies.length > 1;
 
   return (
     <div className="sidebar__academy-selector" ref={menuRef}>
       <button
-        onClick={() => setShowMenu(!showMenu)}
-        className="sidebar__academy-trigger"
-        title="Cambiar academia"
+        onClick={() => hasMultipleAcademies && setShowMenu(!showMenu)}
+        className="sidebar__header-button"
+        title={hasMultipleAcademies ? "Cambiar academia" : academy.name}
+        disabled={!hasMultipleAcademies}
       >
-        <span className="sidebar__academy-name">{currentAcademy?.name || 'Seleccionar academia'}</span>
-        <span className="sidebar__chevron">▾</span>
+        <div className="sidebar__logo">
+          {academy.logoUrl ? (
+            <img src={academy.logoUrl} alt="Academy logo" />
+          ) : (
+            <span>{academy.name?.charAt(0) || '?'}</span>
+          )}
+        </div>
+        <h2 className="sidebar__academy-name">{currentAcademy?.name || academy.name}</h2>
+        {hasMultipleAcademies && <ChevronsUpDown className="sidebar__chevron" />}
       </button>
-      {showMenu && (
+      {showMenu && hasMultipleAcademies && (
         <div className="sidebar__academy-menu">
           <div className="sidebar__academy-menu-header">Tus academias</div>
-          {availableAcademies.map((academy) => (
+          {availableAcademies.map((academyItem) => (
             <button
-              key={academy.id}
+              key={academyItem.id}
               onClick={() => {
-                onSwitch(academy.id);
+                onSwitch(academyItem.id);
                 setShowMenu(false);
               }}
-              className={`sidebar__academy-item ${currentAcademy?.id === academy.id ? 'is-active' : ''}`}
+              className={`sidebar__academy-item ${currentAcademy?.id === academyItem.id ? 'is-active' : ''}`}
             >
               <div className="sidebar__academy-item-body">
-                <p className="sidebar__academy-item-name">{academy.name}</p>
-                <p className="sidebar__academy-item-role">{academy.userRole}</p>
+                <p className="sidebar__academy-item-name">{academyItem.name}</p>
+                <p className="sidebar__academy-item-role">{academyItem.userRole}</p>
               </div>
-              {currentAcademy?.id === academy.id && <span className="sidebar__check">✓</span>}
+              {currentAcademy?.id === academyItem.id && <span className="sidebar__check">✓</span>}
             </button>
           ))}
         </div>
@@ -69,27 +78,18 @@ export default function Sidebar({
 }) {
   return (
     <div className={`sidebar ${className}`}>
+      {/* Logo de Kivee */}
+      <div className="sidebar__kivee-logo">
+        <img src={logoKivee} alt="Kivee Logo" />
+      </div>
+
       {showHeader && (
-        <div className="sidebar__header">
-          <div className="sidebar__logo">
-            {academy.logoUrl ? (
-              <img src={academy.logoUrl} alt="Academy logo" />
-            ) : (
-              <span>{academy.name?.charAt(0) || '?'}</span>
-            )}
-          </div>
-          <div className="sidebar__title">
-            {availableAcademies.length <= 1 ? (
-              <h2 title={academy.name}>{academy.name}</h2>
-            ) : (
-              <AcademySelector
-                availableAcademies={availableAcademies}
-                currentAcademy={academy}
-                onSwitch={onSwitchAcademy}
-              />
-            )}
-          </div>
-        </div>
+        <AcademySelector
+          availableAcademies={availableAcademies}
+          currentAcademy={academy}
+          onSwitch={onSwitchAcademy}
+          academy={academy}
+        />
       )}
 
       <nav className="sidebar__nav">

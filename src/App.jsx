@@ -16,7 +16,7 @@ import PaymentsSection from "./components/PaymentsSection.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 import GroupDetailPage from "./components/GroupDetailPage.jsx";
 import { Toaster } from "react-hot-toast";
-import { LogOut, Home, Users, Layers, Tags, CreditCard, Settings, Menu, X } from "lucide-react";
+import { LogOut, Home, Users, Layers, Tags, CreditCard, Settings, Menu, X, ChevronsUpDown } from "lucide-react";
 import loginIllustration from "./assets/login-ilustration.svg";
 import { isValidAcademyId, getValidatedLocalStorage } from "./utils/validators";
 import logoKivee from "./assets/logo-kivee.svg";
@@ -102,29 +102,34 @@ const UserMenu = ({ user, onSignOut, isSidebar = false }) => {
   }, [menuRef]);
 
   return (
-    <div className="relative" ref={menuRef}>
+    <div className={isSidebar ? "sidebar__user-menu" : "relative"} ref={menuRef}>
       <button
         onClick={() => setShowMenu(!showMenu)}
-        className="flex items-center space-x-3 p-2 rounded-full hover:bg-gray-100"
+        className={isSidebar ? "sidebar__user-button" : "flex items-center space-x-3 p-2 rounded-full hover:bg-gray-100"}
       >
-        {user.photoURL ? (
-          <img src={user.photoURL} alt="User Avatar" className="w-8 h-8 rounded-full object-cover" />
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-            <span className="text-sm font-bold text-gray-600">
+        <div className={isSidebar ? "sidebar__user-avatar" : "w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center"}>
+          {user.photoURL ? (
+            <img src={user.photoURL} alt="User Avatar" />
+          ) : (
+            <span>
               {user.displayName ? user.displayName.charAt(0).toUpperCase() : (user.email ? user.email.charAt(0).toUpperCase() : '?')}
             </span>
-          </div>
+          )}
+        </div>
+        {isSidebar ? (
+          <span className="sidebar__user-name">{user.displayName || user.email}</span>
+        ) : (
+          <span className="font-medium truncate hidden md:block">{user.displayName || user.email}</span>
         )}
-        <span className="font-medium truncate hidden md:block">{user.displayName || user.email}</span>
+        {isSidebar && <ChevronsUpDown className="sidebar__chevron" />}
       </button>
       {showMenu && (
-        <div className={`absolute ${isSidebar ? 'bottom-full left-0 mb-2' : 'top-full right-0 mt-2'} w-64 bg-section border border-gray-200 rounded-lg shadow-lg z-10 p-4`}>
-          <p className="text-sm font-bold truncate">{user.displayName}</p>
-          <p className="text-xs text-gray-500 truncate mb-3">{user.email}</p>
-          <hr className="my-2" />
-          <button onClick={onSignOut} className="w-full text-left text-red-600 hover:bg-red-50 rounded-md px-3 py-2 flex items-center">
-            <LogOut className="mr-2 h-4 w-4" />
+        <div className={isSidebar ? "sidebar__user-menu-dropdown" : "absolute top-full right-0 mt-2 w-64 bg-section border border-gray-200 rounded-lg shadow-lg z-10 p-4"}>
+          <p className={isSidebar ? "sidebar__user-menu-name" : "text-sm font-bold truncate"}>{user.displayName}</p>
+          <p className={isSidebar ? "sidebar__user-menu-email" : "text-xs text-gray-500 truncate mb-3"}>{user.email}</p>
+          <hr className={isSidebar ? "sidebar__user-menu-divider" : "my-2"} />
+          <button onClick={onSignOut} className={isSidebar ? "sidebar__user-menu-signout" : "w-full text-left text-red-600 hover:bg-red-50 rounded-md px-3 py-2 flex items-center"}>
+            <LogOut className={isSidebar ? "sidebar__icon" : "mr-2 h-4 w-4"} />
             <span>Sign Out</span>
           </button>
         </div>
@@ -665,7 +670,7 @@ export default function App() {
   return (
     <div className="flex h-screen bg-app font-sans relative overflow-x-hidden">
       {/* Desktop Sidebar */}
-      <div className="bg-white text-gray-800 w-64 p-4 border-r border-gray-border hidden md:flex md:flex-col md:h-full">
+      <div className="text-gray-800 w-64 border-r border-gray-border hidden md:flex md:flex-col md:h-full">
         <Sidebar
           academy={academy}
           availableAcademies={availableAcademies}

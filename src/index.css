@@ -16,8 +16,9 @@
   --icon-size-sm: 1rem;   /* 16px */
   --icon-size-md: 1.25rem;/* 20px */
   --icon-size-lg: 1.5rem; /* 24px */
-  --app-bg: #F2F3F3; /* fondo base de la aplicación */
+  --app-bg: #fff; /* fondo base de la aplicación */
   --section-bg: #FFFFFF; /* fondo de secciones/tarjetas */
+  --sidebar-bg: linear-gradient(180deg, #F2F3F3 0%, #FFF 100%); /* gradiente del sidebar */
 }
 
 .no-scrollbar {
@@ -30,8 +31,9 @@
 
 /* Global Lucide icon sizing */
 svg.lucide {
-  width: var(--icon-size-sm);
-  height: var(--icon-size-sm);
+  width: var(--icon-size-md);
+  height: var(--icon-size-md);
+  stroke-width: 2;
   stroke: currentColor;
   flex-shrink: 0;
 }
@@ -39,14 +41,17 @@ svg.lucide {
 .icon-sm {
   width: var(--icon-size-sm);
   height: var(--icon-size-sm);
+  stroke-width: 2;
 }
 
 .icon-md {
   width: var(--icon-size-md);
   height: var(--icon-size-md);
+  stroke-width: 2;
 }
 
 .icon-lg {
   width: var(--icon-size-lg);
   height: var(--icon-size-lg);
+  stroke-width: 2;
 }
