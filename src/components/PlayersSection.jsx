@@ -4,6 +4,7 @@ import { collection, query, getDocs, doc, deleteDoc, getDoc, updateDoc } from 'f
 import { deleteObject, ref as storageRef } from 'firebase/storage';
 import { storage } from '../firebase';
 import toast from 'react-hot-toast';
+import '../styles/sections.css';
 
 import { Plus, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Filter, ChevronRight, Check, X } from 'lucide-react';
 export default function PlayersSection({ user, academy, db, membership }) { // 1. Recibir 'membership' como prop
@@ -430,11 +431,11 @@ export default function PlayersSection({ user, academy, db, membership }) { // 1
 
 
   return (
-    <div className="p-6">
-      <div className="w-full max-w-screen-xl mx-auto space-y-4">
+    <div className="section-container">
+      <div className="section-content-wrapper space-y-6">
         {/* Header with title and Add Player button */}
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-gray-800">{studentLabelPlural} of {academy.name}</h2>
+          <h2 className="section-title">{studentLabelPlural} of {academy.name}</h2>
           <button
             onClick={handleAddPlayer}
             className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center"
@@ -444,7 +445,7 @@ export default function PlayersSection({ user, academy, db, membership }) { // 1
           </button>
         </div>
 
-      <div className="bg-section rounded-none shadow-none md:rounded-lg md:shadow-md p-4 md:p-6">
+      <div className="content-card-responsive">
       {/* Filters Section */}
       <div className="flex items-center space-x-4 mb-4 p-4 bg-app rounded-lg">
         <div className="flex items-center space-x-4">

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { collection, getDocs, getDoc, doc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Users, Activity, Mail } from 'lucide-react';
+import '../styles/sections.css';
 
 export default function Dashboard({ user, academy, db, membership, pendingInvites = [], onAcceptInvite, onDeclineInvite, isAcceptingInvite }) {
   const [loading, setLoading] = useState(true);
@@ -181,12 +182,12 @@ export default function Dashboard({ user, academy, db, membership, pendingInvite
   }, [tiers, players]);
 
   return (
-    <div className="w-full max-w-screen-xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+    <div className="section-content-wrapper space-y-6 section-container">
+      <h1 className="section-title">Dashboard</h1>
 
       {/* Academy Invitations Banner */}
       {pendingInvites && pendingInvites.length > 0 && (
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 border border-blue-700 rounded-lg p-5 shadow-lg">
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 border border-blue-700 rounded-lg p-5">
           <div className="flex items-start gap-4">
             <div className="bg-section rounded-full p-2 flex-shrink-0">
               <Mail className="h-6 w-6 text-blue-600" />
@@ -227,7 +228,7 @@ export default function Dashboard({ user, academy, db, membership, pendingInvite
       )}
 
       {/* Students */}
-      <section className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm space-y-3">
+      <section className="bg-section border border-gray-200 rounded-lg p-4 space-y-3">
         <h2 className="text-lg font-semibold text-gray-900">{studentLabelPlural}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -246,7 +247,7 @@ export default function Dashboard({ user, academy, db, membership, pendingInvite
       </section>
 
       {/* Subscriptions */}
-      <section className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm space-y-3">
+      <section className="bg-section border border-gray-200 rounded-lg p-4 space-y-3">
         <h2 className="text-lg font-semibold text-gray-900">Subscriptions</h2>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
@@ -279,7 +280,7 @@ export default function Dashboard({ user, academy, db, membership, pendingInvite
       </section>
 
       {/* Finance */}
-      <section className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm space-y-4">
+      <section className="bg-section border border-gray-200 rounded-lg p-4 space-y-4">
         <h2 className="text-lg font-semibold text-gray-900">Finance</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>

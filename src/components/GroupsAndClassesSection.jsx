@@ -3,6 +3,7 @@ import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc, where } 
 import { Plus, Edit, Trash2, MoreVertical, Users, Calendar, ArrowRightLeft, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import '../styles/sections.css';
 
 export default function GroupsAndClassesSection({ user, academy, db, membership }) {
   const [activeGroupTab, setActiveGroupTab] = useState('groups'); // 'groups', 'schedule', 'transfers'
@@ -304,31 +305,31 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
   };
 
   return (
-    <div className="p-6">
-      <div className="w-full max-w-screen-xl mx-auto space-y-4">
+    <div className="section-container">
+      <div className="section-content-wrapper space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-800">Groups & Classes</h2>
+          <h2 className="section-title">Groups & Classes</h2>
           <div />
         </div>
-      <div className="bg-section rounded-none shadow-none md:rounded-lg md:shadow-md p-4 md:p-6">
-      <div className="border-b border-gray-200 mb-4">
+      <div className="content-card-responsive">
+      <div className="tabs-container">
           <div
-            className="relative w-full max-w-full overflow-x-auto no-scrollbar"
+            className="tabs-scroll-wrapper"
             onTouchStart={handleTabTouchStart}
             onTouchMove={handleTabTouchMove}
           >
-            <nav className="-mb-px flex space-x-6 w-max min-w-0" aria-label="Tabs" role="tablist">
-              <button role="tab" aria-selected={activeGroupTab === 'groups'} onClick={handleTabClick(() => setActiveGroupTab('groups'))} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm flex items-center ${activeGroupTab === 'groups' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-              <Users className="mr-2 h-5 w-5" /> Groups
+            <nav className="tabs-nav" aria-label="Tabs" role="tablist">
+              <button role="tab" aria-selected={activeGroupTab === 'groups'} onClick={handleTabClick(() => setActiveGroupTab('groups'))} className={`tab-button ${activeGroupTab === 'groups' ? 'active' : ''}`}>
+              <Users /> Groups
             </button>
-              <button role="tab" aria-selected={activeGroupTab === 'schedule'} onClick={handleTabClick(() => setActiveGroupTab('schedule'))} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm flex items-center ${activeGroupTab === 'schedule' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-              <Calendar className="mr-2 h-5 w-5" /> Class Schedule
+              <button role="tab" aria-selected={activeGroupTab === 'schedule'} onClick={handleTabClick(() => setActiveGroupTab('schedule'))} className={`tab-button ${activeGroupTab === 'schedule' ? 'active' : ''}`}>
+              <Calendar /> Class Schedule
             </button>
-              <button role="tab" aria-selected={activeGroupTab === 'transfers'} onClick={handleTabClick(() => setActiveGroupTab('transfers'))} className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm flex items-center ${activeGroupTab === 'transfers' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-              <ArrowRightLeft className="mr-2 h-5 w-5" /> Transfers
+              <button role="tab" aria-selected={activeGroupTab === 'transfers'} onClick={handleTabClick(() => setActiveGroupTab('transfers'))} className={`tab-button ${activeGroupTab === 'transfers' ? 'active' : ''}`}>
+              <ArrowRightLeft /> Transfers
             </button>
             </nav>
-            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent md:hidden" aria-hidden />
+            <div className="tabs-scroll-gradient md:hidden" aria-hidden />
           </div>
       </div>
 

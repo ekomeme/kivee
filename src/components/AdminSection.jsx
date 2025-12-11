@@ -3,8 +3,9 @@ import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc, serverTi
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import Select from 'react-select';
 import toast from 'react-hot-toast';
-import { Upload } from 'lucide-react';
+import { Upload, Settings, Users } from 'lucide-react';
 import { sanitizeEmail, sanitizeText, sanitizeFilename, validateFileType } from '../utils/validators';
+import '../styles/sections.css';
 export default function AdminSection({ user, academy, db, onAcademyUpdate, pendingInvites = [], onAcceptInvite, onDeclineInvite, isAcceptingInvite }) {
   // States for Academy Settings
   const [currencyOptions, setCurrencyOptions] = useState([]);
@@ -384,26 +385,32 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
   };
 
   return (
-    <div className="p-6">
-      <div className="w-full max-w-screen-xl mx-auto space-y-4">
+    <div className="section-container">
+      <div className="section-content-wrapper space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-800">Settings</h2>
+          <h2 className="section-title">Settings</h2>
           <div />
         </div>
-        <div className="bg-section rounded-none shadow-none md:rounded-lg md:shadow-md p-4 md:p-6 space-y-8">
-          <div className="flex border-b border-gray-200 space-x-6">
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`py-2 px-1 border-b-2 text-sm font-medium ${activeTab === 'settings' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-            >
-              Preferences
-            </button>
-            <button
-              onClick={() => setActiveTab('team')}
-              className={`py-2 px-1 border-b-2 text-sm font-medium ${activeTab === 'team' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-            >
-              Team
-            </button>
+        <div className="content-card-responsive space-y-8">
+          <div className="tabs-container">
+            <nav className="tabs-nav" aria-label="Tabs" role="tablist">
+              <button
+                role="tab"
+                aria-selected={activeTab === 'settings'}
+                onClick={() => setActiveTab('settings')}
+                className={`tab-button ${activeTab === 'settings' ? 'active' : ''}`}
+              >
+                <Settings /> Preferences
+              </button>
+              <button
+                role="tab"
+                aria-selected={activeTab === 'team'}
+                onClick={() => setActiveTab('team')}
+                className={`tab-button ${activeTab === 'team' ? 'active' : ''}`}
+              >
+                <Users /> Team
+              </button>
+            </nav>
           </div>
 
           {activeTab === 'settings' && (

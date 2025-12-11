@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
 import { Plus, Edit, Trash2, MoreVertical, Package, Tag, Zap, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import '../styles/sections.css';
 
 export default function PlansOffersSection({ user, academy, db, membership }) {
   const [tiers, setTiers] = useState([]);
@@ -522,37 +523,37 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
   };
 
   return (
-    <div className="p-6">
-      <div className="w-full max-w-screen-xl mx-auto space-y-4">
+    <div className="section-container">
+      <div className="section-content-wrapper space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-800">Plans & Offers</h2>
+          <h2 className="section-title">Plans & Offers</h2>
           <div />
         </div>
 
-        <div className="bg-section rounded-none shadow-none md:rounded-lg md:shadow-md p-4 md:p-6">
+        <div className="content-card-responsive">
           {/* Tabs */}
-          <div className="border-b border-gray-200 mb-4">
+          <div className="tabs-container">
             <div
-              className="relative w-full max-w-full overflow-x-auto no-scrollbar"
+              className="tabs-scroll-wrapper"
               onTouchStart={handleTabTouchStart}
               onTouchMove={handleTabTouchMove}
             >
               <nav
-                className="-mb-px flex space-x-6 w-max min-w-0"
+                className="tabs-nav"
                 aria-label="Tabs"
                 role="tablist"
               >
-                <button role="tab" aria-selected={activeTab === 'tiers'} onClick={handleTabClick(() => setActiveTab('tiers'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'tiers' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                  <Zap className="mr-2 h-5 w-5" /> Membership Tiers
+                <button role="tab" aria-selected={activeTab === 'tiers'} onClick={handleTabClick(() => setActiveTab('tiers'))} className={`tab-button ${activeTab === 'tiers' ? 'active' : ''}`}>
+                  <Zap /> Membership Tiers
                 </button>
-                <button role="tab" aria-selected={activeTab === 'products'} onClick={handleTabClick(() => setActiveTab('products'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'products' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                  <Package className="mr-2 h-5 w-5" /> One-time Products
+                <button role="tab" aria-selected={activeTab === 'products'} onClick={handleTabClick(() => setActiveTab('products'))} className={`tab-button ${activeTab === 'products' ? 'active' : ''}`}>
+                  <Package /> One-time Products
                 </button>
-                <button role="tab" aria-selected={activeTab === 'trials'} onClick={handleTabClick(() => setActiveTab('trials'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'trials' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                  <Tag className="mr-2 h-5 w-5" /> Trials
+                <button role="tab" aria-selected={activeTab === 'trials'} onClick={handleTabClick(() => setActiveTab('trials'))} className={`tab-button ${activeTab === 'trials' ? 'active' : ''}`}>
+                  <Tag /> Trials
                 </button>
               </nav>
-              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent md:hidden" aria-hidden />
+              <div className="tabs-scroll-gradient md:hidden" aria-hidden />
             </div>
           </div>
 

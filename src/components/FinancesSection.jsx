@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle, Clock, Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingBar from './LoadingBar.jsx';
+import '../styles/sections.css';
 
 export default function FinancesSection({ user, academy, db, membership }) {
     const [allPayments, setAllPayments] = useState([]);
@@ -303,34 +304,34 @@ export default function FinancesSection({ user, academy, db, membership }) {
     };
 
   return (
-    <div className="p-6">
-      <div className="w-full max-w-screen-xl mx-auto space-y-4">
+    <div className="section-container">
+      <div className="section-content-wrapper space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-800">Payments</h2>
+          <h2 className="section-title">Payments</h2>
           <div />
         </div>
-      <div className="bg-section rounded-none shadow-none md:rounded-lg md:shadow-md p-4 md:p-6">
+      <div className="content-card-responsive">
       <LoadingBar loading={loading} />
 
-            <div className="border-b border-gray-200 mb-4">
+            <div className="tabs-container">
                 <div
-                    className="relative w-full max-w-full overflow-x-auto no-scrollbar"
+                    className="tabs-scroll-wrapper"
                     onTouchStart={handleTabTouchStart}
                     onTouchMove={handleTabTouchMove}
                 >
                     <nav
-                        className="-mb-px flex space-x-6 w-max min-w-0"
+                        className="tabs-nav"
                         aria-label="Tabs"
                         role="tablist"
                     >
-                        <button role="tab" aria-selected={activeTab === 'unpaid'} onClick={handleTabClick(() => setActiveTab('unpaid'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'unpaid' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                        <Clock className="mr-2 h-5 w-5" /> Unpaid
+                        <button role="tab" aria-selected={activeTab === 'unpaid'} onClick={handleTabClick(() => setActiveTab('unpaid'))} className={`tab-button ${activeTab === 'unpaid' ? 'active' : ''}`}>
+                        <Clock /> Unpaid
                     </button>
-                        <button role="tab" aria-selected={activeTab === 'paid'} onClick={handleTabClick(() => setActiveTab('paid'))} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === 'paid' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-                        <CheckCircle className="mr-2 h-5 w-5" /> Paid
+                        <button role="tab" aria-selected={activeTab === 'paid'} onClick={handleTabClick(() => setActiveTab('paid'))} className={`tab-button ${activeTab === 'paid' ? 'active' : ''}`}>
+                        <CheckCircle /> Paid
                     </button>
                     </nav>
-                    <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent md:hidden" aria-hidden />
+                    <div className="tabs-scroll-gradient md:hidden" aria-hidden />
                 </div>
             </div>
 
