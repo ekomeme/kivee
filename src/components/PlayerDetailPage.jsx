@@ -258,7 +258,7 @@ export default function PlayerDetailPage({ user, academy, db, membership }) {
             <span className="text-gray-800">{player.name} {player.lastName}</span>
           </div>
           <div>
-            <button onClick={handleEdit} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center">
+            <button onClick={handleEdit} className="btn-primary">
               <Edit className="mr-2 h-5 w-5" />
               <span>Edit {studentLabelSingular}</span>
             </button>

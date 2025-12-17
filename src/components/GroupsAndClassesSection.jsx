@@ -336,7 +336,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
       {activeGroupTab === 'groups' && (
         <>
           <div className="flex justify-end mb-4">
-            <button onClick={() => handleOpenGroupModal()} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center">
+            <button onClick={() => handleOpenGroupModal()} className="btn-primary">
               <Plus className="mr-2 h-5 w-5" /> Add New Group
             </button>
           </div>
@@ -348,21 +348,30 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
           ) : (
             <>
               <div className="overflow-x-auto hidden md:block">
-                <table className="min-w-full bg-section border border-gray-200">
-                  <thead><tr><th className="py-2 px-4 border-b text-left">Name</th><th className="py-2 px-4 border-b text-left">Age Range</th><th className="py-2 px-4 border-b text-left">Coach</th><th className="py-2 px-4 border-b text-left">Capacity</th><th className="py-2 px-4 border-b text-left">Status</th><th className="py-2 px-4 border-b text-right">Actions</th></tr></thead>
+                <table className="min-w-full bg-section">
+                  <thead>
+                    <tr>
+                      <th className="py-2 px-4 border-b text-left table-header">Name</th>
+                      <th className="py-2 px-4 border-b text-left table-header">Age Range</th>
+                      <th className="py-2 px-4 border-b text-left table-header">Coach</th>
+                      <th className="py-2 px-4 border-b text-left table-header">Capacity</th>
+                      <th className="py-2 px-4 border-b text-left table-header">Status</th>
+                      <th className="py-2 px-4 border-b text-right table-header">Actions</th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {groups.map(group => (
                       <tr
                         key={group.id}
-                        className="hover:bg-gray-50 cursor-pointer"
+                        className="hover:bg-gray-50 cursor-pointer table-row-hover"
                         onClick={() => navigate(`/groups/${group.id}`)}
                       >
-                        <td className="py-3 px-4 border-b font-medium">{group.name}</td>
-                        <td className="py-3 px-4 border-b">{group.minAge}-{group.maxAge} years</td>
-                        <td className="py-3 px-4 border-b">{group.coach}</td>
-                        <td className="py-3 px-4 border-b">{group.maxCapacity || 'N/A'}</td>
-                        <td className="py-3 px-4 border-b"><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${group.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{group.status}</span></td>
-                        <td className="py-3 px-4 border-b text-right">
+                        <td className="py-3 px-4 border-b font-medium table-cell">{group.name}</td>
+                        <td className="py-3 px-4 border-b table-cell">{group.minAge}-{group.maxAge} years</td>
+                        <td className="py-3 px-4 border-b table-cell">{group.coach}</td>
+                        <td className="py-3 px-4 border-b table-cell">{group.maxCapacity || 'N/A'}</td>
+                        <td className="py-3 px-4 border-b table-cell"><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${group.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{group.status}</span></td>
+                        <td className="py-3 px-4 border-b text-right table-cell">
                         <button onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(group); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none" aria-label={`Actions for group ${group.name}`}><MoreVertical className="h-5 w-5 text-gray-500" /></button>
                         </td>
                       </tr>
@@ -425,7 +434,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); handleOpenScheduleModal(group.id); }}
-                      className="bg-primary hover:bg-primary-hover text-white text-xs font-bold py-1 px-3 rounded-md flex items-center"
+                      className="btn-primary-sm"
                     >
                       <Plus className="mr-1 h-4 w-4" /> Add Session
                     </button>
@@ -503,7 +512,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
               {groupError && <p className="text-red-500 text-sm mt-4">{groupError}</p>}
               <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-section py-3 md:bg-transparent md:py-0">
                 <button type="button" onClick={() => setShowGroupModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
-                <button type="submit" disabled={loadingGroups} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md disabled:opacity-50 w-full md:w-auto">{loadingGroups ? 'Saving...' : 'Save'}</button>
+                <button type="submit" disabled={loadingGroups} className="btn-primary w-full md:w-auto">{loadingGroups ? 'Saving...' : 'Save'}</button>
               </div>
             </form>
           </div>
@@ -539,7 +548,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
                 <button
                   type="submit"
                   disabled={scheduleSaving} // Corregido el estado de carga
-                  className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md disabled:opacity-50 w-full md:w-auto"
+                  className="btn-primary w-full md:w-auto"
                 >
                   {scheduleSaving ? 'Saving...' : 'Save'}
                 </button>

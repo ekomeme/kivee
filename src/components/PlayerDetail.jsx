@@ -113,7 +113,7 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
             </div>
             <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-section py-3 md:bg-transparent md:py-0">
               <button type="button" onClick={onClose} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
-              <button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md w-full md:w-auto disabled:opacity-50">{isSubmitting ? 'Saving...' : 'Confirm Payment'}</button>
+              <button type="submit" disabled={isSubmitting} className="btn-primary w-full md:w-auto">{isSubmitting ? 'Saving...' : 'Confirm Payment'}</button>
             </div>
           </form>
         </div>

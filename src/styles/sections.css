@@ -4,7 +4,7 @@
 
 /* Main section container - applies to all pages */
 .section-container {
-  padding-top: 64px; /* 64px from top edge */
+  padding-top: 24px; /* 64px from top edge */
   padding-left: 0;
   padding-right: 0;
   padding-bottom: 0;
@@ -24,9 +24,9 @@
 
 /* Main section title (h1 or h2) */
 .section-title {
-  font-size: 20px;
-  font-weight: 500; /* medium */
-  line-height: 40px;
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-medium); /* medium */
+  line-height: var(--line-height-title);
   color: #1F2937; /* gray-800 */
 
 }
@@ -107,8 +107,8 @@
   padding: 16px 4px; /* py-4 px-1 */
   margin-bottom: -1px; /* Sit flush with baseline */
   border-bottom: 2px solid transparent;
-  font-weight: 500;
-  font-size: 14px; /* text-sm */
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-lg); /* text-sm */
   color: #6B7280; /* text-gray-500 */
   background-color: var(--section-bg, #FFFFFF); /* Cover the container border */
   cursor: pointer;
@@ -171,4 +171,28 @@
   .tabs-scroll-gradient {
     display: none;
   }
+}
+
+/* ============================================
+   TABLE STYLES - Table cell truncation
+   ============================================ */
+
+/* Header styles */
+.table-header {
+  font-weight: var(--font-weight-medium);
+  color: #6B7280; /* text-gray-500 */
+}
+
+/* Row hover effect */
+.table-row-hover {
+  transition: background-color 0.15s ease;
+}
+
+/* Truncate only text content inside table cells */
+.table-cell-truncate {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
 }

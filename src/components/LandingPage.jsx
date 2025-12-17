@@ -19,7 +19,7 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-3">
             <Link to="/sign-in" className="text-sm font-medium text-gray-700 hover:text-black">Sign in</Link>
-            <Link to="/sign-in" className="text-sm font-semibold bg-primary text-white px-4 py-2 rounded-md hover:bg-primary-hover transition-colors">Get started</Link>
+            <Link to="/sign-in" className="btn-primary text-sm px-4 py-2 transition-colors">Get started</Link>
           </div>
         </div>
       </header>
@@ -43,7 +43,7 @@ export default function LandingPage() {
                 Kivee brings students, groups, plans, and finances into a simple dashboard. Less operational friction, more time to coach and grow your community.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
-                <Link to="/sign-in" className="inline-flex items-center justify-center px-7 py-3.5 bg-primary text-white font-semibold rounded-md shadow-sm hover:bg-primary-hover transition-colors">
+                <Link to="/sign-in" className="btn-primary px-7 py-3.5 font-semibold shadow-sm transition-colors">
                   Get started now, it's free
                 </Link>
               </div>

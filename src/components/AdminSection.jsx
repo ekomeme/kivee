@@ -533,7 +533,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
               <button
                 type="submit"
                 disabled={isUpdatingSettings}
-                className="px-4 py-2 font-medium text-white bg-primary rounded-md hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
               >
                 {isUpdatingSettings ? 'Updating...' : 'Save Settings'}
               </button>
@@ -567,7 +567,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
                             type="button"
                             onClick={() => onAcceptInvite && onAcceptInvite(invite.id)}
                             disabled={isAcceptingInvite}
-                            className="text-sm bg-primary hover:bg-primary-hover text-white px-3 py-1 rounded-md disabled:opacity-50"
+                            className="btn-primary-sm text-sm"
                           >
                             {isAcceptingInvite ? 'Joining...' : 'Accept'}
                           </button>
@@ -595,7 +595,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
                     />
                     <button
                       type="submit"
-                      className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-md shadow-sm disabled:opacity-50"
+                      className="btn-primary shadow-sm"
                       disabled={isInviting}
                     >
                       {isInviting ? 'Sending...' : 'Invite'}
@@ -611,27 +611,27 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
                   <div>
                     <p className="text-sm font-semibold text-gray-800 mb-2">Members</p>
                     <div className="overflow-x-auto">
-                      <table className="min-w-full bg-section border border-gray-200">
+                      <table className="min-w-full bg-section">
                         <thead>
                           <tr>
-                            <th className="py-2 px-4 border-b text-left">User</th>
-                            <th className="py-2 px-4 border-b text-left">Email</th>
-                            <th className="py-2 px-4 border-b text-left">Role</th>
-                            <th className="py-2 px-4 border-b text-left">Status</th>
-                            <th className="py-2 px-4 border-b text-left"></th>
+                            <th className="py-2 px-4 border-b text-left table-header">User</th>
+                            <th className="py-2 px-4 border-b text-left table-header">Email</th>
+                            <th className="py-2 px-4 border-b text-left table-header">Role</th>
+                            <th className="py-2 px-4 border-b text-left table-header">Status</th>
+                            <th className="py-2 px-4 border-b text-left table-header"></th>
                           </tr>
                         </thead>
                         <tbody>
                           {teamMembers.length === 0 && (
-                            <tr><td className="py-3 px-4 text-sm text-gray-600" colSpan={5}>No team members yet.</td></tr>
+                            <tr className="table-row-hover"><td className="py-3 px-4 text-sm text-gray-600 table-cell" colSpan={5}>No team members yet.</td></tr>
                           )}
                           {teamMembers.map(member => (
-                            <tr key={member.id} className="hover:bg-gray-50">
-                              <td className="py-2 px-4 border-b font-medium text-gray-900">{member.name || 'Member'}</td>
-                              <td className="py-2 px-4 border-b text-gray-700">{member.email || 'N/A'}</td>
-                              <td className="py-2 px-4 border-b text-gray-700 capitalize">{member.role || 'admin'}</td>
-                              <td className="py-2 px-4 border-b text-gray-700 capitalize">{member.status || 'active'}</td>
-                              <td className="py-2 px-4 border-b text-right">
+                            <tr key={member.id} className="hover:bg-gray-50 table-row-hover">
+                              <td className="py-2 px-4 border-b font-medium text-gray-900 table-cell">{member.name || 'Member'}</td>
+                              <td className="py-2 px-4 border-b text-gray-700 table-cell">{member.email || 'N/A'}</td>
+                              <td className="py-2 px-4 border-b text-gray-700 capitalize table-cell">{member.role || 'admin'}</td>
+                              <td className="py-2 px-4 border-b text-gray-700 capitalize table-cell">{member.status || 'active'}</td>
+                              <td className="py-2 px-4 border-b text-right table-cell">
                                 {canManageTeam && member.id !== academy.ownerId && member.role !== 'owner' && (
                                   <button
                                     type="button"
@@ -652,25 +652,25 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
                   <div>
                     <p className="text-sm font-semibold text-gray-800 mb-2">Invitations</p>
                     <div className="overflow-x-auto">
-                      <table className="min-w-full bg-section border border-gray-200">
+                      <table className="min-w-full bg-section">
                         <thead>
                           <tr>
-                            <th className="py-2 px-4 border-b text-left">Email</th>
-                            <th className="py-2 px-4 border-b text-left">Role</th>
-                            <th className="py-2 px-4 border-b text-left">Status</th>
-                            <th className="py-2 px-4 border-b text-left"></th>
+                            <th className="py-2 px-4 border-b text-left table-header">Email</th>
+                            <th className="py-2 px-4 border-b text-left table-header">Role</th>
+                            <th className="py-2 px-4 border-b text-left table-header">Status</th>
+                            <th className="py-2 px-4 border-b text-left table-header"></th>
                           </tr>
                         </thead>
                         <tbody>
                           {teamInvites.filter(invite => invite.status === 'pending').length === 0 && (
-                            <tr><td className="py-3 px-4 text-sm text-gray-600" colSpan={4}>No pending invitations.</td></tr>
+                            <tr className="table-row-hover"><td className="py-3 px-4 text-sm text-gray-600 table-cell" colSpan={4}>No pending invitations.</td></tr>
                           )}
                           {teamInvites.filter(invite => invite.status === 'pending').map(invite => (
-                            <tr key={invite.id} className="hover:bg-gray-50">
-                              <td className="py-2 px-4 border-b">{invite.email}</td>
-                              <td className="py-2 px-4 border-b capitalize">{invite.role || 'admin'}</td>
-                              <td className="py-2 px-4 border-b capitalize">{invite.status}</td>
-                              <td className="py-2 px-4 border-b text-right">
+                            <tr key={invite.id} className="hover:bg-gray-50 table-row-hover">
+                              <td className="py-2 px-4 border-b table-cell">{invite.email}</td>
+                              <td className="py-2 px-4 border-b capitalize table-cell">{invite.role || 'admin'}</td>
+                              <td className="py-2 px-4 border-b capitalize table-cell">{invite.status}</td>
+                              <td className="py-2 px-4 border-b text-right table-cell">
                                 {canManageTeam && (
                                   <button
                                     type="button"

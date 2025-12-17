@@ -264,7 +264,7 @@ export default function PlayersSection({ user, academy, db, membership }) { // 1
           timeoutRef.current = setTimeout(() => setIsPopoverOpen(false), 100);
         }}
       >
-        <Icon className="h-5 w-5 text-gray-500 cursor-pointer" />
+        <Icon className="h-5 w-5 text-gray-500 cursor-pointer flex-shrink-0" style={{ width: '20px', height: '20px' }} />
         {isPopoverOpen && (
           <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs bg-gray-dark text-white rounded-md py-1.5 px-3 z-20 shadow-lg">
             <div className="flex items-center space-x-2">
@@ -438,7 +438,7 @@ export default function PlayersSection({ user, academy, db, membership }) { // 1
           <h2 className="section-title">{studentLabelPlural} of {academy.name}</h2>
           <button
             onClick={handleAddPlayer}
-            className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md flex items-center"
+            className="btn-primary"
           >
             <Plus className="mr-2 h-5 w-5" />
             <span>Add New {studentLabelSingular}</span>
@@ -481,55 +481,51 @@ export default function PlayersSection({ user, academy, db, membership }) { // 1
         <>
           {/* Desktop table */}
           <div className="overflow-x-auto hidden md:block">
-            <table className="min-w-full bg-section border border-gray-200">
+            <table className="min-w-full bg-section">
               <thead>
                 <tr>
-                  <th className="py-2 px-4 border-b text-left">
-                    <button onClick={() => handleSort('studentId')} className="font-bold flex items-center">
-                      ID {sortConfig.key === 'studentId' && (sortConfig.direction === 'ascending' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />)}
-                    </button>
-                  </th>
-                  <th className="py-2 px-4 border-b text-left">
-                    <button onClick={() => handleSort('name')} className="font-bold flex items-center">
+                  <th className="py-2 px-4 border-b text-left table-header">
+                    <button onClick={() => handleSort('name')} className="table-header flex items-center">
                       Name {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />)}
                     </button>
                   </th>
-                  <th className="py-2 px-4 border-b text-left">Gender</th>
-                  <th className="py-2 px-4 border-b text-left">Group</th>
-                  <th className="py-2 px-4 border-b text-left">Tier</th>
-                  <th className="py-2 px-4 border-b text-left">Tutor</th>
-                  <th className="py-2 px-4 border-b text-right"></th>
+                  <th className="py-2 px-4 border-b text-left table-header">ID</th>
+                  <th className="py-2 px-4 border-b text-left table-header">Group</th>
+                  <th className="py-2 px-4 border-b text-left table-header">Tier</th>
+                  <th className="py-2 px-4 border-b text-left table-header">Tutor</th>
+                  <th className="py-2 px-4 border-b text-right table-header"></th>
                 </tr>
               </thead>
               <tbody>
                 {filteredAndSortedPlayers.map(player => (
-                  <tr key={player.id} className="group hover:bg-gray-100 cursor-pointer" onClick={() => handleRowClick(player)}>
-                    <td className="py-2 px-4 border-b">
-                      <span className="text-sm text-gray-600">{player.studentId || 'N/A'}</span>
-                    </td>
-                    <td className="py-2 px-4 border-b">
-                      <div className="flex items-center space-x-3">
+                  <tr key={player.id} className="group hover:bg-gray-100 cursor-pointer table-row-hover" onClick={() => handleRowClick(player)}>
+                    <td className="py-2 px-4 border-b table-cell">
+                      <div className="flex items-center space-x-4">
                         <Avatar player={player} />
-                        <div className="flex items-center space-x-4">
-                          <span className="font-medium text-gray-800">{player.name} {player.lastName}</span>
-                          <ContactIcon value={player.email} icon={Mail} />
-                          <ContactIcon value={player.contactPhone} icon={Phone} />
-                        </div>
+                        <span className="font-medium text-gray-800 table-cell-truncate">{player.name} {player.lastName}</span>
+                        <ContactIcon value={player.email} icon={Mail} />
+                        <ContactIcon value={player.contactPhone} icon={Phone} />
                       </div>
                     </td>
-                    <td className="py-2 px-4 border-b">{player.gender}</td>
-                    <td className="py-2 px-4 border-b">{player.groupName || 'N/A'}</td>
-                    <td className="py-2 px-4 border-b">{player.tierName || 'N/A'}</td>
-                    <td className="py-2 px-4 border-b">
+                    <td className="py-2 px-4 border-b table-cell">
+                      <span className="table-cell-truncate">{player.studentId || 'N/A'}</span>
+                    </td>
+                    <td className="py-2 px-4 border-b table-cell">
+                      <span className="table-cell-truncate">{player.groupName || 'N/A'}</span>
+                    </td>
+                    <td className="py-2 px-4 border-b table-cell">
+                      <span className="table-cell-truncate">{player.tierName || 'N/A'}</span>
+                    </td>
+                    <td className="py-2 px-4 border-b table-cell">
                       {player.tutor ? (
                         <div className="flex items-center space-x-4">
-                          <span>{player.tutor.name} {player.tutor.lastName}</span>
+                          <span className="table-cell-truncate">{player.tutor.name} {player.tutor.lastName}</span>
                           <ContactIcon value={player.tutor.email} icon={Mail} />
                           <ContactIcon value={player.tutor.contactPhone} icon={Phone} />
                         </div>
-                      ) : 'N/A'}
+                      ) : <span className="table-cell-truncate">N/A</span>}
                     </td>
-                    <td className="py-2 px-4 border-b text-right">
+                    <td className="py-2 px-4 border-b text-right table-cell">
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity relative">
                       <button
                         onClick={(e) => handleOpenActionsMenu(player, e)}

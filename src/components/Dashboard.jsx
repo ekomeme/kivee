@@ -253,20 +253,20 @@ export default function Dashboard({ user, academy, db, membership, pendingInvite
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left text-gray-600">
-                <th className="py-2 pr-4">Plan</th>
-                <th className="py-2 pr-4">Assigned students</th>
+                <th className="py-2 pr-4 table-header">Plan</th>
+                <th className="py-2 pr-4 table-header">Assigned students</th>
               </tr>
             </thead>
             <tbody>
               {tierSummary.map((t, idx) => (
-                <tr key={idx} className="border-t border-gray-100">
-                  <td className="py-2 pr-4 font-medium text-gray-900">{t.name}</td>
-                  <td className="py-2 pr-4 text-gray-700">{t.count}</td>
+                <tr key={idx} className="border-b border-gray-100">
+                  <td className="py-2 pr-4 font-medium text-gray-900 table-cell">{t.name}</td>
+                  <td className="py-2 pr-4 text-gray-700 table-cell">{t.count}</td>
                 </tr>
               ))}
               {tierSummary.length === 0 && (
                 <tr>
-                  <td className="py-2 pr-4 text-gray-500" colSpan={2}>No subscription plans.</td>
+                  <td className="py-2 pr-4 text-gray-500 table-cell border-b border-gray-100" colSpan={2}>No subscription plans.</td>
                 </tr>
               )}
             </tbody>

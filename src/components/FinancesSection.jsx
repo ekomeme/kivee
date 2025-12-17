@@ -122,38 +122,38 @@ export default function FinancesSection({ user, academy, db, membership }) {
     const renderTable = (payments, isPaidTab = false, onPay = null) => ( 
         <>
             <div className="overflow-x-auto hidden md:block">
-                <table className="min-w-full bg-section border border-gray-200">
+                <table className="min-w-full bg-section">
                     <thead>
                         <tr>
-                        <th className="py-2 px-4 border-b text-left">{academy?.studentLabelSingular || 'Student'}</th>
-                            <th className="py-2 px-4 border-b text-left">Item</th>
-                            <th className="py-2 px-4 border-b text-left">Amount</th>
-                            <th className="py-2 px-4 border-b text-left">{isPaidTab ? 'Paid Date' : 'Due Date'}</th> 
-                            {isPaidTab && <th className="py-2 px-4 border-b text-left">Method</th>}
-                            {!isPaidTab && <th className="py-2 px-4 border-b text-left">Actions</th>}
+                        <th className="py-2 px-4 border-b text-left table-header">{academy?.studentLabelSingular || 'Student'}</th>
+                            <th className="py-2 px-4 border-b text-left table-header">Item</th>
+                            <th className="py-2 px-4 border-b text-left table-header">Amount</th>
+                            <th className="py-2 px-4 border-b text-left table-header">{isPaidTab ? 'Paid Date' : 'Due Date'}</th> 
+                            {isPaidTab && <th className="py-2 px-4 border-b text-left table-header">Method</th>}
+                            {!isPaidTab && <th className="py-2 px-4 border-b text-left table-header">Actions</th>}
                         </tr>
                     </thead>
                     <tbody>
                         {payments.map((payment, index) => (
-                            <tr key={index} className="hover:bg-gray-50">
-                                <td className="py-3 px-4 border-b font-medium">
+                            <tr key={index} className="hover:bg-gray-50 table-row-hover">
+                                <td className="py-3 px-4 border-b font-medium table-cell">
                                     <Link to={`/students/${payment.studentId}`} className="text-primary hover:underline">
                                         {payment.studentName}
                                     </Link>
                                 </td>
-                                <td className="py-3 px-4 border-b">{payment.itemName}</td>
-                                <td className="py-3 px-4 border-b flex items-center gap-2">
+                                <td className="py-3 px-4 border-b table-cell">{payment.itemName}</td>
+                                <td className="py-3 px-4 border-b flex items-center gap-2 table-cell">
                                     <span>{formatCurrency(payment.amount)}</span>
                                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isPaidTab ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>{isPaidTab ? 'Paid' : 'Unpaid'}</span>
                                 </td>
-                                <td className="py-3 px-4 border-b">{formatDate(isPaidTab ? payment.paidAt : payment.dueDate)}</td>
+                                <td className="py-3 px-4 border-b table-cell">{formatDate(isPaidTab ? payment.paidAt : payment.dueDate)}</td>
 
-                                {isPaidTab && <td className="py-3 px-4 border-b">{payment.paymentMethod}</td>}
+                                {isPaidTab && <td className="py-3 px-4 border-b table-cell">{payment.paymentMethod}</td>}
                                 {!isPaidTab && (
-                                    <td className="py-3 px-4 border-b">
+                                    <td className="py-3 px-4 border-b table-cell">
                 <button
                     onClick={() => onPay && onPay(index)}
-                    className="bg-primary hover:bg-primary-hover text-white text-xs font-bold py-1 px-3 rounded-md flex items-center"
+                    className="btn-primary-sm"
                     aria-label={`Add payment for ${payment.studentName}`}
                 >
                     <Plus className="mr-1 h-4 w-4" /> Add Payment
@@ -179,7 +179,7 @@ export default function FinancesSection({ user, academy, db, membership }) {
                             {!isPaidTab && (
                                 <button
                                     onClick={() => onPay && onPay(index)}
-                            className="bg-primary hover:bg-primary-hover text-white text-xs font-bold py-1.5 px-3 rounded-md flex items-center"
+                            className="btn-primary-sm"
                             aria-label={`Add payment for ${payment.studentName}`}
                         >
                             <Plus className="mr-1 h-4 w-4" /> Pay
@@ -276,7 +276,7 @@ export default function FinancesSection({ user, academy, db, membership }) {
                         <div><label htmlFor="paymentDate" className="block text-sm font-medium text-gray-700">Payment Date</label><input type="date" id="paymentDate" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
                         <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-section py-3 md:bg-transparent md:py-0">
                             <button type="button" onClick={onClose} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
-                            <button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary-hover text-white font-bold py-2 px-4 rounded-md w-full md:w-auto disabled:opacity-50">{isSubmitting ? 'Saving...' : 'Confirm Payment'}</button>
+                            <button type="submit" disabled={isSubmitting} className="btn-primary w-full md:w-auto">{isSubmitting ? 'Saving...' : 'Confirm Payment'}</button>
                         </div>
                     </form>
                 </div>

@@ -294,7 +294,7 @@ export default function GroupDetailPage({ user, academy, db, membership }) {
                 </div>
                 <div className="flex justify-end space-x-3">
                   <button type="button" onClick={() => { setEditingSession(null); setScheduleForm({ day: 'Monday', startTime: '', endTime: '' }); }} className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 text-gray-800">Cancel</button>
-                  <button type="submit" className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover">{editingSession ? 'Update' : 'Add'}</button>
+                  <button type="submit" className="btn-primary">{editingSession ? 'Update' : 'Add'}</button>
                 </div>
               </form>
             </div>
