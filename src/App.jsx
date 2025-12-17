@@ -144,6 +144,7 @@ export default function App() {
   const [availableAcademies, setAvailableAcademies] = useState([]); // Nuevo: todas las academias disponibles
   const [membership, setMembership] = useState(null); // Nuevo estado para el rol
   const [loading, setLoading] = useState(true);
+  const [loadingAcademies, setLoadingAcademies] = useState(false); // Nuevo: loading para academias
   const [creatingAcademy, setCreatingAcademy] = useState(false);
   const [error, setError] = useState(null);
   const [pendingInvites, setPendingInvites] = useState([]);
@@ -268,6 +269,9 @@ export default function App() {
       return;
     }
 
+    // Mostrar loading visual
+    setLoadingAcademies(true);
+
     // Guardar en localStorage
     try {
       localStorage.setItem(`lastAcademy_${user.uid}`, academyId);
@@ -275,8 +279,13 @@ export default function App() {
       console.error('Failed to save to localStorage:', err);
     }
 
+    // Pequeño delay para feedback visual
+    await new Promise(resolve => setTimeout(resolve, 300));
+
     // Cargar la academia seleccionada
     await loadAcademyById(academyId);
+
+    setLoadingAcademies(false);
   }, [user, loadAcademyById, availableAcademies]);
 
   const ensureOwnerMembership = useCallback(async (academyId, currentUser) => {
@@ -360,11 +369,13 @@ export default function App() {
         setAvailableAcademies([]);
         setMembership(null);
         setLoading(false);
+        setLoadingAcademies(false);
         setPendingInvites([]);
         return;
       }
 
       try {
+        setLoadingAcademies(true); // Activar loading de academias
         // 1) Cargar TODAS las academias disponibles
         const allAcademies = await loadAllAcademies(nextUser.uid);
 
@@ -447,6 +458,8 @@ export default function App() {
       } catch (e) {
         console.error("Firestore error", e);
         setError("Failed to fetch academy data");
+      } finally {
+        setLoadingAcademies(false); // Desactivar loading de academias
       }
 
       setLoading(false);
@@ -589,6 +602,11 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
+  }
+
+  // Show loading while checking for academies
+  if (user && loadingAcademies) {
+    return <div className="flex items-center justify-center h-screen bg-gray-100 text-gray-800"><p className="text-lg font-medium">Cargando...</p></div>;
   }
 
   if (user && !academy) {

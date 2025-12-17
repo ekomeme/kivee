@@ -180,15 +180,23 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
 
   return (
     <div className="bg-section p-4 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl w-full max-w-7xl mx-auto">
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-          <button onClick={() => changeTab('details')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'details' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-            Details
-          </button>
-          <button onClick={() => changeTab('finances')} className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'finances' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-            Finances
-          </button>
-        </nav>
+      <div className="tabs-container">
+        <div className="tabs-scroll-wrapper">
+          <nav className="tabs-nav" aria-label="Tabs">
+            <button
+              onClick={() => changeTab('details')}
+              className={`tab-button ${activeTab === 'details' ? 'active' : ''}`}
+            >
+              Details
+            </button>
+            <button
+              onClick={() => changeTab('finances')}
+              className={`tab-button ${activeTab === 'finances' ? 'active' : ''}`}
+            >
+              Finances
+            </button>
+          </nav>
+        </div>
       </div>
 
       {activeTab === 'details' && (

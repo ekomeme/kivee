@@ -393,24 +393,26 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
         </div>
         <div className="content-card-responsive space-y-8">
           <div className="tabs-container">
-            <nav className="tabs-nav" aria-label="Tabs" role="tablist">
-              <button
-                role="tab"
-                aria-selected={activeTab === 'settings'}
-                onClick={() => setActiveTab('settings')}
-                className={`tab-button ${activeTab === 'settings' ? 'active' : ''}`}
-              >
-                <Settings /> Preferences
-              </button>
-              <button
-                role="tab"
-                aria-selected={activeTab === 'team'}
-                onClick={() => setActiveTab('team')}
-                className={`tab-button ${activeTab === 'team' ? 'active' : ''}`}
-              >
-                <Users /> Team
-              </button>
-            </nav>
+            <div className="tabs-scroll-wrapper">
+              <nav className="tabs-nav" aria-label="Tabs" role="tablist">
+                <button
+                  role="tab"
+                  aria-selected={activeTab === 'settings'}
+                  onClick={() => setActiveTab('settings')}
+                  className={`tab-button ${activeTab === 'settings' ? 'active' : ''}`}
+                >
+                  <Settings /> Preferences
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={activeTab === 'team'}
+                  onClick={() => setActiveTab('team')}
+                  className={`tab-button ${activeTab === 'team' ? 'active' : ''}`}
+                >
+                  <Users /> Team
+                </button>
+              </nav>
+            </div>
           </div>
 
           {activeTab === 'settings' && (
