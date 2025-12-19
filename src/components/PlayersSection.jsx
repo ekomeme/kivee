@@ -4,6 +4,7 @@ import { collection, query, getDocs, doc, deleteDoc, getDoc, updateDoc } from 'f
 import { deleteObject, ref as storageRef } from 'firebase/storage';
 import { storage } from '../firebase';
 import toast from 'react-hot-toast';
+import LoadingBar from './LoadingBar.jsx';
 import '../styles/sections.css';
 
 import { Plus, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Filter, ChevronRight, Check, X } from 'lucide-react';
@@ -446,6 +447,7 @@ export default function PlayersSection({ user, academy, db, membership }) { // 1
         </div>
 
       <div className="content-card-responsive">
+      <LoadingBar loading={loading} />
       {/* Filters Section */}
       <div className="flex items-center space-x-4 mb-4 p-4 bg-app rounded-lg">
         <div className="flex items-center space-x-4">

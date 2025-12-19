@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
 import { Plus, Edit, Trash2, MoreVertical, Package, Tag, Zap, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import LoadingBar from './LoadingBar.jsx';
 import '../styles/sections.css';
 
 export default function PlansOffersSection({ user, academy, db, membership }) {
@@ -531,6 +532,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
         </div>
 
         <div className="content-card-responsive">
+          <LoadingBar loading={loadingTiers || loadingProducts || loadingTrials} />
           {/* Tabs */}
           <div className="tabs-container">
             <div

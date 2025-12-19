@@ -4,7 +4,7 @@ import { LayoutDashboard, Users, GalleryVerticalEnd, PackageOpen, ChartLine, Set
 import logoKivee from '../assets/logo-kivee.svg';
 import './Sidebar.css';
 
-const AcademySelector = ({ availableAcademies, currentAcademy, onSwitch, academy }) => {
+const AcademySelector = ({ availableAcademies, currentAcademy, onSwitch, academy, onOpenInviteModal }) => {
   const menuRef = useRef(null);
   const [showMenu, setShowMenu] = React.useState(false);
 
@@ -42,7 +42,10 @@ const AcademySelector = ({ availableAcademies, currentAcademy, onSwitch, academy
           {hasMultipleAcademies && <ChevronsUpDown className="sidebar__chevron" />}
         </button>
         <div className="sidebar__header-divider"></div>
-        <button className="sidebar__invite-link">
+        <button
+          className="sidebar__invite-link"
+          onClick={onOpenInviteModal}
+        >
           <UserPlus className="sidebar__invite-icon" />
           <span>Invite teammates</span>
         </button>
@@ -79,6 +82,7 @@ export default function Sidebar({
   studentLabelPlural,
   pendingInvites,
   onNavigate,
+  onOpenInviteModal,
   userMenu,
   showHeader = true,
   className = "",
@@ -96,6 +100,7 @@ export default function Sidebar({
           currentAcademy={academy}
           onSwitch={onSwitchAcademy}
           academy={academy}
+          onOpenInviteModal={onOpenInviteModal}
         />
       )}
 

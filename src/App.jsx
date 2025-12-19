@@ -21,6 +21,7 @@ import loginIllustration from "./assets/login-ilustration.svg";
 import { isValidAcademyId, getValidatedLocalStorage } from "./utils/validators";
 import logoKivee from "./assets/logo-kivee.svg";
 import Sidebar from "./components/Sidebar.jsx";
+import InviteTeammateModal from "./components/InviteTeammateModal.jsx";
 
 const AcademySelector = ({ availableAcademies, currentAcademy, onSwitch }) => {
   const [showMenu, setShowMenu] = useState(false);
@@ -152,6 +153,8 @@ export default function App() {
   const [nameInput, setNameInput] = useState("");
   const nameInputRef = useRef(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [refreshTeamData, setRefreshTeamData] = useState(null);
   const studentLabelSingular = academy?.studentLabelSingular || 'Student';
   const studentLabelPlural = academy?.studentLabelPlural || 'Students';
 
@@ -696,6 +699,7 @@ export default function App() {
           studentLabelPlural={studentLabelPlural}
           pendingInvites={pendingInvites}
           onNavigate={() => setIsMobileMenuOpen(false)}
+          onOpenInviteModal={() => setShowInviteModal(true)}
           userMenu={<UserMenu user={user} onSignOut={handleSignOut} isSidebar={true} />}
         />
       </div>
@@ -732,6 +736,7 @@ export default function App() {
             studentLabelPlural={studentLabelPlural}
             pendingInvites={pendingInvites}
             onNavigate={() => setIsMobileMenuOpen(false)}
+            onOpenInviteModal={() => setShowInviteModal(true)}
             showHeader={false}
             className="flex-1"
             userMenu={<UserMenu user={user} onSignOut={handleSignOut} isSidebar={true} />}
@@ -787,6 +792,8 @@ export default function App() {
               onAcceptInvite={handleAcceptInvite}
               onDeclineInvite={handleDeclineInvite}
               isAcceptingInvite={isAcceptingInvite}
+              onOpenInviteModal={() => setShowInviteModal(true)}
+              onRegisterRefreshTeamData={setRefreshTeamData}
               onAcademyUpdate={async () => {
                 if (academy?.id) {
                   await handleAcademyUpdated(academy.id);
@@ -809,6 +816,20 @@ export default function App() {
           </Routes>
         </div>
       </div>
+
+      {/* Invite Teammate Modal */}
+      <InviteTeammateModal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        user={user}
+        academy={academy}
+        db={db}
+        onInviteSent={() => {
+          if (refreshTeamData) {
+            refreshTeamData();
+          }
+        }}
+      />
     </div>
   );
 }

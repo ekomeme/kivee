@@ -3,6 +3,7 @@ import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc, where } 
 import { Plus, Edit, Trash2, MoreVertical, Users, Calendar, ArrowRightLeft, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import LoadingBar from './LoadingBar.jsx';
 import '../styles/sections.css';
 
 export default function GroupsAndClassesSection({ user, academy, db, membership }) {
@@ -312,6 +313,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
           <div />
         </div>
       <div className="content-card-responsive">
+      <LoadingBar loading={loadingGroups} />
       <div className="tabs-container">
           <div
             className="tabs-scroll-wrapper"

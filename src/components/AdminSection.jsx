@@ -3,10 +3,10 @@ import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc, serverTi
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import Select from 'react-select';
 import toast from 'react-hot-toast';
-import { Upload, Settings, Users } from 'lucide-react';
+import { Upload, Settings, Users, Plus } from 'lucide-react';
 import { sanitizeEmail, sanitizeText, sanitizeFilename, validateFileType } from '../utils/validators';
 import '../styles/sections.css';
-export default function AdminSection({ user, academy, db, onAcademyUpdate, pendingInvites = [], onAcceptInvite, onDeclineInvite, isAcceptingInvite }) {
+export default function AdminSection({ user, academy, db, onAcademyUpdate, pendingInvites = [], onAcceptInvite, onDeclineInvite, isAcceptingInvite, onOpenInviteModal, onRegisterRefreshTeamData }) {
   // States for Academy Settings
   const [currencyOptions, setCurrencyOptions] = useState([]);
   const [countryOptions, setCountryOptions] = useState([]);
@@ -24,11 +24,9 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
   const logoInputRef = useRef(null);
   const ACADEMY_CATEGORIES = ['Soccer', 'Basketball', 'Tennis', 'Other'];
   const [activeTab, setActiveTab] = useState('settings');
-  const [inviteEmail, setInviteEmail] = useState('');
   const [teamMembers, setTeamMembers] = useState([]);
   const [teamInvites, setTeamInvites] = useState([]);
   const [teamLoading, setTeamLoading] = useState(false);
-  const [isInviting, setIsInviting] = useState(false);
   const [inviteAcademyNames, setInviteAcademyNames] = useState({});
   const academyId = academy.id || academy.ownerId || user?.uid;
   const canManageTeam = academy.ownerId === user?.uid;
@@ -42,7 +40,6 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
     setLogoFile(null);
     setStudentLabelSingular(academy.studentLabelSingular || 'Student');
     setStudentLabelPlural(academy.studentLabelPlural || 'Students');
-    setInviteEmail('');
   }, [academy]);
 
   useEffect(() => {
@@ -113,6 +110,13 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
     fetchTeamData();
   }, [fetchTeamData]);
 
+  // Register the refresh function with App.jsx
+  useEffect(() => {
+    if (onRegisterRefreshTeamData) {
+      onRegisterRefreshTeamData(() => fetchTeamData);
+    }
+  }, [onRegisterRefreshTeamData, fetchTeamData]);
+
   // Fetch academy names for pending invites
   useEffect(() => {
     const fetchInviteAcademyNames = async () => {
@@ -138,48 +142,6 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
 
     fetchInviteAcademyNames();
   }, [pendingInvites, db]);
-
-  const handleInviteSubmit = async (e) => {
-    e.preventDefault();
-    if (!canManageTeam || !inviteEmail.trim()) return;
-
-    // Validate and sanitize email
-    const sanitizedEmail = sanitizeEmail(inviteEmail);
-    if (!sanitizedEmail) {
-      toast.error("Por favor ingresa un correo electrónico válido.");
-      return;
-    }
-
-    const isAlreadyMember = teamMembers.some(m => (m.email || '').toLowerCase() === sanitizedEmail);
-    const isAlreadyInvited = teamInvites.some(i => (i.email || '').toLowerCase() === sanitizedEmail && i.status === 'pending');
-    if (isAlreadyMember) {
-      toast.error("Ese usuario ya es parte del equipo.");
-      return;
-    }
-    if (isAlreadyInvited) {
-      toast.error("Ya existe una invitación pendiente para ese correo.");
-      return;
-    }
-
-    setIsInviting(true);
-    try {
-      await addDoc(collection(db, `academies/${academyId}/invites`), {
-        email: sanitizedEmail,
-        status: 'pending',
-        invitedBy: user.uid,
-        role: 'admin',
-        invitedAt: serverTimestamp(),
-      });
-      toast.success("Invitación enviada.");
-      setInviteEmail('');
-      fetchTeamData();
-    } catch (err) {
-      console.error("Error inviting teammate:", err);
-      toast.error("No se pudo enviar la invitación.");
-    } finally {
-      setIsInviting(false);
-    }
-  };
 
   const handleRemoveMember = async (member) => {
     if (!canManageTeam) return;
@@ -586,23 +548,13 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
                   <p className="text-sm text-gray-600">Invita o gestiona a quienes pueden administrar la academia.</p>
                 </div>
                 {canManageTeam && (
-                  <form onSubmit={handleInviteSubmit} className="flex items-center space-x-2">
-                    <input
-                      type="email"
-                      placeholder="email@domain.com"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                      required
-                    />
-                    <button
-                      type="submit"
-                      className="btn-primary shadow-sm"
-                      disabled={isInviting}
-                    >
-                      {isInviting ? 'Sending...' : 'Invite'}
-                    </button>
-                  </form>
+                  <button
+                    onClick={onOpenInviteModal}
+                    className="btn-primary shadow-sm flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Invite teammate
+                  </button>
                 )}
               </div>
 
