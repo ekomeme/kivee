@@ -4,13 +4,15 @@ import { collection, query, getDocs, doc, deleteDoc, getDoc, updateDoc } from 'f
 import { deleteObject, ref as storageRef } from 'firebase/storage';
 import { storage } from '../firebase';
 import toast from 'react-hot-toast';
+import { useAcademy } from '../contexts/AcademyContext';
+import { calculateAge } from '../utils/formatters';
+import { hasValidMembership } from '../utils/permissions';
 import LoadingBar from './LoadingBar.jsx';
 import '../styles/sections.css';
 
 import { Plus, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Filter, ChevronRight, Check, X } from 'lucide-react';
-export default function PlayersSection({ user, academy, db, membership }) { // 1. Recibir 'membership' como prop
-  const studentLabelPlural = academy?.studentLabelPlural || 'Students';
-  const studentLabelSingular = academy?.studentLabelSingular || 'Student';
+export default function PlayersSection({ user, db }) {
+  const { academy, membership, studentLabelPlural, studentLabelSingular } = useAcademy();
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -47,14 +49,7 @@ export default function PlayersSection({ user, academy, db, membership }) { // 1
         player.tutor = tutorSnap.exists() ? { id: tutorSnap.id, ...tutorSnap.data() } : null;
       }
       if (player.birthday) {
-        const birthDate = new Date(player.birthday);
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-          age--;
-        }
-        player.age = age;
+        player.age = calculateAge(player.birthday);
       }
       if (player.plan && player.plan.type === 'tier') {
         player.tierName = tiersMap.get(player.plan.id) || 'N/A';
@@ -125,7 +120,7 @@ export default function PlayersSection({ user, academy, db, membership }) { // 1
     }
 
     // Si el rol del usuario no tiene permisos, no hacemos la consulta.
-    if (!['owner', 'admin', 'member'].includes(membership.role)) {
+    if (!hasValidMembership(membership)) {
       setError(`You don't have permission to view ${studentLabelPlural.toLowerCase()}.`);
       setPlayers([]);
       setLoading(false);
