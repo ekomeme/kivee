@@ -22,122 +22,9 @@ import { isValidAcademyId, getValidatedLocalStorage } from "./utils/validators";
 import logoKivee from "./assets/logo-kivee.svg";
 import Sidebar from "./components/Sidebar.jsx";
 import InviteTeammateModal from "./components/InviteTeammateModal.jsx";
-
-const AcademySelector = ({ availableAcademies, currentAcademy, onSwitch }) => {
-  const [showMenu, setShowMenu] = useState(false);
-  const menuRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setShowMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [menuRef]);
-
-  if (!availableAcademies || availableAcademies.length <= 1) {
-    return null; // No mostrar si solo hay una academia o ninguna
-  }
-
-  return (
-    <div className="relative" ref={menuRef}>
-      <button
-        onClick={() => setShowMenu(!showMenu)}
-        className="flex items-center space-x-2 px-3 py-2 rounded-md hover:bg-gray-100 text-sm font-medium"
-        title="Cambiar academia"
-      >
-        <span className="truncate max-w-[150px]">{currentAcademy?.name || 'Seleccionar academia'}</span>
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {showMenu && (
-        <div className="absolute top-full left-0 mt-2 w-64 bg-section border border-gray-200 rounded-lg shadow-lg z-50 py-2">
-          <div className="px-4 py-2 text-xs text-gray-500 font-semibold uppercase">Tus academias</div>
-          {availableAcademies.map((academy) => (
-            <button
-              key={academy.id}
-              onClick={() => {
-                onSwitch(academy.id);
-                setShowMenu(false);
-              }}
-              className={`w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center justify-between transition ${
-                currentAcademy?.id === academy.id ? 'bg-primary/10' : ''
-              }`}
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{academy.name}</p>
-                <p className="text-xs text-gray-500 capitalize">{academy.userRole}</p>
-              </div>
-              {currentAcademy?.id === academy.id && (
-                <svg className="w-5 h-5 text-primary flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const UserMenu = ({ user, onSignOut, isSidebar = false }) => {
-  const [showMenu, setShowMenu] = useState(false);
-  const menuRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setShowMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [menuRef]);
-
-  return (
-    <div className={isSidebar ? "sidebar__user-menu" : "relative"} ref={menuRef}>
-      <button
-        onClick={() => setShowMenu(!showMenu)}
-        className={isSidebar ? "sidebar__user-button" : "flex items-center space-x-3 p-2 rounded-full hover:bg-gray-100"}
-      >
-        <div className={isSidebar ? "sidebar__user-avatar" : "w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center"}>
-          {user.photoURL ? (
-            <img src={user.photoURL} alt="User Avatar" />
-          ) : (
-            <span>
-              {user.displayName ? user.displayName.charAt(0).toUpperCase() : (user.email ? user.email.charAt(0).toUpperCase() : '?')}
-            </span>
-          )}
-        </div>
-        {isSidebar ? (
-          <span className="sidebar__user-name">{user.displayName || user.email}</span>
-        ) : (
-          <span className="font-medium truncate hidden md:block">{user.displayName || user.email}</span>
-        )}
-        {isSidebar && <ChevronsUpDown className="sidebar__chevron" />}
-      </button>
-      {showMenu && (
-        <div className={isSidebar ? "sidebar__user-menu-dropdown" : "absolute top-full right-0 mt-2 w-64 bg-section border border-gray-200 rounded-lg shadow-lg z-10 p-4"}>
-          <p className={isSidebar ? "sidebar__user-menu-name" : "text-sm font-bold truncate"}>{user.displayName}</p>
-          <p className={isSidebar ? "sidebar__user-menu-email" : "text-xs text-gray-500 truncate mb-3"}>{user.email}</p>
-          <hr className={isSidebar ? "sidebar__user-menu-divider" : "my-2"} />
-          <button onClick={onSignOut} className={isSidebar ? "sidebar__user-menu-signout" : "w-full text-left text-red-600 hover:bg-red-50 rounded-md px-3 py-2 flex items-center"}>
-            <LogOut className={isSidebar ? "sidebar__icon" : "mr-2 h-4 w-4"} />
-            <span>Sign Out</span>
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
+import AcademySelector from "./components/AcademySelector.jsx";
+import UserMenu from "./components/UserMenu.jsx";
+import { AcademyProvider } from "./contexts/AcademyContext.jsx";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -690,19 +577,20 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-app font-sans relative overflow-x-hidden">
-      {/* Desktop Sidebar */}
-      <div className="text-gray-800 w-64 border-r border-gray-border hidden md:flex md:flex-col md:h-full">
-        <Sidebar
-          academy={academy}
-          availableAcademies={availableAcademies}
-          onSwitchAcademy={switchAcademy}
-          studentLabelPlural={studentLabelPlural}
-          pendingInvites={pendingInvites}
-          onNavigate={() => setIsMobileMenuOpen(false)}
-          onOpenInviteModal={() => setShowInviteModal(true)}
-          userMenu={<UserMenu user={user} onSignOut={handleSignOut} isSidebar={true} />}
-        />
-      </div>
+      <AcademyProvider user={user} db={db}>
+        {/* Desktop Sidebar */}
+        <div className="text-gray-800 w-64 border-r border-gray-border hidden md:flex md:flex-col md:h-full">
+          <Sidebar
+            academy={academy}
+            availableAcademies={availableAcademies}
+            onSwitchAcademy={switchAcademy}
+            studentLabelPlural={studentLabelPlural}
+            pendingInvites={pendingInvites}
+            onNavigate={() => setIsMobileMenuOpen(false)}
+            onOpenInviteModal={() => setShowInviteModal(true)}
+            userMenu={<UserMenu user={user} onSignOut={handleSignOut} isSidebar={true} />}
+          />
+        </div>
 
       {/* Mobile full-screen menu */}
       {isMobileMenuOpen && (
@@ -831,6 +719,7 @@ export default function App() {
           }
         }}
       />
+      </AcademyProvider>
     </div>
   );
 }
