@@ -2,9 +2,13 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { collection, getDocs, getDoc, doc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Users, Activity, Mail } from 'lucide-react';
+import { useAcademy } from '../contexts/AcademyContext';
+import { formatAcademyCurrency, toDateSafe } from '../utils/formatters';
+import { hasValidMembership } from '../utils/permissions';
 import '../styles/sections.css';
 
-export default function Dashboard({ user, academy, db, membership, pendingInvites = [], onAcceptInvite, onDeclineInvite, isAcceptingInvite }) {
+export default function Dashboard({ user, db, pendingInvites = [], onAcceptInvite, onDeclineInvite, isAcceptingInvite }) {
+  const { academy, membership, studentLabelPlural, studentLabelSingular } = useAcademy();
   const [loading, setLoading] = useState(true);
   const [players, setPlayers] = useState([]);
   const [productsMap, setProductsMap] = useState(new Map());
@@ -12,8 +16,6 @@ export default function Dashboard({ user, academy, db, membership, pendingInvite
   const [trialsMap, setTrialsMap] = useState(new Map());
   const [inviteAcademyNames, setInviteAcademyNames] = useState({});
   const navigate = useNavigate();
-  const studentLabelPlural = academy?.studentLabelPlural || 'Students';
-  const studentLabelSingular = academy?.studentLabelSingular || 'Student';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -21,7 +23,7 @@ export default function Dashboard({ user, academy, db, membership, pendingInvite
         setLoading(false);
         return;
       }
-      if (!['owner', 'admin', 'member'].includes(membership.role)) {
+      if (!hasValidMembership(membership)) {
         setLoading(false);
         return;
       }
@@ -75,24 +77,8 @@ export default function Dashboard({ user, academy, db, membership, pendingInvite
     fetchInviteAcademyNames();
   }, [pendingInvites, db]);
 
-  const formatCurrency = (value) => {
-    try {
-      return new Intl.NumberFormat(undefined, { style: 'currency', currency: academy?.currency || 'USD' }).format(value || 0);
-    } catch (e) {
-      return `$${Number(value || 0).toFixed(2)}`;
-    }
-  };
-
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  const toDateSafe = (d) => {
-    if (!d) return null;
-    if (d instanceof Date) return d;
-    if (d?.seconds) return new Date(d.seconds * 1000);
-    const parsed = new Date(d);
-    return isNaN(parsed) ? null : parsed;
-  };
 
   const payments = useMemo(() => {
     const list = [];
@@ -285,11 +271,11 @@ export default function Dashboard({ user, academy, db, membership, pendingInvite
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <p className="text-sm text-gray-600">Income this month</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(financeStats.incomesMonth)}</p>
+            <p className="text-2xl font-bold text-gray-900 mt-1">{formatAcademyCurrency(financeStats.incomesMonth, academy)}</p>
           </div>
           <div>
             <p className="text-sm text-gray-600">Pending to collect</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(financeStats.unpaidAmount)}</p>
+            <p className="text-2xl font-bold text-gray-900 mt-1">{formatAcademyCurrency(financeStats.unpaidAmount, academy)}</p>
           </div>
           <button
             onClick={() => navigate('/finances')}
@@ -307,7 +293,7 @@ export default function Dashboard({ user, academy, db, membership, pendingInvite
                 const barHeight = Math.max(4, (m.value / maxValue) * 120); // px height
                 return (
                   <div key={idx} className="flex flex-col items-center h-32 justify-end">
-                    <span className="text-xs text-gray-700 mb-1">{formatCurrency(m.value)}</span>
+                    <span className="text-xs text-gray-700 mb-1">{formatAcademyCurrency(m.value, academy)}</span>
                     <div className="w-full bg-primary rounded-t" style={{ height: `${barHeight}px` }}></div>
                     <p className="text-xs text-gray-600 mt-1">{m.label}</p>
                   </div>
