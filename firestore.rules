@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(academyId) {
+      return isAuthenticated() && request.auth.uid == academyId;
+    }
+
+    function isOwnerOrMember(academyId) {
+      return isOwner(academyId) ||
+             exists(/databases/$(database)/documents/academies/$(academyId)/members/$(request.auth.uid));
+    }
+
+    // CRITICAL: Global rule for collectionGroup queries
+    // Support both 'invites' and 'invitations' during migration
+    match /{path=**}/invitations/{inviteId} {
+      allow read: if isAuthenticated() && resource.data.email == request.auth.token.email;
+    }
+    match /{path=**}/invites/{inviteId} {
+      allow read: if isAuthenticated() && resource.data.email == request.auth.token.email;
+    }
+
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      match /memberships/{membershipId} {
+        allow read: if isAuthenticated() && request.auth.uid == userId;
+        allow write: if isAuthenticated() && request.auth.uid == userId;
+      }
+    }
+
+    match /academies/{academyId} {
+      allow read: if isOwnerOrMember(academyId) ||
+                     (isAuthenticated() &&
+                      exists(/databases/$(database)/documents/academies/$(academyId)/invitations/$(request.auth.uid)) &&
+                      get(/databases/$(database)/documents/academies/$(academyId)/invitations/$(request.auth.uid)).data.email == request.auth.token.email);
+      allow create: if isAuthenticated() && request.auth.uid == academyId;
+      allow update: if isOwnerOrMember(academyId);
+      allow delete: if isOwner(academyId);
+
+      match /members/{memberId} {
+        allow read: if isOwnerOrMember(academyId);
+        allow write: if isOwnerOrMember(academyId) ||
+                        (isAuthenticated() && memberId == request.auth.uid);
+      }
+
+      // Support both collections during migration
+      match /invitations/{inviteId} {
+        allow read: if isOwnerOrMember(academyId) ||
+                      (isAuthenticated() && resource.data.email == request.auth.token.email);
+        allow update: if isOwnerOrMember(academyId) ||
+                         (isAuthenticated() && resource.data.email == request.auth.token.email);
+        allow create, delete: if isOwnerOrMember(academyId);
+      }
+
+      match /invites/{inviteId} {
+        allow read: if isOwnerOrMember(academyId) ||
+                      (isAuthenticated() && resource.data.email == request.auth.token.email);
+        allow update: if isOwnerOrMember(academyId) ||
+                         (isAuthenticated() && resource.data.email == request.auth.token.email);
+        allow create, delete: if isOwnerOrMember(academyId);
+      }
+
+      match /groups/{groupId} {
+        allow read, write: if isOwnerOrMember(academyId);
+
+        match /schedule/{sessionId} {
+          allow read, write: if isOwnerOrMember(academyId);
+        }
+      }
+
+      match /{subcollection}/{docId} {
+        allow read, write: if subcollection in ['players', 'tiers', 'trials', 'tutors', 'products']
+                              && isOwnerOrMember(academyId);
+      }
+    }
+  }
+}

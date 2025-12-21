@@ -824,6 +824,7 @@ export default function App() {
         user={user}
         academy={academy}
         db={db}
+        membership={membership}
         onInviteSent={() => {
           if (refreshTeamData) {
             refreshTeamData();

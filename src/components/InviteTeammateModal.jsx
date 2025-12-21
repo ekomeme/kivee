@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import toast from 'react-hot-toast';
-import { sanitizeEmail } from '../utils/validators';
+import { sanitizeEmail, isValidEmail } from '../utils/validators';
+import { ROLES, COLLECTIONS, ERROR_MESSAGES } from '../config/constants';
+import { canManageTeam as canManageTeamPermission } from '../utils/permissions';
 
 export default function InviteTeammateModal({
   isOpen,
@@ -10,21 +12,22 @@ export default function InviteTeammateModal({
   user,
   academy,
   db,
+  membership,
   onInviteSent
 }) {
   const [inviteEmail, setInviteEmail] = useState('');
   const [isInviting, setIsInviting] = useState(false);
 
-  const academyId = academy.id || academy.ownerId || user?.uid;
-  const canManageTeam = academy.ownerId === user?.uid;
+  const academyId = academy.id;
+  const canManageTeam = canManageTeamPermission(membership);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!canManageTeam || !inviteEmail.trim()) return;
 
     const sanitizedEmail = sanitizeEmail(inviteEmail);
-    if (!sanitizedEmail) {
-      toast.error("Por favor ingresa un correo electrónico válido.");
+    if (!isValidEmail(sanitizedEmail)) {
+      toast.error(ERROR_MESSAGES.INVALID_INPUT);
       return;
     }
 
@@ -32,8 +35,8 @@ export default function InviteTeammateModal({
     try {
       // Fetch current team members and invites to check for duplicates
       const [membersSnap, invitesSnap] = await Promise.all([
-        getDocs(collection(db, `academies/${academyId}/members`)),
-        getDocs(collection(db, `academies/${academyId}/invites`)),
+        getDocs(collection(db, `${COLLECTIONS.ACADEMIES}/${academyId}/${COLLECTIONS.MEMBERS}`)),
+        getDocs(collection(db, `${COLLECTIONS.ACADEMIES}/${academyId}/${COLLECTIONS.INVITATIONS}`)),
       ]);
 
       const teamMembers = membersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -43,25 +46,25 @@ export default function InviteTeammateModal({
       const isAlreadyInvited = teamInvites.some(i => (i.email || '').toLowerCase() === sanitizedEmail && i.status === 'pending');
 
       if (isAlreadyMember) {
-        toast.error("Ese usuario ya es parte del equipo.");
+        toast.error("That user is already part of the team.");
         setIsInviting(false);
         return;
       }
       if (isAlreadyInvited) {
-        toast.error("Ya existe una invitación pendiente para ese correo.");
+        toast.error("A pending invitation already exists for that email.");
         setIsInviting(false);
         return;
       }
 
-      await addDoc(collection(db, `academies/${academyId}/invites`), {
+      await addDoc(collection(db, `${COLLECTIONS.ACADEMIES}/${academyId}/${COLLECTIONS.INVITATIONS}`), {
         email: sanitizedEmail,
         status: 'pending',
         invitedBy: user.uid,
-        role: 'admin',
+        role: ROLES.ADMIN,
         invitedAt: serverTimestamp(),
       });
 
-      toast.success("Invitación enviada.");
+      toast.success("Invitation sent successfully.");
       setInviteEmail('');
       onClose();
 
@@ -70,7 +73,7 @@ export default function InviteTeammateModal({
       }
     } catch (err) {
       console.error("Error inviting teammate:", err);
-      toast.error("No se pudo enviar la invitación.");
+      toast.error(ERROR_MESSAGES.GENERIC_ERROR);
     } finally {
       setIsInviting(false);
     }

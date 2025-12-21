@@ -114,7 +114,7 @@ export const COLLECTIONS = {
   ACADEMIES: 'academies',
   USERS: 'users',
   MEMBERSHIPS: 'memberships',
-  INVITATIONS: 'invitations',
+  INVITATIONS: 'invites', // Keeping 'invites' (matches existing Firestore collection)
 
   // Academy subcollections (use with getAcademyCollection helper)
   PLAYERS: 'players',

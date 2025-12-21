@@ -18,6 +18,16 @@ export const sanitizeText = (input, maxLength = 500) => {
 };
 
 /**
+ * Validate email format
+ * @param {string} email - Email address to validate
+ * @returns {boolean} True if email is valid
+ */
+export const isValidEmail = (email) => {
+  if (!email || typeof email !== 'string') return false;
+  return validator.isEmail(email);
+};
+
+/**
  * Validate and sanitize email
  * @param {string} email - Email address to validate
  * @returns {string|null} Sanitized email or null if invalid
