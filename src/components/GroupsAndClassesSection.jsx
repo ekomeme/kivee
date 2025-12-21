@@ -437,13 +437,15 @@ export default function GroupsAndClassesSection({ user, db }) {
                     <p className="text-xs text-gray-500">{group.minAge}-{group.maxAge} yrs • Coach: {group.coach || 'N/A'}</p>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <button
-                      type="button"
+                    <div
                       onClick={(e) => { e.stopPropagation(); handleOpenScheduleModal(group.id); }}
-                      className="btn-primary-sm"
+                      className="btn-primary-sm cursor-pointer"
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleOpenScheduleModal(group.id); } }}
                     >
                       <Plus className="mr-1 h-4 w-4" /> Add Session
-                    </button>
+                    </div>
                     <span className="text-sm text-gray-500">{isOpen ? '▾' : '▸'}</span>
                   </div>
                 </button>

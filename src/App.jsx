@@ -665,7 +665,7 @@ export default function App() {
           <Routes>
             <Route path="/sign-in" element={<Navigate to="/" replace />} />
             <Route path="/students/new" element={<NewPlayerPage user={user} academy={academy} db={db} membership={membership} />} />
-            <Route path="/students" element={<PlayersSection user={user} academy={academy} db={db} membership={membership} />} />
+            <Route path="/students" element={<PlayersSection user={user} db={db} />} />
             <Route path="/students/:playerId" element={<PlayerDetailPage user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/students/:playerId/edit" element={<EditPlayerPage user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/plans" element={<PlansOffersSection user={user} db={db} />} />
@@ -691,9 +691,7 @@ export default function App() {
             />} />
             <Route path="/" element={<Dashboard
               user={user}
-              academy={academy}
               db={db}
-              membership={membership}
               pendingInvites={pendingInvites}
               onAcceptInvite={handleAcceptInvite}
               onDeclineInvite={handleDeclineInvite}
