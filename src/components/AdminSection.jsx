@@ -4,9 +4,13 @@ import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "fire
 import Select from 'react-select';
 import toast from 'react-hot-toast';
 import { Upload, Settings, Users, Plus } from 'lucide-react';
+import { useAcademy } from '../contexts/AcademyContext';
 import { sanitizeEmail, sanitizeText, sanitizeFilename, validateFileType } from '../utils/validators';
+import { ownsAcademy } from '../utils/permissions';
+import { ACADEMY_CATEGORIES, EXTERNAL_APIS, COLLECTIONS } from '../config/constants';
 import '../styles/sections.css';
-export default function AdminSection({ user, academy, db, onAcademyUpdate, pendingInvites = [], onAcceptInvite, onDeclineInvite, isAcceptingInvite, onOpenInviteModal, onRegisterRefreshTeamData }) {
+export default function AdminSection({ user, db, onAcademyUpdate, pendingInvites = [], onAcceptInvite, onDeclineInvite, isAcceptingInvite, onOpenInviteModal, onRegisterRefreshTeamData }) {
+  const { academy, membership } = useAcademy();
   // States for Academy Settings
   const [currencyOptions, setCurrencyOptions] = useState([]);
   const [countryOptions, setCountryOptions] = useState([]);
@@ -22,14 +26,13 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
   const [studentLabelSingular, setStudentLabelSingular] = useState(academy.studentLabelSingular || 'Student');
   const [studentLabelPlural, setStudentLabelPlural] = useState(academy.studentLabelPlural || 'Students');
   const logoInputRef = useRef(null);
-  const ACADEMY_CATEGORIES = ['Soccer', 'Basketball', 'Tennis', 'Other'];
   const [activeTab, setActiveTab] = useState('settings');
   const [teamMembers, setTeamMembers] = useState([]);
   const [teamInvites, setTeamInvites] = useState([]);
   const [teamLoading, setTeamLoading] = useState(false);
   const [inviteAcademyNames, setInviteAcademyNames] = useState({});
-  const academyId = academy.id || academy.ownerId || user?.uid;
-  const canManageTeam = academy.ownerId === user?.uid;
+  const academyId = academy.id;
+  const canManageTeam = ownsAcademy(academy, user);
 
   // Sync form state when academy changes (e.g., switching dropdown)
   useEffect(() => {
@@ -46,7 +49,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
     const fetchCurrencies = async () => {
       try {
         // Using a more comprehensive, free, and open-source currency API
-        const response = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies.json');
+        const response = await fetch(EXTERNAL_APIS.CURRENCY);
         const data = await response.json();
 
         // The API returns an object like { "aed": "United Arab Emirates Dirham", ... }
@@ -70,7 +73,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
   useEffect(() => {
     const fetchCountries = async () => {
       try {
-        const response = await fetch('https://restcountries.com/v3.1/all?fields=name,cca2');
+        const response = await fetch(EXTERNAL_APIS.COUNTRIES);
         const data = await response.json();
         const countries = data.map(country => ({
           value: country.name.common,
@@ -91,8 +94,8 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
     setTeamLoading(true);
     try {
       const [membersSnap, invitesSnap] = await Promise.all([
-        getDocs(collection(db, `academies/${academyId}/members`)),
-        getDocs(collection(db, `academies/${academyId}/invites`)),
+        getDocs(collection(db, `${COLLECTIONS.ACADEMIES}/${academyId}/${COLLECTIONS.MEMBERS}`)),
+        getDocs(collection(db, `${COLLECTIONS.ACADEMIES}/${academyId}/invites`)),
       ]);
       const members = membersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       const invites = invitesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -154,11 +157,11 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
     if (!confirmed) return;
 
     try {
-      await deleteDoc(doc(db, `academies/${academyId}/members`, member.id));
+      await deleteDoc(doc(db, `${COLLECTIONS.ACADEMIES}/${academyId}/${COLLECTIONS.MEMBERS}`, member.id));
       if (member.userId || member.id) {
         const targetUserId = member.userId || member.id;
         try {
-          await deleteDoc(doc(db, `users/${targetUserId}/memberships`, academyId));
+          await deleteDoc(doc(db, `${COLLECTIONS.USERS}/${targetUserId}/${COLLECTIONS.MEMBERSHIPS}`, academyId));
         } catch (innerErr) {
           console.warn("No se pudo limpiar el membership del usuario:", innerErr);
         }
@@ -174,7 +177,7 @@ export default function AdminSection({ user, academy, db, onAcademyUpdate, pendi
   const handleCancelInvite = async (invite) => {
     if (!canManageTeam) return;
     try {
-      await updateDoc(doc(db, `academies/${academyId}/invites`, invite.id), { status: 'revoked', revokedAt: serverTimestamp() });
+      await updateDoc(doc(db, `${COLLECTIONS.ACADEMIES}/${academyId}/invites`, invite.id), { status: 'revoked', revokedAt: serverTimestamp() });
       toast.success("Invitación revocada.");
       fetchTeamData();
     } catch (err) {

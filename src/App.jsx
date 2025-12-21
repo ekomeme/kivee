@@ -674,7 +674,6 @@ export default function App() {
             <Route path="/groups/:groupId" element={<GroupDetailPage user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/settings" element={<AdminSection
               user={user}
-              academy={academy}
               db={db}
               pendingInvites={pendingInvites}
               onAcceptInvite={handleAcceptInvite}
