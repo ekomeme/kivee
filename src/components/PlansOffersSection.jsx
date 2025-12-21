@@ -4,8 +4,13 @@ import { Plus, Edit, Trash2, MoreVertical, Package, Tag, Zap, X } from 'lucide-r
 import toast from 'react-hot-toast';
 import LoadingBar from './LoadingBar.jsx';
 import '../styles/sections.css';
+import { useAcademy } from '../contexts/AcademyContext';
+import { hasValidMembership } from '../utils/permissions';
+import { formatAcademyCurrency } from '../utils/formatters';
+import { COLLECTIONS } from '../config/constants';
 
-export default function PlansOffersSection({ user, academy, db, membership }) {
+export default function PlansOffersSection({ user, db }) {
+  const { academy, membership } = useAcademy();
   const [tiers, setTiers] = useState([]);
   const [oneTimeProducts, setOneTimeProducts] = useState([]);
   const [trials, setTrials] = useState([]);
@@ -64,10 +69,10 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
 
   const fetchTiers = async () => {
     if (!user || !academy || !membership) return;
-    if (!['owner', 'admin', 'member'].includes(membership.role)) {
+    if (!hasValidMembership(membership)) {
       return;
     }
-    const tiersRef = collection(db, `academies/${academy.id}/tiers`);
+    const tiersRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.TIERS}`);
     const q = query(tiersRef);
     const querySnapshot = await getDocs(q);
     const tiersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -76,10 +81,10 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
 
   const fetchProducts = async () => {
     if (!user || !academy || !membership) return;
-    if (!['owner', 'admin', 'member'].includes(membership.role)) {
+    if (!hasValidMembership(membership)) {
       return;
     }
-    const productsRef = collection(db, `academies/${academy.id}/products`);
+    const productsRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.PRODUCTS}`);
     const q = query(productsRef);
     const querySnapshot = await getDocs(q);
     const productsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -88,10 +93,10 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
 
   const fetchTrials = async () => {
     if (!user || !academy || !membership) return;
-    if (!['owner', 'admin', 'member'].includes(membership.role)) {
+    if (!hasValidMembership(membership)) {
       return;
     }
-    const trialsRef = collection(db, `academies/${academy.id}/trials`);
+    const trialsRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.TRIALS}`);
     const q = query(trialsRef);
     const querySnapshot = await getDocs(q);
     const trialsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -137,12 +142,12 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
     try {
       if (editingTier) {
         // Update existing tier
-        const tierDocRef = doc(db, `academies/${academy.id}/tiers`, editingTier.id);
+        const tierDocRef = doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.TIERS}`, editingTier.id);
         await updateDoc(tierDocRef, tierData);
         toast.success("Tier updated successfully.");
       } else {
         // Add new tier
-        const tiersCollectionRef = collection(db, `academies/${academy.id}/tiers`);
+        const tiersCollectionRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.TIERS}`);
         await addDoc(tiersCollectionRef, tierData);
         toast.success("Tier added successfully.");
       }
@@ -233,11 +238,11 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
 
     try {
       if (editingProduct) {
-        const productDocRef = doc(db, `academies/${academy.id}/products`, editingProduct.id);
+        const productDocRef = doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.PRODUCTS}`, editingProduct.id);
         await updateDoc(productDocRef, productData);
         toast.success("Product updated successfully.");
       } else {
-        const productsCollectionRef = collection(db, `academies/${academy.id}/products`);
+        const productsCollectionRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.PRODUCTS}`);
         await addDoc(productsCollectionRef, productData);
         toast.success("Product added successfully.");
       }
@@ -300,11 +305,11 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
 
     try {
       if (editingTrial) {
-        const trialDocRef = doc(db, `academies/${academy.id}/trials`, editingTrial.id);
+        const trialDocRef = doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.TRIALS}`, editingTrial.id);
         await updateDoc(trialDocRef, trialData);
         toast.success("Trial updated successfully.");
       } else {
-        const trialsCollectionRef = collection(db, `academies/${academy.id}/trials`);
+        const trialsCollectionRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.TRIALS}`);
         await addDoc(trialsCollectionRef, trialData);
         toast.success("Trial added successfully.");
       }
@@ -341,7 +346,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
   const handleDeleteTier = async (tierId) => {
     const deleteAction = async () => {
       try {
-        await deleteDoc(doc(db, `academies/${academy.id}/tiers`, tierId));
+        await deleteDoc(doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.TIERS}`, tierId));
         fetchTiers();
         toast.success("Tier deleted successfully.");
       } catch (error) {
@@ -373,7 +378,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
   const handleDeleteProduct = async (productId) => {
     const deleteAction = async () => {
       try {
-        await deleteDoc(doc(db, `academies/${academy.id}/products`, productId));
+        await deleteDoc(doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.PRODUCTS}`, productId));
         fetchProducts();
         toast.success("Product deleted successfully.");
       } catch (error) {
@@ -396,7 +401,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
   const handleDeleteTrial = async (trialId) => {
     const deleteAction = async () => {
       try {
-        await deleteDoc(doc(db, `academies/${academy.id}/trials`, trialId));
+        await deleteDoc(doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.TRIALS}`, trialId));
         fetchTrials();
         toast.success("Trial deleted successfully.");
       } catch (error) {
@@ -414,20 +419,6 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
     ), {
       duration: 6000,
     });
-  };
-
-
-  const formatCurrency = (price, currencyCode) => {
-    try {
-      // Use Intl.NumberFormat for robust currency formatting
-      return new Intl.NumberFormat(undefined, {
-        style: 'currency',
-        currency: currencyCode || 'USD',
-      }).format(price);
-    } catch (e) {
-      // Fallback for invalid or missing currency codes
-      return `$${Number(price).toFixed(2)}`;
-    }
   };
 
   // Custom hook to detect clicks outside a component
@@ -592,16 +583,16 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
                             <td className="py-3 px-4 border-b text-base font-medium table-cell">{tier.name}</td>
                             <td className="py-3 px-4 border-b text-sm text-gray-600 max-w-xs truncate table-cell">{tier.description}</td>
                             <td className="py-3 px-4 border-b text-base table-cell">
-                              {tier.pricingModel === 'monthly' && `${formatCurrency(tier.price, academy.currency)}/mo`}
-                              {tier.pricingModel === 'semi-annual' && `${formatCurrency(tier.price, academy.currency)}/6mo`}
-                              {tier.pricingModel === 'annual' && `${formatCurrency(tier.price, academy.currency)}/yr`}
+                              {tier.pricingModel === 'monthly' && `${formatAcademyCurrency(tier.price, academy)}/mo`}
+                              {tier.pricingModel === 'semi-annual' && `${formatAcademyCurrency(tier.price, academy)}/6mo`}
+                              {tier.pricingModel === 'annual' && `${formatAcademyCurrency(tier.price, academy)}/yr`}
                               {tier.pricingModel === 'term' && (
                                 <div>
-                                  <p>{formatCurrency(tier.price, academy.currency)}/term</p>
+                                  <p>{formatAcademyCurrency(tier.price, academy)}/term</p>
                                   <p className="text-xs text-gray-500">{tier.termStartDate} - {tier.termEndDate}</p>
                                 </div>
                               )}
-                              {!tier.pricingModel && `${formatCurrency(tier.price, academy.currency)}`}
+                              {!tier.pricingModel && `${formatAcademyCurrency(tier.price, academy)}`}
                             </td>
                             <td className="py-3 px-4 border-b text-sm text-gray-600 table-cell">{tier.classesPerWeek ? `${tier.classesPerWeek} per week` : 'N/A'}</td>
                             <td className="py-3 px-4 border-b table-cell">
@@ -635,11 +626,11 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
                           <div className="bg-gray-50 rounded-md p-2">
                             <p className="text-xs text-gray-500">Price</p>
                             <p className="font-medium">
-                              {tier.pricingModel === 'monthly' && `${formatCurrency(tier.price, academy.currency)}/mo`}
-                              {tier.pricingModel === 'semi-annual' && `${formatCurrency(tier.price, academy.currency)}/6mo`}
-                              {tier.pricingModel === 'annual' && `${formatCurrency(tier.price, academy.currency)}/yr`}
-                              {tier.pricingModel === 'term' && `${formatCurrency(tier.price, academy.currency)}/term`}
-                              {!tier.pricingModel && `${formatCurrency(tier.price, academy.currency)}`}
+                              {tier.pricingModel === 'monthly' && `${formatAcademyCurrency(tier.price, academy)}/mo`}
+                              {tier.pricingModel === 'semi-annual' && `${formatAcademyCurrency(tier.price, academy)}/6mo`}
+                              {tier.pricingModel === 'annual' && `${formatAcademyCurrency(tier.price, academy)}/yr`}
+                              {tier.pricingModel === 'term' && `${formatAcademyCurrency(tier.price, academy)}/term`}
+                              {!tier.pricingModel && `${formatAcademyCurrency(tier.price, academy)}`}
                             </p>
                           </div>
                           <div className="bg-gray-50 rounded-md p-2">
@@ -695,7 +686,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
                       <tr key={product.id} className="hover:bg-gray-50 table-row-hover">
                         <td className="py-3 px-4 border-b text-base font-medium table-cell">{product.name}</td>
                         <td className="py-3 px-4 border-b text-sm text-gray-600 capitalize table-cell">{product.type}</td>
-                        <td className="py-3 px-4 border-b text-base table-cell">{formatCurrency(product.price, academy.currency)}</td>
+                        <td className="py-3 px-4 border-b text-base table-cell">{formatAcademyCurrency(product.price, academy)}</td>
                         <td className="py-3 px-4 border-b text-sm text-gray-600 table-cell">{product.inventory ?? 'N/A'}</td>
                         <td className="py-3 px-4 border-b text-right table-cell">
                         <button onClick={(e) => { e.stopPropagation(); setActiveProductMenu(product); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none" aria-label={`Actions for product ${product.name}`}>
@@ -722,7 +713,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
                     <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-700">
                       <div className="bg-gray-50 rounded-md p-2">
                         <p className="text-xs text-gray-500">Price</p>
-                        <p className="font-medium">{formatCurrency(product.price, academy.currency)}</p>
+                        <p className="font-medium">{formatAcademyCurrency(product.price, academy)}</p>
                       </div>
                       <div className="bg-gray-50 rounded-md p-2">
                         <p className="text-xs text-gray-500">Inventory</p>
@@ -767,7 +758,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
                         <td className="py-3 px-4 border-b text-base font-medium table-cell">{trial.name}</td>
                         <td className="py-3 px-4 border-b text-sm text-gray-600 table-cell">{trial.durationInDays} days</td>
                         <td className="py-3 px-4 border-b text-sm text-gray-600 capitalize table-cell">{trial.classLimit}</td>
-                        <td className="py-3 px-4 border-b text-base table-cell">{formatCurrency(trial.price, academy.currency)}</td>
+                        <td className="py-3 px-4 border-b text-base table-cell">{formatAcademyCurrency(trial.price, academy)}</td>
                         <td className="py-3 px-4 border-b text-right table-cell">
                         <button onClick={(e) => { e.stopPropagation(); setActiveTrialMenu(trial); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none" aria-label={`Actions for trial ${trial.name}`}>
                           <MoreVertical className="h-5 w-5 text-gray-500" />
@@ -797,7 +788,7 @@ export default function PlansOffersSection({ user, academy, db, membership }) {
                       </div>
                       <div className="bg-gray-50 rounded-md p-2">
                         <p className="text-xs text-gray-500">Price</p>
-                        <p className="font-medium">{formatCurrency(trial.price, academy.currency)}</p>
+                        <p className="font-medium">{formatAcademyCurrency(trial.price, academy)}</p>
                       </div>
                     </div>
                   </div>
