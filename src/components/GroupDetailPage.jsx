@@ -3,8 +3,11 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { doc, getDoc, collection, query, where, getDocs, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { Users, Calendar, Edit3, Save, X, Trash2, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAcademy } from '../contexts/AcademyContext';
+import { COLLECTIONS } from '../config/constants';
 
-export default function GroupDetailPage({ user, academy, db, membership }) {
+export default function GroupDetailPage({ user, db }) {
+  const { academy, membership, studentLabelPlural, studentLabelSingular } = useAcademy();
   const { groupId } = useParams();
   const navigate = useNavigate();
   const [group, setGroup] = useState(null);
@@ -16,15 +19,13 @@ export default function GroupDetailPage({ user, academy, db, membership }) {
   const [coachDraft, setCoachDraft] = useState('');
   const [scheduleForm, setScheduleForm] = useState({ day: 'Monday', startTime: '', endTime: '' });
   const [editingSession, setEditingSession] = useState(null);
-  const studentLabelPlural = academy?.studentLabelPlural || 'Students';
-  const studentLabelSingular = academy?.studentLabelSingular || 'Student';
 
   useEffect(() => {
     const fetchData = async () => {
       if (!user || !db || !groupId || !academy?.id || !membership) return;
       setLoading(true);
       try {
-        const groupRef = doc(db, `academies/${academy.id}/groups`, groupId);
+        const groupRef = doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.GROUPS}`, groupId);
         const groupSnap = await getDoc(groupRef);
         if (!groupSnap.exists()) {
           setError('Group not found');
@@ -35,12 +36,12 @@ export default function GroupDetailPage({ user, academy, db, membership }) {
         setGroup(groupData);
         setCoachDraft(groupData.coach || '');
 
-        const playersRef = collection(db, `academies/${academy.id}/players`);
+        const playersRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.PLAYERS}`);
         const playersQ = query(playersRef, where('groupId', '==', groupId));
         const playersSnap = await getDocs(playersQ);
         setStudents(playersSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-        const scheduleRef = collection(db, `academies/${academy.id}/groups/${groupId}/schedule`);
+        const scheduleRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.GROUPS}/${groupId}/schedule`);
         const scheduleSnap = await getDocs(scheduleRef);
         setSchedule(scheduleSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (err) {
@@ -59,7 +60,7 @@ export default function GroupDetailPage({ user, academy, db, membership }) {
 
   const handleSaveGroup = async () => {
     try {
-      const groupRef = doc(db, `academies/${academy.id}/groups`, groupId);
+      const groupRef = doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.GROUPS}`, groupId);
       await updateDoc(groupRef, { coach: coachDraft });
       setGroup(prev => ({ ...prev, coach: coachDraft }));
       setEditing(false);
@@ -89,15 +90,15 @@ export default function GroupDetailPage({ user, academy, db, membership }) {
     e.preventDefault();
     try {
       if (editingSession) {
-        const ref = doc(db, `academies/${academy.id}/groups/${groupId}/schedule`, editingSession.id);
+        const ref = doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.GROUPS}/${groupId}/schedule`, editingSession.id);
         await updateDoc(ref, scheduleForm);
         toast.success('Session updated');
       } else {
-        const ref = collection(db, `academies/${academy.id}/groups/${groupId}/schedule`);
+        const ref = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.GROUPS}/${groupId}/schedule`);
         await addDoc(ref, scheduleForm);
         toast.success('Session added');
       }
-      const scheduleRef = collection(db, `academies/${academy.id}/groups/${groupId}/schedule`);
+      const scheduleRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.GROUPS}/${groupId}/schedule`);
       const snap = await getDocs(scheduleRef);
       setSchedule(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setEditingSession(null);
@@ -110,7 +111,7 @@ export default function GroupDetailPage({ user, academy, db, membership }) {
 
   const handleDeleteSession = async (sessionId) => {
     try {
-      const ref = doc(db, `academies/${academy.id}/groups/${groupId}/schedule`, sessionId);
+      const ref = doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.GROUPS}/${groupId}/schedule`, sessionId);
       await deleteDoc(ref);
       setSchedule(prev => prev.filter(s => s.id !== sessionId));
       toast.success('Session deleted');

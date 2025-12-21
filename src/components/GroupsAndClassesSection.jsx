@@ -5,8 +5,12 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import LoadingBar from './LoadingBar.jsx';
 import '../styles/sections.css';
+import { useAcademy } from '../contexts/AcademyContext';
+import { hasValidMembership } from '../utils/permissions';
+import { COLLECTIONS } from '../config/constants';
 
-export default function GroupsAndClassesSection({ user, academy, db, membership }) {
+export default function GroupsAndClassesSection({ user, db }) {
+  const { academy, membership } = useAcademy();
   const [activeGroupTab, setActiveGroupTab] = useState('groups'); // 'groups', 'schedule', 'transfers'
   const touchStartX = useRef(0);
   const touchMoved = useRef(false);
@@ -38,12 +42,12 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
 
   const fetchGroups = async () => {
     if (!user || !academy || !membership) return;
-    if (!['owner', 'admin', 'member'].includes(membership.role)) {
+    if (!hasValidMembership(membership)) {
       setLoadingGroups(false);
       return;
     }
     setLoadingGroups(true);
-    const groupsRef = collection(db, `academies/${academy.id}/groups`);
+    const groupsRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.GROUPS}`);
     const q = query(groupsRef);
     const querySnapshot = await getDocs(q);
     const groupsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -85,12 +89,12 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
 
   const fetchSchedulesForGroup = async (groupId) => {
     if (!groupId || !academy || !membership) return;
-    if (!['owner', 'admin', 'member'].includes(membership.role)) {
+    if (!hasValidMembership(membership)) {
       setLoadingSchedules(false);
       return;
     }
     setLoadingSchedules(true);
-    const scheduleRef = collection(db, `academies/${academy.id}/groups/${groupId}/schedule`);
+    const scheduleRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.GROUPS}/${groupId}/schedule`);
     const q = query(scheduleRef);
     const querySnapshot = await getDocs(q);
     const scheduleData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -107,10 +111,10 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
 
   const fetchMembersForGroup = async (groupId) => {
     if (!groupId || !academy || !membership) return;
-    if (!['owner', 'admin', 'member'].includes(membership.role)) {
+    if (!hasValidMembership(membership)) {
       return;
     }
-    const playersRef = collection(db, `academies/${academy.id}/players`);
+    const playersRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.PLAYERS}`);
     const q = query(playersRef, where('groupId', '==', groupId));
     const snap = await getDocs(q);
     const players = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -169,12 +173,12 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
 
     try {
       if (editingGroup) {
-        const groupDocRef = doc(db, `academies/${academy.id}/groups`, editingGroup.id);
+        const groupDocRef = doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.GROUPS}`, editingGroup.id);
         await updateDoc(groupDocRef, groupData);
         toast.success("Group updated successfully.");
       } else {
         groupData.createdAt = new Date();
-        const groupsCollectionRef = collection(db, `academies/${academy.id}/groups`);
+        const groupsCollectionRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.GROUPS}`);
         await addDoc(groupsCollectionRef, groupData);
         toast.success("Group added successfully.");
       }
@@ -196,7 +200,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
           <button onClick={async () => {
             toast.dismiss(t.id);
             try {
-              await deleteDoc(doc(db, `academies/${academy.id}/groups`, groupId));
+              await deleteDoc(doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.GROUPS}`, groupId));
               fetchGroups();
               toast.success("Group deleted successfully.");
             } catch (error) {
@@ -247,11 +251,11 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
 
     try {
       if (editingSchedule) {
-        const scheduleDocRef = doc(db, `academies/${academy.id}/groups/${activeScheduleGroupId}/schedule`, editingSchedule.id);
+        const scheduleDocRef = doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.GROUPS}/${activeScheduleGroupId}/schedule`, editingSchedule.id);
         await updateDoc(scheduleDocRef, scheduleData);
         toast.success("Session updated successfully.");
       } else {
-        const scheduleCollectionRef = collection(db, `academies/${academy.id}/groups/${activeScheduleGroupId}/schedule`);
+        const scheduleCollectionRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.GROUPS}/${activeScheduleGroupId}/schedule`);
         await addDoc(scheduleCollectionRef, scheduleData);
         toast.success("Session added successfully.");
       }
@@ -273,7 +277,7 @@ export default function GroupsAndClassesSection({ user, academy, db, membership 
           <button onClick={async () => {
             toast.dismiss(t.id);
             try {
-              await deleteDoc(doc(db, `academies/${academy.id}/groups/${groupId}/schedule`, scheduleId));
+              await deleteDoc(doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.GROUPS}/${groupId}/schedule`, scheduleId));
               fetchSchedulesForGroup(groupId);
               toast.success("Session deleted successfully.");
             } catch (error) {
