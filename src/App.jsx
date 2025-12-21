@@ -669,7 +669,7 @@ export default function App() {
             <Route path="/students/:playerId" element={<PlayerDetailPage user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/students/:playerId/edit" element={<EditPlayerPage user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/plans" element={<PlansOffersSection user={user} db={db} />} />
-            <Route path="/finances" element={<FinancesSection user={user} academy={academy} db={db} membership={membership} />} />
+            <Route path="/finances" element={<FinancesSection user={user} db={db} />} />
             <Route path="/groups" element={<GroupsAndClassesSection user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/groups/:groupId" element={<GroupDetailPage user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/settings" element={<AdminSection

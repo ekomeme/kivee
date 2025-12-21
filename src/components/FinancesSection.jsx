@@ -5,8 +5,13 @@ import { CheckCircle, Clock, Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingBar from './LoadingBar.jsx';
 import '../styles/sections.css';
+import { useAcademy } from '../contexts/AcademyContext';
+import { hasValidMembership } from '../utils/permissions';
+import { formatAcademyCurrency } from '../utils/formatters';
+import { COLLECTIONS } from '../config/constants';
 
-export default function FinancesSection({ user, academy, db, membership }) {
+export default function FinancesSection({ user, db }) {
+    const { academy, membership, studentLabelPlural } = useAcademy();
     const [allPayments, setAllPayments] = useState([]);
     const [showPaymentModalFor, setShowPaymentModalFor] = useState(null);
     const touchStartX = useRef(0);
@@ -20,16 +25,16 @@ export default function FinancesSection({ user, academy, db, membership }) {
             setLoading(false);
             return;
         }
-        if (!['owner', 'admin', 'member'].includes(membership.role)) {
+        if (!hasValidMembership(membership)) {
             setLoading(false);
             return;
         }
         setLoading(true);
 
         try {
-            // Fetch all necessary data in parallel 
-            const productsRef = collection(db, `academies/${academyId}/products`);
-            const playersRef = collection(db, `academies/${academyId}/players`);
+            // Fetch all necessary data in parallel
+            const productsRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academyId}/${COLLECTIONS.PRODUCTS}`);
+            const playersRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academyId}/${COLLECTIONS.PLAYERS}`);
 
             const [productsSnap, playersSnap] = await Promise.all([
                 getDocs(productsRef),
@@ -102,15 +107,6 @@ export default function FinancesSection({ user, academy, db, membership }) {
         return { unpaidPayments: unpaid, paidPayments: paid };
     }, [allPayments]);
 
-
-    const formatCurrency = (price) => {
-        try {
-            return new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(price);
-        } catch (e) {
-            return `$${Number(price).toFixed(2)}`;
-        }
-    };
-
     const formatDate = (date) => {
         if (!date) return 'N/A';
         if (date.seconds) { // It's a Firestore Timestamp
@@ -143,7 +139,7 @@ export default function FinancesSection({ user, academy, db, membership }) {
                                 </td>
                                 <td className="py-3 px-4 border-b table-cell">{payment.itemName}</td>
                                 <td className="py-3 px-4 border-b flex items-center gap-2 table-cell">
-                                    <span>{formatCurrency(payment.amount)}</span>
+                                    <span>{formatAcademyCurrency(payment.amount, academy)}</span>
                                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isPaidTab ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>{isPaidTab ? 'Paid' : 'Unpaid'}</span>
                                 </td>
                                 <td className="py-3 px-4 border-b table-cell">{formatDate(isPaidTab ? payment.paidAt : payment.dueDate)}</td>
@@ -190,7 +186,7 @@ export default function FinancesSection({ user, academy, db, membership }) {
                             <div className="bg-gray-50 rounded-md p-2">
                                 <p className="text-xs text-gray-500">Amount</p>
                                 <div className="flex items-center gap-2">
-                                    <p className="font-medium">{formatCurrency(payment.amount)}</p>
+                                    <p className="font-medium">{formatAcademyCurrency(payment.amount, academy)}</p>
                                     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isPaidTab ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>{isPaidTab ? 'Paid' : 'Unpaid'}</span>
                                 </div>
                             </div>
@@ -270,7 +266,7 @@ export default function FinancesSection({ user, academy, db, membership }) {
                         </button>
                     </div>
                     <p className="mb-1"><strong>Item:</strong> {payment.itemName}</p>
-                    <p className="mb-4"><strong>Amount:</strong> {formatCurrency(payment.amount)}</p>
+                    <p className="mb-4"><strong>Amount:</strong> {formatAcademyCurrency(payment.amount, academy)}</p>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div><label htmlFor="paymentMethod" className="block text-sm font-medium text-gray-700">Payment Method</label><select id="paymentMethod" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option>Cash</option><option>Credit Card</option><option>Bank Transfer</option><option>Other</option></select></div>
                         <div><label htmlFor="paymentDate" className="block text-sm font-medium text-gray-700">Payment Date</label><input type="date" id="paymentDate" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
