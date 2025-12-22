@@ -259,7 +259,8 @@ export const AcademyProvider = ({ children, user, db }) => {
 
   return (
     <AcademyContext.Provider value={value}>
-      {children}
+      {/* Only render children when academy is loaded or when explicitly loading */}
+      {!loading || academy ? children : null}
     </AcademyContext.Provider>
   );
 };

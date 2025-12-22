@@ -504,16 +504,22 @@ export default function App() {
     );
   }
 
-  // Show loading while checking for academies (only if we already have an academy or available academies)
-  if (user && loadingAcademies && (academy || availableAcademies.length > 0)) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-white">
-        <div className="flex items-center gap-3">
-          <Loader2 className="h-6 w-6 animate-spin text-gray-600" />
-          <p className="text-lg font-medium text-gray-800">Loading...</p>
+  // Show loading while checking for academies (skip for first-time users to show onboarding immediately)
+  if (user && loadingAcademies) {
+    // Only show simple spinner if we're switching academies or refreshing with existing data
+    // For first-time users (no academy, no availableAcademies), skip to show the create academy form
+    const hasExistingData = academy || availableAcademies.length > 0;
+    if (hasExistingData) {
+      return (
+        <div className="flex h-screen w-screen items-center justify-center bg-white">
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-6 w-6 animate-spin text-gray-600" />
+            <p className="text-lg font-medium text-gray-800">Loading...</p>
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
+    // For first-time users, fall through to create academy screen
   }
 
   if (user && !academy) {
@@ -635,6 +641,18 @@ export default function App() {
           <div className="w-full max-w-xl">
             <img src={loginIllustration} alt="Kivee Illustration" className="w-full h-auto object-contain" />
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Safety check: if we got here but academy is still null, show loading
+  if (!academy) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-white">
+        <div className="flex items-center gap-3">
+          <Loader2 className="h-6 w-6 animate-spin text-gray-600" />
+          <p className="text-lg font-medium text-gray-800">Loading...</p>
         </div>
       </div>
     );
