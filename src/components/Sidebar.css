@@ -97,7 +97,7 @@
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
-  background: var(--color-white, #fff);
+  background: var(--color-gray-light, #f3f4f6);
 }
 
 .sidebar__logo img {
@@ -218,7 +218,7 @@
   align-items: center;
   gap: 0.5rem; /* 8px */
   width: 100%;
-  padding: 0.5rem 0.75rem; /* 8px 12px */
+  padding: 0.5rem 1.1rem;
   border-radius: 0.5rem; /* 8px */
   color: var(--color-gray-dark, #374151);
   text-decoration: none;
