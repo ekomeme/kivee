@@ -16,7 +16,7 @@ import FinancesSection from "./components/FinancesSection.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 import GroupDetailPage from "./components/GroupDetailPage.jsx";
 import { Toaster } from "react-hot-toast";
-import { LogOut, Home, Users, Layers, Tags, CreditCard, Settings, Menu, X, ChevronsUpDown } from "lucide-react";
+import { LogOut, Home, Users, Layers, Tags, CreditCard, Settings, Menu, X, ChevronsUpDown, Loader2 } from "lucide-react";
 import loginIllustration from "./assets/login-ilustration.svg";
 import { isValidAcademyId, getValidatedLocalStorage } from "./utils/validators";
 import logoKivee from "./assets/logo-kivee.svg";
@@ -25,6 +25,7 @@ import InviteTeammateModal from "./components/InviteTeammateModal.jsx";
 import AcademySelector from "./components/AcademySelector.jsx";
 import UserMenu from "./components/UserMenu.jsx";
 import { AcademyProvider } from "./contexts/AcademyContext.jsx";
+import "./App.css";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -236,11 +237,13 @@ export default function App() {
         const targetEmail = (user.email || '').toLowerCase();
         const q = query(collectionGroup(db, "invites"), where("email", "==", targetEmail));
         const snap = await getDocs(q);
-        const invites = snap.docs.map(d => ({
-          id: d.id,
-          academyId: d.ref.parent.parent.id,
-          ...d.data(),
-        })).filter(inv => inv.status === 'pending');
+        const invites = snap.docs
+          .map(d => ({
+            id: d.id,
+            academyId: d.ref.parent.parent.id,
+            ...d.data(),
+          }))
+          .filter(inv => inv.status === 'pending');
         setPendingInvites(invites);
       } catch (err) {
         console.error("[fetchInvitesOnly] error", err);
@@ -481,7 +484,26 @@ export default function App() {
 
   // Conditional rendering based on app state
   if (loading) {
-    return <div className="flex items-center justify-center h-screen bg-gray-100 text-gray-800"><p className="text-lg font-medium">Cargando...</p></div>;
+    return (
+      <div className="flex h-screen w-screen font-sans">
+        {/* Left Side - Loading */}
+        <div className="w-1/2 bg-section flex flex-col justify-center items-center p-12 relative">
+          <div className="absolute top-8 left-8 right-8 flex justify-between items-center h-[58px]">
+            <img src={logoKivee} alt="Kivee Logo" className="h-5 w-auto" />
+          </div>
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-6 w-6 animate-spin text-gray-600" />
+            <p className="text-lg font-medium text-gray-800">Loading...</p>
+          </div>
+        </div>
+        {/* Right Side - Illustration */}
+        <div className="w-1/2 flex justify-center items-center p-12" style={{ background: 'var(--sidebar-bg)' }}>
+          <div className="w-full max-w-xl">
+            <img src={loginIllustration} alt="Kivee Illustration" className="w-full h-auto object-contain" />
+          </div>
+        </div>
+      </div>
+    );
   }
   // If no user, show the login component
   if (!user) {
@@ -496,39 +518,90 @@ export default function App() {
 
   // Show loading while checking for academies
   if (user && loadingAcademies) {
-    return <div className="flex items-center justify-center h-screen bg-gray-100 text-gray-800"><p className="text-lg font-medium">Cargando...</p></div>;
+    return (
+      <div className="flex h-screen w-screen font-sans">
+        {/* Left Side - Loading */}
+        <div className="w-1/2 bg-section flex flex-col justify-center items-center p-12 relative">
+          <div className="absolute top-8 left-8 right-8 flex justify-between items-center h-[58px]">
+            <img src={logoKivee} alt="Kivee Logo" className="h-5 w-auto" />
+          </div>
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-6 w-6 animate-spin text-gray-600" />
+            <p className="text-lg font-medium text-gray-800">Loading...</p>
+          </div>
+        </div>
+        {/* Right Side - Illustration */}
+        <div className="w-1/2 flex justify-center items-center p-12" style={{ background: 'var(--sidebar-bg)' }}>
+          <div className="w-full max-w-xl">
+            <img src={loginIllustration} alt="Kivee Illustration" className="w-full h-auto object-contain" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (user && !academy) {
+    // Show creating academy loading screen
+    if (creatingAcademy) {
+      return (
+        <div className="flex h-screen w-screen font-sans">
+          {/* Left Side - Creating */}
+          <div className="w-1/2 bg-section flex flex-col justify-center items-center p-12 relative">
+            <div className="absolute top-8 left-8 right-8 flex justify-between items-center h-[58px]">
+              <img src={logoKivee} alt="Kivee Logo" className="h-5 w-auto" />
+            </div>
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-6 w-6 animate-spin text-gray-600" />
+              <p className="text-lg font-medium text-gray-800">Creating...</p>
+            </div>
+          </div>
+          {/* Right Side - Illustration */}
+          <div className="w-1/2 flex justify-center items-center p-12" style={{ background: 'var(--sidebar-bg)' }}>
+            <div className="w-full max-w-xl">
+              <img src={loginIllustration} alt="Kivee Illustration" className="w-full h-auto object-contain" />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex h-screen w-screen font-sans">
         {/* Left Side */}
         <div className="w-1/2 bg-section flex flex-col justify-center items-center p-12 relative">
-          <div className="absolute top-8 left-8 right-8 flex justify-between items-center">
+          <div className="absolute top-8 left-8 right-8 flex justify-between items-center h-[58px]">
             <img src={logoKivee} alt="Kivee Logo" className="h-5 w-auto"  />
-            <UserMenu user={user} onSignOut={handleSignOut} />
+            <UserMenu user={user} onSignOut={handleSignOut} isSidebar={true} dropdownUp={false} />
           </div>
-          <div className="w-full max-w-[360px]">
-            <div className="text-left">
-              <h1 className="text-[24px] font-semibold text-black">Hi, {user.displayName}</h1>
-              <h2 className="text-[24px] font-medium text-gray-dark mt-1">Let’s create your Academy</h2>
+          <div className="w-full max-w-[376px]">
+            <div className="space-y-1">
+              <h1 className="auth-heading-primary">Hi, {user.displayName}</h1>
+              <h2 className="auth-heading-secondary">
+                {pendingInvites.length > 0
+                  ? "You've been invited to join an existing Academy"
+                  : "Let's create your Academy"}
+              </h2>
             </div>
             {pendingInvites.length > 0 && (
-              <div className="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
-                <h3 className="text-lg font-semibold text-gray-900">You have been invited</h3>
-                <p className="text-sm text-gray-600">Accept an invitation to join an existing academy.</p>
-                <div className="space-y-3">
+              <>
+                <div className="mt-12 space-y-3">
                   {pendingInvites.map(invite => (
-                    <div key={invite.id} className="border border-gray-200 rounded-md p-3 bg-section flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-900">Academy ID: {invite.academyId}</p>
-                        <p className="text-xs text-gray-500">Invited by {invite.invitedBy || 'owner'}</p>
+                    <div key={invite.id} className="border border-gray-200 rounded-lg p-4 bg-section">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                          <span className="text-white font-semibold text-lg">
+                            {invite.academyName?.charAt(0)?.toUpperCase() || 'A'}
+                          </span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900">{invite.academyName || invite.academyId}</p>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => handleDeclineInvite(invite.id)}
-                          className="text-sm text-gray-600 hover:text-gray-800 px-3 py-1 rounded-md border border-gray-200"
+                          className="flex-1 text-gray-600 hover:text-gray-800 h-12 px-4 rounded-md border border-gray-200 font-medium"
                         >
                           Decline
                         </button>
@@ -536,7 +609,7 @@ export default function App() {
                           type="button"
                           onClick={() => handleAcceptInvite(invite.id)}
                           disabled={isAcceptingInvite}
-                          className="text-sm bg-primary hover:bg-primary-hover text-white px-3 py-1 rounded-md disabled:opacity-50"
+                          className="flex-1 bg-primary hover:bg-primary-hover text-white h-12 px-4 rounded-md disabled:opacity-50 font-medium"
                         >
                           {isAcceptingInvite ? 'Joining...' : 'Accept'}
                         </button>
@@ -544,9 +617,25 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-              </div>
+
+                {/* OR Divider */}
+                <div className="mt-4 flex items-center">
+                  <div className="flex-1 border-t border-gray-300"></div>
+                  <span className="px-4 text-sm font-medium text-gray-500">OR</span>
+                  <div className="flex-1 border-t border-gray-300"></div>
+                </div>
+
+                {/* Create New Academy Button */}
+                <button
+                  type="button"
+                  onClick={() => setPendingInvites([])}
+                  className="w-full h-12 px-4 rounded-md border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 mt-4"
+                >
+                  Create new Academy
+                </button>
+              </>
             )}
-            <form onSubmit={createAcademy} className="mt-12">
+            <form onSubmit={createAcademy} className={pendingInvites.length > 0 ? "hidden" : "mt-12"}>
               <input
                 ref={nameInputRef}
                 type="text"
@@ -558,7 +647,7 @@ export default function App() {
                 maxLength={50}
                 className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary text-base"
               />
-              <button type="submit" className="w-full bg-primary hover:bg-primary-hover text-white font-medium py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary mt-4 text-base" disabled={creatingAcademy || !nameInput.trim()}>
+              <button type="submit" className="w-full bg-primary hover:bg-primary-hover text-white font-medium h-12 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary mt-4 text-base" disabled={creatingAcademy || !nameInput.trim()}>
                 {creatingAcademy ? "Creating..." : "Continue"}
               </button>
               {error && <p className="text-red-500 mt-4 text-sm">{error}</p>}
@@ -566,9 +655,9 @@ export default function App() {
           </div>
         </div>
         {/* Right Side */}
-        <div className="w-1/2 bg-app flex justify-center items-center p-12">
-          <div className="w-full max-w-md">
-            <img src={loginIllustration} alt="Kivee Illustration" className="w-full h-auto" />
+        <div className="w-1/2 flex justify-center items-center p-12" style={{ background: 'var(--sidebar-bg)' }}>
+          <div className="w-full max-w-xl">
+            <img src={loginIllustration} alt="Kivee Illustration" className="w-full h-auto object-contain" />
           </div>
         </div>
       </div>

@@ -338,6 +338,20 @@
   padding: 1rem; /* 16px */
 }
 
+.sidebar__user-menu-dropdown--down {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem; /* 8px */
+  width: 16.25rem; /* 260px */
+  background: var(--color-white, #fff);
+  border: 0.0625rem solid var(--color-gray-border, #e5e7eb); /* 1px */
+  border-radius: 0.75rem; /* 12px */
+  box-shadow: 0 0.625rem 1.875rem rgba(0,0,0,0.08); /* 0 10px 30px */
+  z-index: 50;
+  padding: 1rem; /* 16px */
+}
+
 .sidebar__user-menu-name {
   font-size: var(--font-size-md); /* 14px */
   font-weight: var(--font-weight-bold);

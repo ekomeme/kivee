@@ -9,8 +9,9 @@ import { LogOut, ChevronsUpDown } from 'lucide-react';
  * @param {Object} props.user - Firebase user object
  * @param {Function} props.onSignOut - Callback when user clicks sign out
  * @param {boolean} props.isSidebar - Whether this is rendered in the sidebar (uses different styles)
+ * @param {boolean} props.dropdownUp - Whether the dropdown should open upwards (default: true for sidebar, false otherwise)
  */
-const UserMenu = ({ user, onSignOut, isSidebar = false }) => {
+const UserMenu = ({ user, onSignOut, isSidebar = false, dropdownUp = isSidebar }) => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
 
@@ -97,7 +98,7 @@ const UserMenu = ({ user, onSignOut, isSidebar = false }) => {
         <div
           className={
             isSidebar
-              ? 'sidebar__user-menu-dropdown'
+              ? (dropdownUp ? 'sidebar__user-menu-dropdown' : 'sidebar__user-menu-dropdown--down')
               : 'absolute top-full right-0 mt-2 w-64 bg-section border border-gray-200 rounded-lg shadow-lg z-10 p-4'
           }
         >

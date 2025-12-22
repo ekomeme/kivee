@@ -62,6 +62,7 @@ export default function InviteTeammateModal({
         invitedBy: user.uid,
         role: ROLES.ADMIN,
         invitedAt: serverTimestamp(),
+        academyName: academy?.name || null,
       });
 
       toast.success("Invitation sent successfully.");
