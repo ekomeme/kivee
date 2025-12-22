@@ -485,22 +485,10 @@ export default function App() {
   // Conditional rendering based on app state
   if (loading) {
     return (
-      <div className="flex h-screen w-screen font-sans">
-        {/* Left Side - Loading */}
-        <div className="w-1/2 bg-section flex flex-col justify-center items-center p-12 relative">
-          <div className="absolute top-8 left-8 right-8 flex justify-between items-center h-[58px]">
-            <img src={logoKivee} alt="Kivee Logo" className="h-5 w-auto" />
-          </div>
-          <div className="flex items-center gap-3">
-            <Loader2 className="h-6 w-6 animate-spin text-gray-600" />
-            <p className="text-lg font-medium text-gray-800">Loading...</p>
-          </div>
-        </div>
-        {/* Right Side - Illustration */}
-        <div className="w-1/2 flex justify-center items-center p-12" style={{ background: 'var(--sidebar-bg)' }}>
-          <div className="w-full max-w-xl">
-            <img src={loginIllustration} alt="Kivee Illustration" className="w-full h-auto object-contain" />
-          </div>
+      <div className="flex h-screen w-screen items-center justify-center bg-white">
+        <div className="flex items-center gap-3">
+          <Loader2 className="h-6 w-6 animate-spin text-gray-600" />
+          <p className="text-lg font-medium text-gray-800">Loading...</p>
         </div>
       </div>
     );
@@ -516,25 +504,13 @@ export default function App() {
     );
   }
 
-  // Show loading while checking for academies
-  if (user && loadingAcademies) {
+  // Show loading while checking for academies (only if we already have an academy or available academies)
+  if (user && loadingAcademies && (academy || availableAcademies.length > 0)) {
     return (
-      <div className="flex h-screen w-screen font-sans">
-        {/* Left Side - Loading */}
-        <div className="w-1/2 bg-section flex flex-col justify-center items-center p-12 relative">
-          <div className="absolute top-8 left-8 right-8 flex justify-between items-center h-[58px]">
-            <img src={logoKivee} alt="Kivee Logo" className="h-5 w-auto" />
-          </div>
-          <div className="flex items-center gap-3">
-            <Loader2 className="h-6 w-6 animate-spin text-gray-600" />
-            <p className="text-lg font-medium text-gray-800">Loading...</p>
-          </div>
-        </div>
-        {/* Right Side - Illustration */}
-        <div className="w-1/2 flex justify-center items-center p-12" style={{ background: 'var(--sidebar-bg)' }}>
-          <div className="w-full max-w-xl">
-            <img src={loginIllustration} alt="Kivee Illustration" className="w-full h-auto object-contain" />
-          </div>
+      <div className="flex h-screen w-screen items-center justify-center bg-white">
+        <div className="flex items-center gap-3">
+          <Loader2 className="h-6 w-6 animate-spin text-gray-600" />
+          <p className="text-lg font-medium text-gray-800">Loading...</p>
         </div>
       </div>
     );
