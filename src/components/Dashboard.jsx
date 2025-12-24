@@ -7,6 +7,69 @@ import { formatAcademyCurrency, toDateSafe } from '../utils/formatters';
 import { hasValidMembership } from '../utils/permissions';
 import '../styles/sections.css';
 
+// Skeleton components for loading states
+const SkeletonBox = ({ className = '' }) => (
+  <div className={`animate-pulse bg-gray-200 rounded ${className}`}></div>
+);
+
+const StatsSkeleton = () => (
+  <section className="bg-section border border-gray-200 rounded-lg p-4 space-y-3">
+    <SkeletonBox className="h-6 w-32" />
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {[1, 2, 3].map(i => (
+        <div key={i}>
+          <SkeletonBox className="h-4 w-24 mb-2" />
+          <SkeletonBox className="h-8 w-16 mt-1" />
+        </div>
+      ))}
+    </div>
+  </section>
+);
+
+const TableSkeleton = () => (
+  <section className="bg-section border border-gray-200 rounded-lg p-4 space-y-3">
+    <SkeletonBox className="h-6 w-32 mb-3" />
+    <div className="space-y-2">
+      {[1, 2, 3].map(i => (
+        <div key={i} className="flex justify-between items-center py-2">
+          <SkeletonBox className="h-4 w-32" />
+          <SkeletonBox className="h-4 w-16" />
+        </div>
+      ))}
+    </div>
+    <div className="pt-2 space-y-2">
+      <SkeletonBox className="h-4 w-24" />
+      <SkeletonBox className="h-6 w-12" />
+      <SkeletonBox className="h-4 w-32" />
+    </div>
+  </section>
+);
+
+const FinanceSkeleton = () => (
+  <section className="bg-section border border-gray-200 rounded-lg p-4 space-y-4">
+    <SkeletonBox className="h-6 w-24 mb-4" />
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {[1, 2, 3].map(i => (
+        <div key={i}>
+          <SkeletonBox className="h-4 w-28 mb-2" />
+          <SkeletonBox className="h-8 w-24 mt-1" />
+        </div>
+      ))}
+    </div>
+    <div>
+      <SkeletonBox className="h-4 w-48 mb-2" />
+      <div className="grid grid-cols-6 gap-3 items-end h-40">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div key={i} className="flex flex-col items-center h-32 justify-end">
+            <SkeletonBox className={`w-full h-${20 + i * 5}`} />
+            <SkeletonBox className="h-3 w-8 mt-1" />
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+);
+
 export default function Dashboard({ user, db, pendingInvites = [], onAcceptInvite, onDeclineInvite, isAcceptingInvite }) {
   const { academy, membership, studentLabelPlural, studentLabelSingular } = useAcademy();
   const [loading, setLoading] = useState(true);
@@ -49,33 +112,38 @@ export default function Dashboard({ user, db, pendingInvites = [], onAcceptInvit
     };
 
     fetchData();
-  }, [user, db, academy, membership]);
+  }, [academy?.id, db, membership?.role]); // Optimized: only reload when academy ID or membership role changes
 
-  // Fetch academy names for pending invites
+  // Fetch academy names for pending invites (in parallel)
   useEffect(() => {
     const fetchInviteAcademyNames = async () => {
       if (!pendingInvites || pendingInvites.length === 0) return;
 
-      const names = {};
-      for (const invite of pendingInvites) {
+      // Fetch all academy names in parallel instead of sequentially
+      const namePromises = pendingInvites.map(async (invite) => {
         try {
           const academyRef = doc(db, 'academies', invite.academyId);
           const academySnap = await getDoc(academyRef);
-          if (academySnap.exists()) {
-            names[invite.academyId] = academySnap.data().name || invite.academyId;
-          } else {
-            names[invite.academyId] = invite.academyId;
-          }
+          return {
+            academyId: invite.academyId,
+            name: academySnap.exists() ? (academySnap.data().name || invite.academyId) : invite.academyId
+          };
         } catch (err) {
           console.error(`Error fetching academy name for ${invite.academyId}:`, err);
-          names[invite.academyId] = invite.academyId;
+          return { academyId: invite.academyId, name: invite.academyId };
         }
-      }
+      });
+
+      const results = await Promise.all(namePromises);
+      const names = {};
+      results.forEach(({ academyId, name }) => {
+        names[academyId] = name;
+      });
       setInviteAcademyNames(names);
     };
 
     fetchInviteAcademyNames();
-  }, [pendingInvites, db]);
+  }, [pendingInvites?.length, db]);
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -213,8 +281,17 @@ export default function Dashboard({ user, db, pendingInvites = [], onAcceptInvit
         </div>
       )}
 
-      {/* Students */}
-      <section className="bg-section border border-gray-200 rounded-lg p-4 space-y-3">
+      {loading ? (
+        <>
+          {/* Show skeleton loaders while loading */}
+          <StatsSkeleton />
+          <TableSkeleton />
+          <FinanceSkeleton />
+        </>
+      ) : (
+        <>
+          {/* Students */}
+          <section className="bg-section border border-gray-200 rounded-lg p-4 space-y-3">
         <h2 className="text-lg font-semibold text-gray-900">{studentLabelPlural}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -305,6 +382,8 @@ export default function Dashboard({ user, db, pendingInvites = [], onAcceptInvit
           )}
         </div>
       </section>
+        </>
+      )}
     </div>
   );
 }

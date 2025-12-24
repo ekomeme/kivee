@@ -9,7 +9,6 @@ import PlayerDetailPage from "./components/PlayerDetailPage.jsx";
 import EditPlayerPage from "./components/EditPlayerPage.jsx";
 import PlayersSection from "./components/PlayersSection.jsx";
 import PlansOffersSection from "./components/PlansOffersSection.jsx";
-import NewPlayerPage from "./components/NewPlayerPage.jsx"; // Import the new page
 import GroupsAndClassesSection from "./components/GroupsAndClassesSection.jsx";
 import AdminSection from "./components/AdminSection.jsx";
 import FinancesSection from "./components/FinancesSection.jsx";
@@ -86,32 +85,40 @@ export default function App() {
         }
       }
 
-      // 2. Cargar academias donde es miembro
+      // 2. Cargar academias donde es miembro (en paralelo)
       try {
         const membershipsRef = collection(db, "users", userId, "memberships");
         const membershipsSnap = await getDocs(membershipsRef);
 
-        for (const membershipDoc of membershipsSnap.docs) {
-          const membershipData = membershipDoc.data();
-          if (membershipData.status === 'active' && membershipData.academyId) {
-            try {
-              const academyRef = doc(db, "academies", membershipData.academyId);
-              const academySnap = await getDoc(academyRef);
-              if (academySnap.exists()) {
-                // Evitar duplicados si ya se cargó como owner
-                if (!academies.find(a => a.id === membershipData.academyId)) {
-                  academies.push({
-                    id: academySnap.id,
-                    ...academySnap.data(),
-                    userRole: membershipData.role || 'admin'
-                  });
-                }
-              }
-            } catch (err) {
-              console.error(`Error loading academy ${membershipData.academyId}:`, err);
+        // Fetch all member academies in parallel
+        const memberAcademyPromises = membershipsSnap.docs
+          .map(membershipDoc => {
+            const membershipData = membershipDoc.data();
+            if (membershipData.status === 'active' && membershipData.academyId) {
+              return getDoc(doc(db, "academies", membershipData.academyId))
+                .then(academySnap => {
+                  if (academySnap.exists()) {
+                    // Evitar duplicados si ya se cargó como owner
+                    if (!academies.find(a => a.id === membershipData.academyId)) {
+                      return {
+                        id: academySnap.id,
+                        ...academySnap.data(),
+                        userRole: membershipData.role || 'admin'
+                      };
+                    }
+                  }
+                  return null;
+                })
+                .catch(err => {
+                  console.error(`Error loading academy ${membershipData.academyId}:`, err);
+                  return null;
+                });
             }
-          }
-        }
+            return Promise.resolve(null);
+          });
+
+        const memberAcademies = (await Promise.all(memberAcademyPromises)).filter(Boolean);
+        academies.push(...memberAcademies);
       } catch (err) {
         if (err?.code !== 'permission-denied') {
           console.error('Error loading memberships:', err);
@@ -747,7 +754,6 @@ export default function App() {
         <div className="flex-grow p-0 md:p-8 overflow-auto min-w-0"> {/* Added overflow-auto for scrollable content */}
           <Routes>
             <Route path="/sign-in" element={<Navigate to="/" replace />} />
-            <Route path="/students/new" element={<NewPlayerPage user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/students" element={<PlayersSection user={user} db={db} />} />
             <Route path="/students/:playerId" element={<PlayerDetailPage user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/students/:playerId/edit" element={<EditPlayerPage user={user} academy={academy} db={db} membership={membership} />} />

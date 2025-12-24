@@ -8,6 +8,8 @@ import { useAcademy } from '../contexts/AcademyContext';
 import { calculateAge } from '../utils/formatters';
 import { hasValidMembership } from '../utils/permissions';
 import LoadingBar from './LoadingBar.jsx';
+import PlayerForm from './PlayerForm.jsx';
+import PlayerDetail from './PlayerDetail.jsx';
 import '../styles/sections.css';
 
 import { Plus, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Filter, ChevronRight, Check, X } from 'lucide-react';
@@ -16,6 +18,13 @@ export default function PlayersSection({ user, db }) {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  // Cache for reference data
+  const [tiersCache, setTiersCache] = useState(new Map());
+  const [trialsCache, setTrialsCache] = useState(new Map());
+  const [productsCache, setProductsCache] = useState(new Map());
+  const [groupsCache, setGroupsCache] = useState(new Map());
 
   // Fetches players and their tutors
   const fetchPlayers = async () => {
@@ -23,44 +32,80 @@ export default function PlayersSection({ user, db }) {
     setLoading(true);
     setError(null);
 
-    // 2. Usar 'academy.id' en lugar de 'user.uid' para que funcione para todos los miembros.
-    // Fetch Tiers
-    const tiersRef = collection(db, `academies/${academy.id}/tiers`);
-    const tiersSnapshot = await getDocs(tiersRef);
-    const tiersData = tiersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const tiersMap = new Map(tiersData.map(tier => [tier.id, tier.name]));
-    setTiers(tiersData);
+    try {
+      // 2. Usar 'academy.id' en lugar de 'user.uid' para que funcione para todos los miembros.
+      // Fetch all collections in parallel
+      const [tiersSnapshot, trialsSnapshot, productsSnapshot, groupsSnapshot, tutorsSnapshot, playersSnapshot] = await Promise.all([
+        getDocs(collection(db, `academies/${academy.id}/tiers`)),
+        getDocs(collection(db, `academies/${academy.id}/trials`)),
+        getDocs(collection(db, `academies/${academy.id}/products`)),
+        getDocs(collection(db, `academies/${academy.id}/groups`)),
+        getDocs(collection(db, `academies/${academy.id}/tutors`)),
+        getDocs(query(collection(db, `academies/${academy.id}/players`))),
+      ]);
 
-    // Fetch Groups
-    const groupsRef = collection(db, `academies/${academy.id}/groups`);
-    const groupsSnapshot = await getDocs(groupsRef);
-    const groupsData = groupsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const groupsMap = new Map(groupsData.map(group => [group.id, group.name]));
-    setGroups(groupsData);
-    // Fetch Players
-    const playersRef = collection(db, `academies/${academy.id}/players`);
-    const q = query(playersRef);
-    const querySnapshot = await getDocs(q);
-    const playersData = await Promise.all(querySnapshot.docs.map(async playerDoc => {
-      const player = { id: playerDoc.id, ...playerDoc.data() };
-      if (player.tutorId) {
-        const tutorRef = doc(db, `academies/${academy.id}/tutors`, player.tutorId);
-        const tutorSnap = await getDoc(tutorRef);
-        player.tutor = tutorSnap.exists() ? { id: tutorSnap.id, ...tutorSnap.data() } : null;
-      }
-      if (player.birthday) {
-        player.age = calculateAge(player.birthday);
-      }
-      if (player.plan && player.plan.type === 'tier') {
-        player.tierName = tiersMap.get(player.plan.id) || 'N/A';
-      }
-      if (player.groupId) {
-        player.groupName = groupsMap.get(player.groupId) || 'N/A';
-      }
-      return player;
-    }));
-    setPlayers(playersData);
-    setLoading(false);
+      // Process and cache Tiers
+      const tiersData = tiersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const tiersMap = new Map(tiersData.map(tier => [tier.id, tier]));
+      const tiersNameMap = new Map(tiersData.map(tier => [tier.id, tier.name]));
+      setTiers(tiersData);
+      setTiersCache(tiersMap);
+
+      // Process and cache Trials
+      const trialsData = trialsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const trialsMap = new Map(trialsData.map(trial => [trial.id, trial]));
+      setTrialsCache(trialsMap);
+
+      // Process and cache Products
+      const productsData = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const productsMap = new Map(productsData.map(product => [product.id, product]));
+      setProductsCache(productsMap);
+
+      // Process and cache Groups
+      const groupsData = groupsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const groupsMap = new Map(groupsData.map(group => [group.id, group.name]));
+      setGroups(groupsData);
+      setGroupsCache(new Map(groupsData.map(group => [group.id, group])));
+
+      // Process and cache Tutors
+      const tutorsMap = new Map(
+        tutorsSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }])
+      );
+
+      // Process Players (no more individual tutor queries!)
+      const playersData = playersSnapshot.docs.map(playerDoc => {
+        const player = { id: playerDoc.id, ...playerDoc.data() };
+
+        // Get tutor from cache
+        if (player.tutorId) {
+          player.tutor = tutorsMap.get(player.tutorId) || null;
+        }
+
+        // Calculate age
+        if (player.birthday) {
+          player.age = calculateAge(player.birthday);
+        }
+
+        // Get tier name
+        if (player.plan && player.plan.type === 'tier') {
+          player.tierName = tiersNameMap.get(player.plan.id) || 'N/A';
+        }
+
+        // Get group name
+        if (player.groupId) {
+          player.groupName = groupsMap.get(player.groupId) || 'N/A';
+        }
+
+        return player;
+      });
+
+      setPlayers(playersData);
+    } catch (error) {
+      console.error('Error fetching players:', error);
+      setError('Failed to load students. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const [tiers, setTiers] = useState([]);
@@ -128,7 +173,7 @@ export default function PlayersSection({ user, db }) {
     }
 
     fetchPlayers();
-  }, [user, academy, db, membership]); // 4. Añadir 'membership' a las dependencias
+  }, [academy?.id, db, membership?.role]); // Optimized: only reload when academy ID or membership role changes
 
   const handleSort = (key) => {
     let direction = 'ascending';
@@ -156,7 +201,84 @@ export default function PlayersSection({ user, db }) {
   const navigate = useNavigate();
 
   const handleAddPlayer = () => {
-    navigate('/students/new');
+    setIsDrawerOpen(true);
+  };
+
+  const handleCloseDrawer = () => {
+    setIsDrawerOpen(false);
+  };
+
+  const handlePlayerAdded = () => {
+    setIsDrawerOpen(false);
+    fetchPlayers();
+  };
+
+  const handleCloseDetailDrawer = () => {
+    setIsDetailDrawerOpen(false);
+    setSelectedPlayer(null);
+  };
+
+  const handleMarkProductAsPaid = async (productIndex, paymentMethod, paymentDate) => {
+    if (!selectedPlayer) return;
+
+    const paidDate = paymentDate ? new Date(paymentDate) : new Date();
+    const updatedProducts = [...selectedPlayer.oneTimeProducts];
+    updatedProducts[productIndex] = {
+      ...updatedProducts[productIndex],
+      status: 'paid',
+      paymentMethod: paymentMethod,
+      paidAt: paidDate,
+    };
+
+    const finalProductsForDB = updatedProducts.map(p => {
+      const cleanProduct = { ...p };
+      delete cleanProduct.productDetails;
+      delete cleanProduct.originalIndex;
+      delete cleanProduct.tierDetails;
+      return cleanProduct;
+    });
+
+    const playerRef = doc(db, `academies/${academy.id}/players`, selectedPlayer.id);
+    try {
+      await updateDoc(playerRef, { oneTimeProducts: finalProductsForDB });
+      setActiveTab('finances');
+      await fetchPlayerDetail(selectedPlayer.id);
+      toast.success('Payment registered successfully!');
+    } catch (error) {
+      console.error("Error updating payment status:", error);
+      toast.error('Failed to register payment.');
+    }
+  };
+
+  const handleRemoveProduct = async (productIndex) => {
+    if (!selectedPlayer) return;
+
+    const updatedProducts = selectedPlayer.oneTimeProducts.filter((_, index) => index !== productIndex);
+    const finalProductsForDB = updatedProducts.map(p => {
+      const cleanProduct = { ...p };
+      delete cleanProduct.productDetails;
+      delete cleanProduct.originalIndex;
+      delete cleanProduct.tierDetails;
+      return cleanProduct;
+    });
+
+    const playerRef = doc(db, `academies/${academy.id}/players`, selectedPlayer.id);
+
+    try {
+      await updateDoc(playerRef, { oneTimeProducts: finalProductsForDB });
+      setActiveTab('finances');
+      await fetchPlayerDetail(selectedPlayer.id);
+      toast.success('Item removed successfully!');
+    } catch (error) {
+      console.error("Error removing product:", error);
+      toast.error('Failed to remove item.');
+    }
+  };
+
+  const handleEditPlayer = () => {
+    if (selectedPlayer) {
+      navigate(`/students/${selectedPlayer.id}/edit`);
+    }
   };
 
   const handleDeletePlayer = async (playerId) => {
@@ -202,13 +324,155 @@ export default function PlayersSection({ user, db }) {
     });
   };
 
-  const handleRowClick = (player) => {
-    navigate(`/students/${player.id}`);
+  const handleRowClick = async (player) => {
+    setIsDetailDrawerOpen(true);
+    setActiveTab('details');
+    setPaymentPage(1);
+
+    // Fetch full player details with all relationships
+    await fetchPlayerDetail(player.id);
+  };
+
+  const dateFromAny = (d) => (d?.seconds ? new Date(d.seconds * 1000) : new Date(d));
+
+  const addCycleToDate = (date, pricingModel) => {
+    const base = dateFromAny(date);
+    const result = new Date(base);
+    switch (pricingModel) {
+      case 'monthly':
+        result.setMonth(result.getMonth() + 1);
+        break;
+      case 'semi-annual':
+        result.setMonth(result.getMonth() + 6);
+        break;
+      case 'annual':
+        result.setFullYear(result.getFullYear() + 1);
+        break;
+      default:
+        return null;
+    }
+    return result;
+  };
+
+  const ensureSubscriptionPaymentsAreCurrent = async (playerData, tiersMap, playerRef) => {
+    const payments = playerData.oneTimeProducts || [];
+    const groupedByTier = new Map();
+
+    payments
+      .filter(p => p.paymentFor === 'tier')
+      .forEach(p => {
+        const tier = tiersMap.get(p.itemId);
+        if (!tier) return;
+        const list = groupedByTier.get(p.itemId) || [];
+        list.push({ payment: p, tier });
+        groupedByTier.set(p.itemId, list);
+      });
+
+    let updated = false;
+    const newPayments = [...payments];
+    const now = new Date();
+
+    groupedByTier.forEach((list, tierId) => {
+      list.sort((a, b) => dateFromAny(a.payment.dueDate) - dateFromAny(b.payment.dueDate));
+      let lastDueDate = list[list.length - 1].payment.dueDate;
+      const tierDetails = list[list.length - 1].tier;
+
+      let nextCycleStart = addCycleToDate(lastDueDate, tierDetails.pricingModel);
+      while (nextCycleStart && nextCycleStart <= now) {
+        newPayments.push({
+          paymentFor: 'tier',
+          itemId: tierId,
+          itemName: tierDetails.name,
+          amount: tierDetails.price,
+          dueDate: nextCycleStart,
+          status: 'unpaid',
+        });
+        updated = true;
+        lastDueDate = nextCycleStart;
+        nextCycleStart = addCycleToDate(lastDueDate, tierDetails.pricingModel);
+      }
+    });
+
+    if (!updated) return false;
+
+    const cleaned = newPayments.map(p => {
+      const cp = { ...p };
+      delete cp.productDetails;
+      delete cp.originalIndex;
+      delete cp.tierDetails;
+      return cp;
+    });
+
+    await updateDoc(playerRef, { oneTimeProducts: cleaned });
+    return true;
+  };
+
+  const fetchPlayerDetail = async (playerId) => {
+    if (!user || !db || !academy) return;
+
+    setLoadingDetail(true);
+
+    try {
+      const academyId = academy.id;
+
+      // Use cached data instead of fetching again
+      const playerRef = doc(db, `academies/${academyId}/players`, playerId);
+      const playerSnap = await getDoc(playerRef);
+
+      if (playerSnap.exists()) {
+        const playerData = { id: playerSnap.id, ...playerSnap.data() };
+
+        if (playerData.tutorId) {
+          const tutorRef = doc(db, `academies/${academyId}/tutors`, playerData.tutorId);
+          const tutorSnap = await getDoc(tutorRef);
+          playerData.tutor = tutorSnap.exists() ? { id: tutorSnap.id, ...tutorSnap.data() } : null;
+        }
+
+        if (playerData.groupId) {
+          playerData.groupName = groupsCache.get(playerData.groupId)?.name || 'N/A';
+        }
+
+        if (playerData.plan) {
+          if (playerData.plan.type === 'tier') {
+            playerData.planDetails = tiersCache.get(playerData.plan.id);
+          } else if (playerData.plan.type === 'trial') {
+            playerData.planDetails = trialsCache.get(playerData.plan.id);
+          }
+        }
+
+        if (playerData.oneTimeProducts) {
+          playerData.oneTimeProducts = playerData.oneTimeProducts.map(p => ({
+            ...p,
+            productDetails: productsCache.get(p.productId),
+            tierDetails: p.paymentFor === 'tier' ? tiersCache.get(p.itemId) : undefined,
+          }));
+        }
+
+        const updated = await ensureSubscriptionPaymentsAreCurrent(playerData, tiersCache, playerRef);
+        if (updated) {
+          setLoadingDetail(false);
+          await fetchPlayerDetail(playerId);
+          return;
+        }
+
+        setSelectedPlayer(playerData);
+      }
+    } catch (error) {
+      console.error("Error fetching player details:", error);
+      toast.error(`Failed to load ${studentLabelSingular.toLowerCase()} details.`);
+    } finally {
+      setLoadingDetail(false);
+    }
   };
 
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [actionsMenuPosition, setActionsMenuPosition] = useState({ x: 0, y: 0 });
   const [selectedPlayerForActions, setSelectedPlayerForActions] = useState(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [activeTab, setActiveTab] = useState('details');
+  const [paymentPage, setPaymentPage] = useState(1);
 
   const handleOpenActionsMenu = (player, event) => {
     event.stopPropagation(); // Prevent row click
@@ -599,6 +863,105 @@ export default function PlayersSection({ user, db }) {
       )}
       </div>
       </div>
+
+      {/* Drawer Overlay - Add New Student */}
+      {isDrawerOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"
+            onClick={handleCloseDrawer}
+          />
+          <div
+            className="fixed top-0 right-0 h-full w-full md:w-2/3 lg:w-1/2 bg-app shadow-2xl z-50 overflow-y-auto transform transition-transform"
+            style={{
+              transform: isDrawerOpen ? 'translateX(0)' : 'translateX(100%)',
+              transition: 'transform 0.3s ease-in-out'
+            }}
+          >
+            <div className="sticky top-0 bg-app border-b border-gray-border z-10 px-4 md:px-6 py-4 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-800">Add New {studentLabelSingular}</h2>
+              <button
+                onClick={handleCloseDrawer}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Close drawer"
+              >
+                <X className="h-6 w-6 text-gray-600" />
+              </button>
+            </div>
+            <div className="p-4 md:p-6">
+              <PlayerForm
+                user={user}
+                academy={academy}
+                db={db}
+                membership={membership}
+                onComplete={handlePlayerAdded}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Drawer Overlay - Student Detail */}
+      {isDetailDrawerOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"
+            onClick={handleCloseDetailDrawer}
+          />
+          <div
+            className="fixed top-0 right-0 h-full w-full md:w-2/3 lg:w-1/2 bg-app shadow-2xl z-50 overflow-y-auto transform transition-transform"
+            style={{
+              transform: isDetailDrawerOpen ? 'translateX(0)' : 'translateX(100%)',
+              transition: 'transform 0.3s ease-in-out'
+            }}
+          >
+            <div className="sticky top-0 bg-app border-b border-gray-border z-10 px-4 md:px-6 py-4 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-800">
+                {selectedPlayer ? `${selectedPlayer.name} ${selectedPlayer.lastName}` : 'Loading...'}
+              </h2>
+              <div className="flex items-center space-x-2">
+                {selectedPlayer && (
+                  <button
+                    onClick={handleEditPlayer}
+                    className="flex items-center px-3 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-hover transition-colors"
+                  >
+                    <Edit className="mr-2 h-4 w-4" />
+                    <span>Edit</span>
+                  </button>
+                )}
+                <button
+                  onClick={handleCloseDetailDrawer}
+                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  aria-label="Close drawer"
+                >
+                  <X className="h-6 w-6 text-gray-600" />
+                </button>
+              </div>
+            </div>
+            <div className="p-4 md:p-6">
+              {loadingDetail || !selectedPlayer ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+                    <p className="text-gray-600">Loading {studentLabelSingular.toLowerCase()} details...</p>
+                  </div>
+                </div>
+              ) : (
+                <PlayerDetail
+                  player={selectedPlayer}
+                  onMarkAsPaid={handleMarkProductAsPaid}
+                  onRemoveProduct={handleRemoveProduct}
+                  academy={academy}
+                  activeTab={activeTab}
+                  onTabChange={setActiveTab}
+                  paymentPage={paymentPage}
+                  onPaymentPageChange={setPaymentPage}
+                />
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
