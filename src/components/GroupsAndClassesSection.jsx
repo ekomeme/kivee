@@ -59,13 +59,33 @@ export default function GroupsAndClassesSection({ user, db }) {
       });
       return next;
     });
-    // Preload schedules for all groups
+    // Preload schedules for all groups in parallel
     setLoadingSchedules(true);
-    for (const g of groupsData) {
-      await fetchSchedulesForGroup(g.id);
+    try {
+      const schedulePromises = groupsData.map(async (g) => {
+        const scheduleRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.GROUPS}/${g.id}/schedule`);
+        const q = query(scheduleRef);
+        const querySnapshot = await getDocs(q);
+        const scheduleData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return { groupId: g.id, scheduleData };
+      });
+
+      const scheduleResults = await Promise.all(schedulePromises);
+
+      // Update schedules state with all results at once
+      setSchedules(prev => {
+        const next = { ...prev };
+        scheduleResults.forEach(({ groupId, scheduleData }) => {
+          next[groupId] = scheduleData;
+        });
+        return next;
+      });
+    } catch (error) {
+      console.error('Error fetching schedules:', error);
+    } finally {
+      setLoadingSchedules(false);
+      setLoadingGroups(false);
     }
-    setLoadingSchedules(false);
-    setLoadingGroups(false);
   };
 
   useEffect(() => {

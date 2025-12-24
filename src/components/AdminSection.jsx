@@ -48,7 +48,21 @@ export default function AdminSection({ user, db, onAcademyUpdate, pendingInvites
   useEffect(() => {
     const fetchCurrencies = async () => {
       try {
-        // Using a more comprehensive, free, and open-source currency API
+        // Check localStorage cache first
+        const cachedCurrencies = localStorage.getItem('kivee_currencies_cache');
+        const cacheTimestamp = localStorage.getItem('kivee_currencies_cache_time');
+        const ONE_WEEK = 7 * 24 * 60 * 60 * 1000; // Cache for 1 week
+
+        if (cachedCurrencies && cacheTimestamp) {
+          const age = Date.now() - parseInt(cacheTimestamp);
+          if (age < ONE_WEEK) {
+            // Use cached data
+            setCurrencyOptions(JSON.parse(cachedCurrencies));
+            return;
+          }
+        }
+
+        // Fetch from API if no cache or cache expired
         const response = await fetch(EXTERNAL_APIS.CURRENCY);
         const data = await response.json();
 
@@ -60,6 +74,10 @@ export default function AdminSection({ user, db, onAcademyUpdate, pendingInvites
         }));
 
         currencies.sort((a, b) => a.label.localeCompare(b.label)); // Sort alphabetically
+
+        // Cache the result
+        localStorage.setItem('kivee_currencies_cache', JSON.stringify(currencies));
+        localStorage.setItem('kivee_currencies_cache_time', Date.now().toString());
 
         setCurrencyOptions(currencies);
       } catch (error) {
@@ -73,6 +91,21 @@ export default function AdminSection({ user, db, onAcademyUpdate, pendingInvites
   useEffect(() => {
     const fetchCountries = async () => {
       try {
+        // Check localStorage cache first
+        const cachedCountries = localStorage.getItem('kivee_countries_cache');
+        const cacheTimestamp = localStorage.getItem('kivee_countries_cache_time');
+        const ONE_MONTH = 30 * 24 * 60 * 60 * 1000; // Cache for 1 month
+
+        if (cachedCountries && cacheTimestamp) {
+          const age = Date.now() - parseInt(cacheTimestamp);
+          if (age < ONE_MONTH) {
+            // Use cached data
+            setCountryOptions(JSON.parse(cachedCountries));
+            return;
+          }
+        }
+
+        // Fetch from API if no cache or cache expired
         const response = await fetch(EXTERNAL_APIS.COUNTRIES);
         const data = await response.json();
         const countries = data.map(country => ({
@@ -81,6 +114,11 @@ export default function AdminSection({ user, db, onAcademyUpdate, pendingInvites
           countryCode: country.cca2 // Store the 2-letter country code
         }));
         countries.sort((a, b) => a.label.localeCompare(b.label));
+
+        // Cache the result
+        localStorage.setItem('kivee_countries_cache', JSON.stringify(countries));
+        localStorage.setItem('kivee_countries_cache_time', Date.now().toString());
+
         setCountryOptions(countries);
       } catch (error) {
         console.error("Error fetching countries:", error);
