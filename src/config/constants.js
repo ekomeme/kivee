@@ -63,7 +63,9 @@ export const DEFAULT_LABELS = {
   GROUP_SINGULAR: 'Group',
   GROUP_PLURAL: 'Groups',
   CLASS_SINGULAR: 'Class',
-  CLASS_PLURAL: 'Classes'
+  CLASS_PLURAL: 'Classes',
+  LOCATION_SINGULAR: 'Location',
+  LOCATION_PLURAL: 'Locations'
 };
 
 export const DEFAULT_CURRENCY = 'USD';
@@ -126,7 +128,8 @@ export const COLLECTIONS = {
   TRIALS: 'trials',
   MEMBERS: 'members',
   PAYMENTS: 'payments',
-  SUBSCRIPTIONS: 'subscriptions'
+  SUBSCRIPTIONS: 'subscriptions',
+  LOCATIONS: 'locations'
 };
 
 // ==================== PAYMENT & BILLING ====================

@@ -411,6 +411,18 @@ export default function App() {
       await setDoc(ref, data); // Escribe la academia en Firestore
       await ensureOwnerMembership(ref.id, user);
 
+      // Create default location for the academy
+      const locationsRef = collection(db, `academies/${ref.id}/locations`);
+      const defaultLocationRef = doc(locationsRef);
+      await setDoc(defaultLocationRef, {
+        name: `${nameInput} - Main Location`,
+        status: 'active',
+        isDefault: true,
+        academyId: ref.id,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
       // Optimistically update academy state
       setAcademy({ id: ref.id, ...data });
       setError(null);

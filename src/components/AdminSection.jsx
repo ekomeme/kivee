@@ -3,11 +3,12 @@ import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc, serverTi
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import Select from 'react-select';
 import toast from 'react-hot-toast';
-import { Upload, Settings, Users, Plus } from 'lucide-react';
+import { Upload, Settings, Users, Plus, MapPin } from 'lucide-react';
 import { useAcademy } from '../contexts/AcademyContext';
 import { sanitizeEmail, sanitizeText, sanitizeFilename, validateFileType } from '../utils/validators';
 import { ownsAcademy } from '../utils/permissions';
 import { ACADEMY_CATEGORIES, EXTERNAL_APIS, COLLECTIONS } from '../config/constants';
+import LocationsSettings from './LocationsSettings.jsx';
 import '../styles/sections.css';
 export default function AdminSection({ user, db, onAcademyUpdate, pendingInvites = [], onAcceptInvite, onDeclineInvite, isAcceptingInvite, onOpenInviteModal, onRegisterRefreshTeamData }) {
   const { academy, membership } = useAcademy();
@@ -408,6 +409,14 @@ export default function AdminSection({ user, db, onAcademyUpdate, pendingInvites
                 </button>
                 <button
                   role="tab"
+                  aria-selected={activeTab === 'locations'}
+                  onClick={() => setActiveTab('locations')}
+                  className={`tab-button ${activeTab === 'locations' ? 'active' : ''}`}
+                >
+                  <MapPin /> Locations
+                </button>
+                <button
+                  role="tab"
                   aria-selected={activeTab === 'team'}
                   onClick={() => setActiveTab('team')}
                   className={`tab-button ${activeTab === 'team' ? 'active' : ''}`}
@@ -544,6 +553,10 @@ export default function AdminSection({ user, db, onAcademyUpdate, pendingInvites
               </button>
             </div>
           </form>
+          )}
+
+          {activeTab === 'locations' && (
+            <LocationsSettings db={db} academy={academy} />
           )}
 
           {activeTab === 'team' && (

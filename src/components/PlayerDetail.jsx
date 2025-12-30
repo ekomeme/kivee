@@ -214,6 +214,7 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
               <div></div>
               <div><strong>Name:</strong> <span className="text-gray-800">{formatValue(`${player.name} ${player.lastName}`)}</span></div>
               <div><strong>ID:</strong> <span className="text-gray-800">{formatValue(player.studentId)}</span></div>
+              <div><strong>Nationality:</strong> <span className="text-gray-800">{formatValue(player.nationality)}</span></div>
               <div><strong>Date of Birth:</strong> <span className="text-gray-800">{formatValue(player.birthday)}</span></div>
               <div><strong>Gender:</strong> <span className="text-gray-800">{formatValue(player.gender)}</span></div>
               <div><strong>Group:</strong> <span className="text-gray-800">{formatValue(player.groupName)}</span></div>

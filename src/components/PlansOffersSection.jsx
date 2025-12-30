@@ -8,6 +8,18 @@ import { useAcademy } from '../contexts/AcademyContext';
 import { hasValidMembership } from '../utils/permissions';
 import { formatAcademyCurrency } from '../utils/formatters';
 import { COLLECTIONS } from '../config/constants';
+import { getLocations } from '../services/firestore';
+
+// Helper function to remove undefined fields from object
+const removeUndefinedFields = (obj) => {
+  const cleaned = {};
+  Object.keys(obj).forEach(key => {
+    if (obj[key] !== undefined) {
+      cleaned[key] = obj[key];
+    }
+  });
+  return cleaned;
+};
 
 export default function PlansOffersSection({ user, db }) {
   const { academy, membership } = useAcademy();
@@ -24,6 +36,8 @@ export default function PlansOffersSection({ user, db }) {
   const [newTierDescription, setNewTierDescription] = useState('');
   const [pricingModel, setPricingModel] = useState('monthly'); // 'monthly', 'semi-annual', 'annual', 'term'
   const [price, setPrice] = useState('');
+  const [locationPricing, setLocationPricing] = useState('global'); // 'global' or 'specific'
+  const [locationPrices, setLocationPrices] = useState({}); // { locationId: price }
   const [termStartDate, setTermStartDate] = useState('');
   const [termEndDate, setTermEndDate] = useState('');
   const [classesPerWeek, setClassesPerWeek] = useState('');
@@ -36,12 +50,16 @@ export default function PlansOffersSection({ user, db }) {
   const [editingTier, setEditingTier] = useState(null); // State for editing
   const [showTierModal, setShowTierModal] = useState(false);
   const [activeTierMenu, setActiveTierMenu] = useState(null); // To control which tier's menu is open
+  const [locations, setLocations] = useState([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
 
   // States for One-time Products
   const [productName, setProductName] = useState('');
   const [productType, setProductType] = useState('enrollment');
   const [productDescription, setProductDescription] = useState('');
   const [productPrice, setProductPrice] = useState('');
+  const [productLocationPricing, setProductLocationPricing] = useState('global'); // 'global' or 'specific'
+  const [productLocationPrices, setProductLocationPrices] = useState({}); // { locationId: price }
   const [availableDate, setAvailableDate] = useState('');
   const [inventory, setInventory] = useState('');
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -107,7 +125,21 @@ export default function PlansOffersSection({ user, db }) {
     fetchTiers();
     fetchProducts();
     fetchTrials();
+    fetchLocationsData();
   }, [user, academy, membership]);
+
+  const fetchLocationsData = async () => {
+    if (!academy?.id || !db) return;
+    setLoadingLocations(true);
+    try {
+      const locationsData = await getLocations(db, academy.id);
+      setLocations(locationsData);
+    } catch (error) {
+      console.error('Error fetching locations:', error);
+    } finally {
+      setLoadingLocations(false);
+    }
+  };
 
   const handleAddOrUpdateTier = async (e) => {
     e.preventDefault();
@@ -124,9 +156,11 @@ export default function PlansOffersSection({ user, db }) {
 
     const tierData = {
       name: newTierName,
-      description: newTierDescription,
+      ...(newTierDescription && { description: newTierDescription }), // Only include if not empty
       pricingModel: pricingModel,
-      price: Number(price) || 0,
+      price: locationPricing === 'global' ? Number(price) || 0 : 0,
+      locationPricing: locationPricing,
+      locationPrices: locationPricing === 'specific' ? locationPrices : null,
       termStartDate: pricingModel === 'term' ? termStartDate : null,
       termEndDate: pricingModel === 'term' ? termEndDate : null,
       classesPerWeek: Number(classesPerWeek) || 0,
@@ -143,12 +177,12 @@ export default function PlansOffersSection({ user, db }) {
       if (editingTier) {
         // Update existing tier
         const tierDocRef = doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.TIERS}`, editingTier.id);
-        await updateDoc(tierDocRef, tierData);
+        await updateDoc(tierDocRef, removeUndefinedFields(tierData));
         toast.success("Tier updated successfully.");
       } else {
         // Add new tier
         const tiersCollectionRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.TIERS}`);
-        await addDoc(tiersCollectionRef, tierData);
+        await addDoc(tiersCollectionRef, removeUndefinedFields(tierData));
         toast.success("Tier added successfully.");
       }
       setNewTierName('');
@@ -180,6 +214,8 @@ export default function PlansOffersSection({ user, db }) {
     setNewTierDescription(tier.description);
     setPricingModel(tier.pricingModel || 'monthly');
     setPrice(tier.price || '');
+    setLocationPricing(tier.locationPricing || 'global');
+    setLocationPrices(tier.locationPrices || {});
     setTermStartDate(tier.termStartDate || '');
     setTermEndDate(tier.termEndDate || '');
     setClassesPerWeek(tier.classesPerWeek || '');
@@ -199,6 +235,8 @@ export default function PlansOffersSection({ user, db }) {
       setNewTierDescription('');
       setPricingModel('monthly');
       setPrice('');
+      setLocationPricing('global');
+      setLocationPrices({});
       setTermStartDate('');
       setTermEndDate('');
       setClassesPerWeek('');
@@ -227,8 +265,10 @@ export default function PlansOffersSection({ user, db }) {
     const productData = {
       name: productName,
       type: productType,
-      description: productDescription,
-      price: Number(productPrice) || 0,
+      ...(productDescription && { description: productDescription }), // Only include if not empty
+      price: productLocationPricing === 'global' ? Number(productPrice) || 0 : 0,
+      locationPricing: productLocationPricing,
+      locationPrices: productLocationPricing === 'specific' ? productLocationPrices : null,
       availableDate: availableDate || null,
       inventory: inventory ? Number(inventory) : null,
       academyId: academy.id,
@@ -239,11 +279,11 @@ export default function PlansOffersSection({ user, db }) {
     try {
       if (editingProduct) {
         const productDocRef = doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.PRODUCTS}`, editingProduct.id);
-        await updateDoc(productDocRef, productData);
+        await updateDoc(productDocRef, removeUndefinedFields(productData));
         toast.success("Product updated successfully.");
       } else {
         const productsCollectionRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.PRODUCTS}`);
-        await addDoc(productsCollectionRef, productData);
+        await addDoc(productsCollectionRef, removeUndefinedFields(productData));
         toast.success("Product added successfully.");
       }
       setShowProductModal(false);
@@ -263,6 +303,8 @@ export default function PlansOffersSection({ user, db }) {
       setProductType(product.type);
       setProductDescription(product.description || '');
       setProductPrice(product.price || '');
+      setProductLocationPricing(product.locationPricing || 'global');
+      setProductLocationPrices(product.locationPrices || {});
       setAvailableDate(product.availableDate || '');
       setInventory(product.inventory || '');
     } else {
@@ -271,6 +313,8 @@ export default function PlansOffersSection({ user, db }) {
       setProductType('enrollment');
       setProductDescription('');
       setProductPrice('');
+      setProductLocationPricing('global');
+      setProductLocationPrices({});
       setAvailableDate('');
       setInventory('');
       setProductError(null);
@@ -306,11 +350,11 @@ export default function PlansOffersSection({ user, db }) {
     try {
       if (editingTrial) {
         const trialDocRef = doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.TRIALS}`, editingTrial.id);
-        await updateDoc(trialDocRef, trialData);
+        await updateDoc(trialDocRef, removeUndefinedFields(trialData));
         toast.success("Trial updated successfully.");
       } else {
         const trialsCollectionRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.TRIALS}`);
-        await addDoc(trialsCollectionRef, trialData);
+        await addDoc(trialsCollectionRef, removeUndefinedFields(trialData));
         toast.success("Trial added successfully.");
       }
       setShowTrialModal(false);
@@ -583,16 +627,22 @@ export default function PlansOffersSection({ user, db }) {
                             <td className="py-3 px-4 border-b text-base font-medium table-cell">{tier.name}</td>
                             <td className="py-3 px-4 border-b text-sm text-gray-600 max-w-xs truncate table-cell">{tier.description}</td>
                             <td className="py-3 px-4 border-b text-base table-cell">
-                              {tier.pricingModel === 'monthly' && `${formatAcademyCurrency(tier.price, academy)}/mo`}
-                              {tier.pricingModel === 'semi-annual' && `${formatAcademyCurrency(tier.price, academy)}/6mo`}
-                              {tier.pricingModel === 'annual' && `${formatAcademyCurrency(tier.price, academy)}/yr`}
-                              {tier.pricingModel === 'term' && (
-                                <div>
-                                  <p>{formatAcademyCurrency(tier.price, academy)}/term</p>
-                                  <p className="text-xs text-gray-500">{tier.termStartDate} - {tier.termEndDate}</p>
-                                </div>
+                              {tier.locationPricing === 'specific' ? (
+                                <span className="text-sm text-gray-600 italic">Varies by location</span>
+                              ) : (
+                                <>
+                                  {tier.pricingModel === 'monthly' && `${formatAcademyCurrency(tier.price, academy)}/mo`}
+                                  {tier.pricingModel === 'semi-annual' && `${formatAcademyCurrency(tier.price, academy)}/6mo`}
+                                  {tier.pricingModel === 'annual' && `${formatAcademyCurrency(tier.price, academy)}/yr`}
+                                  {tier.pricingModel === 'term' && (
+                                    <div>
+                                      <p>{formatAcademyCurrency(tier.price, academy)}/term</p>
+                                      <p className="text-xs text-gray-500">{tier.termStartDate} - {tier.termEndDate}</p>
+                                    </div>
+                                  )}
+                                  {!tier.pricingModel && `${formatAcademyCurrency(tier.price, academy)}`}
+                                </>
                               )}
-                              {!tier.pricingModel && `${formatAcademyCurrency(tier.price, academy)}`}
                             </td>
                             <td className="py-3 px-4 border-b text-sm text-gray-600 table-cell">{tier.classesPerWeek ? `${tier.classesPerWeek} per week` : 'N/A'}</td>
                             <td className="py-3 px-4 border-b table-cell">
@@ -626,11 +676,17 @@ export default function PlansOffersSection({ user, db }) {
                           <div className="bg-gray-50 rounded-md p-2">
                             <p className="text-xs text-gray-500">Price</p>
                             <p className="font-medium">
-                              {tier.pricingModel === 'monthly' && `${formatAcademyCurrency(tier.price, academy)}/mo`}
-                              {tier.pricingModel === 'semi-annual' && `${formatAcademyCurrency(tier.price, academy)}/6mo`}
-                              {tier.pricingModel === 'annual' && `${formatAcademyCurrency(tier.price, academy)}/yr`}
-                              {tier.pricingModel === 'term' && `${formatAcademyCurrency(tier.price, academy)}/term`}
-                              {!tier.pricingModel && `${formatAcademyCurrency(tier.price, academy)}`}
+                              {tier.locationPricing === 'specific' ? (
+                                <span className="text-sm text-gray-600 italic">Varies by location</span>
+                              ) : (
+                                <>
+                                  {tier.pricingModel === 'monthly' && `${formatAcademyCurrency(tier.price, academy)}/mo`}
+                                  {tier.pricingModel === 'semi-annual' && `${formatAcademyCurrency(tier.price, academy)}/6mo`}
+                                  {tier.pricingModel === 'annual' && `${formatAcademyCurrency(tier.price, academy)}/yr`}
+                                  {tier.pricingModel === 'term' && `${formatAcademyCurrency(tier.price, academy)}/term`}
+                                  {!tier.pricingModel && `${formatAcademyCurrency(tier.price, academy)}`}
+                                </>
+                              )}
                             </p>
                           </div>
                           <div className="bg-gray-50 rounded-md p-2">
@@ -686,7 +742,13 @@ export default function PlansOffersSection({ user, db }) {
                       <tr key={product.id} className="hover:bg-gray-50 table-row-hover">
                         <td className="py-3 px-4 border-b text-base font-medium table-cell">{product.name}</td>
                         <td className="py-3 px-4 border-b text-sm text-gray-600 capitalize table-cell">{product.type}</td>
-                        <td className="py-3 px-4 border-b text-base table-cell">{formatAcademyCurrency(product.price, academy)}</td>
+                        <td className="py-3 px-4 border-b text-base table-cell">
+                          {product.locationPricing === 'specific' ? (
+                            <span className="text-sm text-gray-600 italic">Varies by location</span>
+                          ) : (
+                            formatAcademyCurrency(product.price, academy)
+                          )}
+                        </td>
                         <td className="py-3 px-4 border-b text-sm text-gray-600 table-cell">{product.inventory ?? 'N/A'}</td>
                         <td className="py-3 px-4 border-b text-right table-cell">
                         <button onClick={(e) => { e.stopPropagation(); setActiveProductMenu(product); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none" aria-label={`Actions for product ${product.name}`}>
@@ -713,7 +775,13 @@ export default function PlansOffersSection({ user, db }) {
                     <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-700">
                       <div className="bg-gray-50 rounded-md p-2">
                         <p className="text-xs text-gray-500">Price</p>
-                        <p className="font-medium">{formatAcademyCurrency(product.price, academy)}</p>
+                        <p className="font-medium">
+                          {product.locationPricing === 'specific' ? (
+                            <span className="text-sm text-gray-600 italic">Varies by location</span>
+                          ) : (
+                            formatAcademyCurrency(product.price, academy)
+                          )}
+                        </p>
                       </div>
                       <div className="bg-gray-50 rounded-md p-2">
                         <p className="text-xs text-gray-500">Inventory</p>
@@ -878,6 +946,43 @@ export default function PlansOffersSection({ user, db }) {
                       <option value="term">Term</option>
                     </select>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Location Pricing</label>
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        id="pricingGlobal"
+                        name="locationPricing"
+                        value="global"
+                        checked={locationPricing === 'global'}
+                        onChange={(e) => setLocationPricing(e.target.value)}
+                        className="h-4 w-4 text-primary border-gray-300"
+                      />
+                      <label htmlFor="pricingGlobal" className="ml-2 text-sm text-gray-700">
+                        Same price for all locations
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        id="pricingSpecific"
+                        name="locationPricing"
+                        value="specific"
+                        checked={locationPricing === 'specific'}
+                        onChange={(e) => setLocationPricing(e.target.value)}
+                        className="h-4 w-4 text-primary border-gray-300"
+                      />
+                      <label htmlFor="pricingSpecific" className="ml-2 text-sm text-gray-700">
+                        Different price per location
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {locationPricing === 'global' && (
                   <div>
                     <label htmlFor="price" className="block text-sm font-medium text-gray-700">Price</label>
                     <div className="relative mt-1">
@@ -887,7 +992,35 @@ export default function PlansOffersSection({ user, db }) {
                       <input type="number" id="price" value={price} onChange={(e) => setPrice(e.target.value)} required min="0" step="0.01" className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
                     </div>
                   </div>
-                </div>
+                )}
+
+                {locationPricing === 'specific' && (
+                  <div className="p-4 bg-gray-50 rounded-md border space-y-3">
+                    <p className="text-sm font-medium text-gray-700">Price per Location</p>
+                    {locations.filter(loc => loc.status === 'active').map(location => (
+                      <div key={location.id}>
+                        <label htmlFor={`price-${location.id}`} className="block text-sm text-gray-700 mb-1">
+                          {location.name}
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
+                          </div>
+                          <input
+                            type="number"
+                            id={`price-${location.id}`}
+                            value={locationPrices[location.id] || ''}
+                            onChange={(e) => setLocationPrices(prev => ({ ...prev, [location.id]: e.target.value }))}
+                            required
+                            min="0"
+                            step="0.01"
+                            className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {pricingModel === 'term' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-md border">
@@ -976,7 +1109,42 @@ export default function PlansOffersSection({ user, db }) {
                 <label htmlFor="productDescription" className="block text-sm font-medium text-gray-700">Description (Optional)</label>
                 <textarea id="productDescription" value={productDescription} onChange={(e) => setProductDescription(e.target.value)} rows="3" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></textarea>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Location Pricing</label>
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      id="productPricingGlobal"
+                      name="productLocationPricing"
+                      value="global"
+                      checked={productLocationPricing === 'global'}
+                      onChange={(e) => setProductLocationPricing(e.target.value)}
+                      className="h-4 w-4 text-primary border-gray-300"
+                    />
+                    <label htmlFor="productPricingGlobal" className="ml-2 text-sm text-gray-700">
+                      Same price for all locations
+                    </label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      id="productPricingSpecific"
+                      name="productLocationPricing"
+                      value="specific"
+                      checked={productLocationPricing === 'specific'}
+                      onChange={(e) => setProductLocationPricing(e.target.value)}
+                      className="h-4 w-4 text-primary border-gray-300"
+                    />
+                    <label htmlFor="productPricingSpecific" className="ml-2 text-sm text-gray-700">
+                      Different price per location
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {productLocationPricing === 'global' && (
                 <div>
                   <label htmlFor="productPrice" className="block text-sm font-medium text-gray-700">Price</label>
                   <div className="relative mt-1">
@@ -986,10 +1154,39 @@ export default function PlansOffersSection({ user, db }) {
                     <input type="number" id="productPrice" value={productPrice} onChange={(e) => setProductPrice(e.target.value)} required min="0" step="0.01" className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
                   </div>
                 </div>
-                <div>
-                  <label htmlFor="inventory" className="block text-sm font-medium text-gray-700">Inventory (Optional)</label>
-                  <input type="number" id="inventory" value={inventory} onChange={(e) => setInventory(e.target.value)} min="0" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+              )}
+
+              {productLocationPricing === 'specific' && (
+                <div className="p-4 bg-gray-50 rounded-md border space-y-3">
+                  <p className="text-sm font-medium text-gray-700">Price per Location</p>
+                  {locations.filter(loc => loc.status === 'active').map(location => (
+                    <div key={location.id}>
+                      <label htmlFor={`product-price-${location.id}`} className="block text-sm text-gray-700 mb-1">
+                        {location.name}
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
+                        </div>
+                        <input
+                          type="number"
+                          id={`product-price-${location.id}`}
+                          value={productLocationPrices[location.id] || ''}
+                          onChange={(e) => setProductLocationPrices(prev => ({ ...prev, [location.id]: e.target.value }))}
+                          required
+                          min="0"
+                          step="0.01"
+                          className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
+              )}
+
+              <div>
+                <label htmlFor="inventory" className="block text-sm font-medium text-gray-700">Inventory (Optional)</label>
+                <input type="number" id="inventory" value={inventory} onChange={(e) => setInventory(e.target.value)} min="0" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
               </div>
               <div>
                 <label htmlFor="availableDate" className="block text-sm font-medium text-gray-700">Available Date (Optional)</label>

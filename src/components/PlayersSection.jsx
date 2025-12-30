@@ -216,6 +216,22 @@ export default function PlayersSection({ user, db }) {
   const handleCloseDetailDrawer = () => {
     setIsDetailDrawerOpen(false);
     setSelectedPlayer(null);
+    setDrawerMode('detail');
+  };
+
+  const handlePlayerUpdated = async () => {
+    // Refresh the player list and the selected player details
+    await fetchPlayers();
+    if (selectedPlayer) {
+      await fetchPlayerDetail(selectedPlayer.id);
+    }
+    setDrawerMode('detail');
+  };
+
+  const handleEditPlayer = () => {
+    if (selectedPlayer) {
+      setDrawerMode('edit');
+    }
   };
 
   const handleMarkProductAsPaid = async (productIndex, paymentMethod, paymentDate) => {
@@ -275,12 +291,6 @@ export default function PlayersSection({ user, db }) {
     }
   };
 
-  const handleEditPlayer = () => {
-    if (selectedPlayer) {
-      navigate(`/students/${selectedPlayer.id}/edit`);
-    }
-  };
-
   const handleDeletePlayer = async (playerId) => {
     const deleteAction = async () => {
       try {
@@ -328,6 +338,7 @@ export default function PlayersSection({ user, db }) {
     setIsDetailDrawerOpen(true);
     setActiveTab('details');
     setPaymentPage(1);
+    setDrawerMode('detail');
 
     // Fetch full player details with all relationships
     await fetchPlayerDetail(player.id);
@@ -473,6 +484,7 @@ export default function PlayersSection({ user, db }) {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [activeTab, setActiveTab] = useState('details');
   const [paymentPage, setPaymentPage] = useState(1);
+  const [drawerMode, setDrawerMode] = useState('detail'); // 'detail' or 'edit'
 
   const handleOpenActionsMenu = (player, event) => {
     event.stopPropagation(); // Prevent row click
@@ -917,10 +929,12 @@ export default function PlayersSection({ user, db }) {
           >
             <div className="sticky top-0 bg-app border-b border-gray-border z-10 px-4 md:px-6 py-4 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-800">
-                {selectedPlayer ? `${selectedPlayer.name} ${selectedPlayer.lastName}` : 'Loading...'}
+                {drawerMode === 'edit'
+                  ? `Edit ${studentLabelSingular}`
+                  : selectedPlayer ? `${selectedPlayer.name} ${selectedPlayer.lastName}` : 'Loading...'}
               </h2>
               <div className="flex items-center space-x-2">
-                {selectedPlayer && (
+                {selectedPlayer && drawerMode === 'detail' && (
                   <button
                     onClick={handleEditPlayer}
                     className="flex items-center px-3 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-hover transition-colors"
@@ -946,6 +960,15 @@ export default function PlayersSection({ user, db }) {
                     <p className="text-gray-600">Loading {studentLabelSingular.toLowerCase()} details...</p>
                   </div>
                 </div>
+              ) : drawerMode === 'edit' ? (
+                <PlayerForm
+                  user={user}
+                  academy={academy}
+                  db={db}
+                  membership={membership}
+                  playerToEdit={selectedPlayer}
+                  onComplete={handlePlayerUpdated}
+                />
               ) : (
                 <PlayerDetail
                   player={selectedPlayer}

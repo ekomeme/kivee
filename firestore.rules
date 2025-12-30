@@ -72,7 +72,7 @@ service cloud.firestore {
       }
 
       match /{subcollection}/{docId} {
-        allow read, write: if subcollection in ['players', 'tiers', 'trials', 'tutors', 'products']
+        allow read, write: if subcollection in ['players', 'tiers', 'trials', 'tutors', 'products', 'locations']
                               && isOwnerOrMember(academyId);
       }
     }

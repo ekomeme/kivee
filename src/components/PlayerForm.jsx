@@ -6,6 +6,12 @@ import Select from 'react-select'; // Import Select for country codes
 import { Upload } from 'lucide-react'; // Import Upload icon
 import { sanitizeText, sanitizeEmail, sanitizePhone, sanitizeNotes, sanitizeFilename, validateFileType } from '../utils/validators';
 import { parsePhoneNumberWithError, isValidPhoneNumber, getCountries, getCountryCallingCode } from 'libphonenumber-js';
+import { getName, registerLocale } from 'i18n-nationality';
+import en from 'i18n-nationality/langs/en.json';
+import { getLocations } from '../services/firestore';
+
+// Register English locale for nationality adjectives
+registerLocale(en);
 
 export default function PlayerForm({ user, academy, db, membership, onComplete, playerToEdit }) {
   const studentLabelSingular = academy?.studentLabelSingular || 'Student';
@@ -27,6 +33,8 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
   const [groupId, setGroupId] = useState('');
   const [documentType, setDocumentType] = useState('passport');
   const [documentNumber, setDocumentNumber] = useState('');
+  const [nationality, setNationality] = useState('');
+  const [locationId, setLocationId] = useState('');
 
   // Tutor Info
   const [hasTutor, setHasTutor] = useState(false);
@@ -48,11 +56,15 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
   const [oneTimeProducts, setOneTimeProducts] = useState([]);
   const [groups, setGroups] = useState([]);
   const [trials, setTrials] = useState([]);
+  const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [countryCodes, setCountryCodes] = useState([]);
+  const [nationalities, setNationalities] = useState([]);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showCreatePlan, setShowCreatePlan] = useState(false);
+  const [creatingGroup, setCreatingGroup] = useState(false);
+  const [creatingPlan, setCreatingPlan] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newPlanType, setNewPlanType] = useState('tier'); // 'tier' or 'trial'
   const [newPlanName, setNewPlanName] = useState('');
@@ -109,19 +121,37 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
       }
     };
 
+    const fetchLocationsData = async () => {
+      if (!academy?.id || !db) return;
+      try {
+        const locationsData = await getLocations(db, academy.id);
+        setLocations(locationsData);
+      } catch (err) {
+        console.error('Error fetching locations:', err);
+      }
+    };
+
     fetchTiers();
     fetchTrials();
     fetchGroups();
     fetchProducts();
+    fetchLocationsData();
   }, [user, academy, db, membership]);
 
   // Build country codes for phone prefixes using libphonenumber-js
   useEffect(() => {
     const buildCountryCodes = async () => {
       try {
-        const response = await fetch('https://restcountries.com/v3.1/all?fields=name,cca2');
+        // Use REST Countries API - force English by requesting only needed fields
+        // The name.common field is always in English in the v3.1 API
+        const response = await fetch('https://restcountries.com/v3.1/all?fields=name,cca2', {
+          headers: {
+            'Accept-Language': 'en-US,en;q=0.9'
+          }
+        });
         const data = await response.json();
-        const countryMap = new Map(data.map(c => [c.cca2, c.name.common]));
+        // Extract English names from the API response
+        const countryMap = new Map(data.map(c => [c.cca2, c.name.common || c.cca2]));
 
         const countries = getCountries();
         const codes = countries
@@ -137,6 +167,29 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
           .sort((a, b) => a.label.localeCompare(b.label));
 
         setCountryCodes(codes);
+
+        // Build nationalities list (nationality adjectives, not country names)
+        const nationalitiesList = countries
+          .map(countryCode => {
+            // Use i18n-nationality to get the nationality adjective (e.g., "Chinese" not "China")
+            const nationality = getName(countryCode, 'en');
+
+            // Only use if getName returned a valid nationality (not undefined)
+            // Skip countries that don't have a proper nationality adjective
+            if (!nationality) {
+              return null;
+            }
+
+            return {
+              value: nationality,
+              label: nationality
+            };
+          })
+          .filter(n => n !== null) // Remove entries where getName failed
+          .sort((a, b) => a.label.localeCompare(b.label));
+
+        console.log('Nationalities sample:', nationalitiesList.slice(0, 5));
+        setNationalities(nationalitiesList);
 
         // Set default country based on academy country, only for new players
         if (!playerToEdit && academy.countryCode) {
@@ -166,6 +219,24 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
     return playerToEdit.plan.startDate || null;
   }, [playerToEdit]);
 
+  // Filter groups by selected location
+  const filteredGroups = useMemo(() => {
+    if (!locationId) return [];
+    return groups.filter(g => g.status === 'active' && g.locationId === locationId);
+  }, [groups, locationId]);
+
+  // Filter tiers by selected location
+  const filteredTiers = useMemo(() => {
+    if (!locationId) return [];
+    return tiers.filter(t => t.status === 'active');
+  }, [tiers, locationId]);
+
+  // Filter products by selected location
+  const filteredProducts = useMemo(() => {
+    if (!locationId) return [];
+    return oneTimeProducts;
+  }, [oneTimeProducts, locationId]);
+
   // Populate form if editing a player
   useEffect(() => {
     if (playerToEdit) {
@@ -174,6 +245,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
       setLastName(playerToEdit.lastName || '');
       setDocumentType(playerToEdit.documentType || 'passport');
       setDocumentNumber(playerToEdit.documentNumber || '');
+      setNationality(playerToEdit.nationality || '');
       setGender(playerToEdit.gender || '');
       setBirthday(playerToEdit.birthday || '');
       setPhotoURL(playerToEdit.photoURL || '');
@@ -196,6 +268,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
 
       setGroupId(playerToEdit.groupId || '');
       setPlayerStatus(playerToEdit.status || 'active');
+      setLocationId(playerToEdit.locationId || '');
 
       // Tutor Info
       if (playerToEdit.tutorId && playerToEdit.tutor) {
@@ -308,11 +381,20 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
       return;
     }
 
+    if (!locationId) {
+      toast.error('Please select a location first.');
+      return;
+    }
+
+    if (creatingGroup) return; // Prevent double-click
+
     try {
+      setCreatingGroup(true);
       const groupData = {
         name: sanitizeText(newGroupName, 50),
         status: 'active',
         academyId: academy.id,
+        locationId: locationId, // Add the locationId
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -327,6 +409,8 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
     } catch (err) {
       console.error('Error creating group:', err);
       toast.error('Error creating group.');
+    } finally {
+      setCreatingGroup(false);
     }
   };
 
@@ -336,6 +420,10 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
       return;
     }
 
+    if (creatingPlan) return; // Prevent double-click
+
+    setCreatingPlan(true);
+
     try {
       let planRef;
       let newPlan;
@@ -343,12 +431,15 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
       if (newPlanType === 'tier') {
         if (!newPlanPrice || parseFloat(newPlanPrice) < 0) {
           toast.error('Valid price is required for membership tier.');
+          setCreatingPlan(false);
           return;
         }
 
         const tierData = {
           name: sanitizeText(newPlanName, 50),
           price: parseFloat(newPlanPrice),
+          locationPricing: 'global', // Default to global pricing
+          locationPrices: null,
           status: 'active',
           academyId: academy.id,
           createdAt: serverTimestamp(),
@@ -363,6 +454,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
         // Trial
         if (!newPlanDuration || parseInt(newPlanDuration) < 1) {
           toast.error('Valid duration is required for trial.');
+          setCreatingPlan(false);
           return;
         }
 
@@ -389,6 +481,8 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
     } catch (err) {
       console.error('Error creating plan:', err);
       toast.error('Error creating plan.');
+    } finally {
+      setCreatingPlan(false);
     }
   };
 
@@ -456,17 +550,12 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
     const sanitizedName = sanitizeText(name, 50);
     const sanitizedLastName = sanitizeText(lastName, 50);
     const sanitizedDocumentNumber = sanitizeText(documentNumber, 50);
+    const sanitizedNationality = sanitizeText(nationality, 50);
     const sanitizedPlayerEmail = sanitizeEmail(playerEmail);
     const sanitizedTutorName = sanitizeText(tutorName, 50);
     const sanitizedTutorLastName = sanitizeText(tutorLastName, 50);
     const sanitizedTutorEmail = sanitizeEmail(tutorEmail);
     const sanitizedNotes = sanitizeNotes(notes, 5000);
-
-    // Validate required fields
-    if (!sanitizedName) {
-      toast.error(`${studentLabelSingular}'s name is required.`);
-      return;
-    }
 
     // Validate emails if provided
     if (playerEmail && !sanitizedPlayerEmail) {
@@ -692,6 +781,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
       lastName: sanitizedLastName,
       documentType: documentType || null,
       documentNumber: sanitizedDocumentNumber || null,
+      nationality: sanitizedNationality || null,
       gender,
       birthday,
       photoURL: finalPhotoURL,
@@ -702,6 +792,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
       phoneInternational: playerPhoneData?.international || null,
       phoneNational: playerPhoneData?.nationalNumber || null,
       tutorId: hasTutor ? linkedTutorId : null,
+      locationId: locationId || null,
       groupId: groupId || null,
       plan: planData,
       oneTimeProducts: finalProductsData,
@@ -735,13 +826,13 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
   return (
     <>
     <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Student Photo Section */}
+        {/* Student Information Section (includes photo) */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
-      <legend className="text-xl font-semibold text-gray-900 px-2">{studentLabelSingular} Photo</legend>
-      <div className="flex flex-col items-center justify-center mt-4">
-        <input type="file" ref={fileInputRef} onChange={handlePhotoFileChange} accept="image/*" className="hidden" />
-        <div
-          className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer overflow-hidden"
+          <legend className="text-xl font-semibold text-gray-900 px-2">{studentLabelSingular} Information</legend>
+          <div className="flex flex-col items-center justify-center mt-4">
+            <input type="file" ref={fileInputRef} onChange={handlePhotoFileChange} accept="image/*" className="hidden" />
+            <div
+              className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer overflow-hidden"
               onClick={() => fileInputRef.current.click()}
             >
               {photoURL ? (
@@ -749,19 +840,31 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
               ) : (
                 <Upload className="h-8 w-8 text-gray-400" />
               )}
-        </div>
-        <p className="text-sm text-gray-600 mt-2">{studentLabelSingular} Photo</p>
-        <p className="text-xs text-gray-500">Max 2MB · JPG/PNG/WEBP · 100–3000px</p>
-        {uploadProgress > 0 && uploadProgress < 100 && <div className="w-24 bg-gray-200 rounded-full h-1.5 mt-2"><div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div></div>}
-      </div>
-    </fieldset>
-
-        {/* Student Information Section */}
-        <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">{studentLabelSingular} Information</legend>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            <div><label htmlFor="name" className="block text-sm font-medium text-gray-700">First Name</label><input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
-            <div><label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Last Name</label><input type="text" id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
+            </div>
+            <p className="text-sm text-gray-600 mt-2">{studentLabelSingular} Photo</p>
+            <p className="text-xs text-gray-500">Max 2MB · JPG/PNG/WEBP · 100–3000px</p>
+            {uploadProgress > 0 && uploadProgress < 100 && <div className="w-24 bg-gray-200 rounded-full h-1.5 mt-2"><div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div></div>}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div><label htmlFor="name" className="block text-sm font-medium text-gray-700">First Name</label><input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
+            <div><label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Last Name</label><input type="text" id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
+            <div>
+              <label htmlFor="nationality" className="block text-sm font-medium text-gray-700">Nationality</label>
+              <Select
+                id="nationality"
+                value={nationality ? { value: nationality, label: nationality } : null}
+                onChange={(option) => setNationality(option?.value || '')}
+                options={nationalities}
+                isClearable
+                isSearchable
+                placeholder="Select nationality"
+                className="mt-1"
+                styles={{
+                  menu: (base) => ({ ...base, zIndex: 20 })
+                }}
+              />
+            </div>
+            <div><label htmlFor="birthday" className="block text-sm font-medium text-gray-700">Date of Birth</label><input type="date" id="birthday" value={birthday} onChange={(e) => setBirthday(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
             <div>
               <label htmlFor="documentType" className="block text-sm font-medium text-gray-700">Document Type</label>
               <Select
@@ -781,7 +884,6 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
               />
             </div>
             <div><label htmlFor="documentNumber" className="block text-sm font-medium text-gray-700">Document Number</label><input type="text" id="documentNumber" value={documentNumber} onChange={(e) => setDocumentNumber(e.target.value)} placeholder="Enter document number" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
-            <div><label htmlFor="birthday" className="block text-sm font-medium text-gray-700">Date of Birth</label><input type="date" id="birthday" value={birthday} onChange={(e) => setBirthday(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
             <div>
               <label htmlFor="gender" className="block text-sm font-medium text-gray-700">Gender</label>
               <Select
@@ -801,47 +903,16 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
                 }}
               />
             </div>
-            <div>
-              <label htmlFor="group" className="block text-sm font-medium text-gray-700">Group</label>
-              <Select
-                id="group"
-                value={groupId ? groups.find(g => g.id === groupId) ? { value: groupId, label: groups.find(g => g.id === groupId).name } : null : null}
-                onChange={(option) => {
-                  if (option?.value === '__create_new__') {
-                    setShowCreateGroup(true);
-                  } else {
-                    setGroupId(option?.value || '');
-                  }
-                }}
-                options={[
-                  {
-                    label: 'Actions',
-                    options: [{ value: '__create_new__', label: '+ Create New Group' }]
-                  },
-                  {
-                    label: 'Groups',
-                    options: groups.filter(g => g.status === 'active').map(group => ({
-                      value: group.id,
-                      label: group.name
-                    }))
-                  }
-                ]}
-                isClearable
-                placeholder="Select a group"
-                className="mt-1"
-                styles={{
-                  menu: (base) => ({ ...base, zIndex: 20 }),
-                  option: (base, state) => ({
-                    ...base,
-                    fontWeight: state.data.value === '__create_new__' ? 600 : 400,
-                    color: state.data.value === '__create_new__' ? '#2563eb' : base.color,
-                  })
-                }}
-              />
-            </div>
-            <div><label htmlFor="playerEmail" className="block text-sm font-medium text-gray-700">Email (Optional)</label><input type="email" id="playerEmail" value={playerEmail} onChange={(e) => setPlayerEmail(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
+          </div>
+        </fieldset>
+
+        {/* Contact Information Section */}
+        <fieldset className="border-t-2 border-gray-200 pt-6">
+          <legend className="text-xl font-semibold text-gray-900 px-2">{studentLabelSingular} Contact Information</legend>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            <div><label htmlFor="playerEmail" className="block text-sm font-medium text-gray-700">Email</label><input type="email" id="playerEmail" value={playerEmail} onChange={(e) => setPlayerEmail(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
             <div className="md:col-span-2">
-              <label htmlFor="playerContactPhone" className="block text-sm font-medium text-gray-700">Phone (Optional)</label>
+              <label htmlFor="playerContactPhone" className="block text-sm font-medium text-gray-700">Phone</label>
               <div className="mt-1 flex gap-2">
                 <Select
                   options={countryCodes}
@@ -873,24 +944,6 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
                 </div>
               </div>
             </div>
-            {playerToEdit && (
-              <div>
-                <label htmlFor="playerStatus" className="block text-sm font-medium text-gray-700">Status</label>
-                <Select
-                  id="playerStatus"
-                  value={{ value: playerStatus, label: playerStatus === 'active' ? 'Active' : 'Inactive' }}
-                  onChange={(option) => setPlayerStatus(option.value)}
-                  options={[
-                    { value: 'active', label: 'Active' },
-                    { value: 'inactive', label: 'Inactive' }
-                  ]}
-                  className="mt-1"
-                  styles={{
-                    menu: (base) => ({ ...base, zIndex: 20 })
-                  }}
-                />
-              </div>
-            )}
           </div>
         </fieldset>
 
@@ -915,11 +968,11 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
           </div>
           {hasTutor && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-              <div><label htmlFor="tutorName" className="block text-sm font-medium text-gray-700">Tutor First Name</label><input type="text" id="tutorName" value={tutorName} onChange={(e) => setTutorName(e.target.value)} required={hasTutor} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
-              <div><label htmlFor="tutorLastName" className="block text-sm font-medium text-gray-700">Tutor Last Name</label><input type="text" id="tutorLastName" value={tutorLastName} onChange={(e) => setTutorLastName(e.target.value)} required={hasTutor} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
-              <div className="md:col-span-2"><label htmlFor="tutorEmail" className="block text-sm font-medium text-gray-700">Tutor Email (Optional)</label><input type="email" id="tutorEmail" value={tutorEmail} onChange={(e) => setTutorEmail(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
+              <div><label htmlFor="tutorName" className="block text-sm font-medium text-gray-700">Tutor First Name</label><input type="text" id="tutorName" value={tutorName} onChange={(e) => setTutorName(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
+              <div><label htmlFor="tutorLastName" className="block text-sm font-medium text-gray-700">Tutor Last Name</label><input type="text" id="tutorLastName" value={tutorLastName} onChange={(e) => setTutorLastName(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
+              <div className="md:col-span-2"><label htmlFor="tutorEmail" className="block text-sm font-medium text-gray-700">Tutor Email</label><input type="email" id="tutorEmail" value={tutorEmail} onChange={(e) => setTutorEmail(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
               <div className="md:col-span-2">
-                <label htmlFor="tutorContactPhone" className="block text-sm font-medium text-gray-700">Tutor Phone (Optional)</label>
+                <label htmlFor="tutorContactPhone" className="block text-sm font-medium text-gray-700">Tutor Phone</label>
                 <div className="mt-1 flex gap-2">
                   <Select
                     options={countryCodes}
@@ -959,6 +1012,87 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
         <fieldset className="border-t-2 border-gray-200 pt-6">
           <legend className="text-xl font-semibold text-gray-900 px-2">Plan Information</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 items-start">
+            <div>
+              <label htmlFor="location" className="block text-sm font-medium text-gray-700">Location</label>
+              <Select
+                id="location"
+                value={locationId ? locations.find(loc => loc.id === locationId) ? { value: locationId, label: locations.find(loc => loc.id === locationId).name } : null : null}
+                onChange={(option) => {
+                  setLocationId(option?.value || '');
+                  // Clear group and plan when location changes
+                  setGroupId('');
+                  setSelectedPlan(null);
+                }}
+                options={locations.filter(loc => loc.status === 'active').map(location => ({
+                  value: location.id,
+                  label: location.name
+                }))}
+                isClearable={false}
+                isSearchable
+                placeholder="Select a location"
+                className="mt-1"
+                styles={{
+                  menu: (base) => ({ ...base, zIndex: 20 })
+                }}
+              />
+            </div>
+            <div>
+              <label htmlFor="group" className="block text-sm font-medium text-gray-700">Group</label>
+              <Select
+                id="group"
+                value={groupId ? filteredGroups.find(g => g.id === groupId) ? { value: groupId, label: filteredGroups.find(g => g.id === groupId).name } : null : null}
+                onChange={(option) => {
+                  if (option?.value === '__create_new__') {
+                    setShowCreateGroup(true);
+                  } else {
+                    setGroupId(option?.value || '');
+                  }
+                }}
+                options={[
+                  {
+                    label: 'Actions',
+                    options: [{ value: '__create_new__', label: '+ Create New Group' }]
+                  },
+                  {
+                    label: 'Groups',
+                    options: filteredGroups.map(group => ({
+                      value: group.id,
+                      label: group.name
+                    }))
+                  }
+                ]}
+                isClearable
+                placeholder={locationId ? "Select a group" : "Select a location first"}
+                isDisabled={!locationId}
+                className="mt-1"
+                styles={{
+                  menu: (base) => ({ ...base, zIndex: 20 }),
+                  option: (base, state) => ({
+                    ...base,
+                    fontWeight: state.data.value === '__create_new__' ? 600 : 400,
+                    color: state.data.value === '__create_new__' ? '#2563eb' : base.color,
+                  })
+                }}
+              />
+            </div>
+            {playerToEdit && (
+              <div>
+                <label htmlFor="playerStatus" className="block text-sm font-medium text-gray-700">Status</label>
+                <Select
+                  id="playerStatus"
+                  value={{ value: playerStatus, label: playerStatus === 'active' ? 'Active' : 'Inactive' }}
+                  onChange={(option) => setPlayerStatus(option.value)}
+                  options={[
+                    { value: 'active', label: 'Active' },
+                    { value: 'inactive', label: 'Inactive' }
+                  ]}
+                  className="mt-1"
+                  styles={{
+                    menu: (base) => ({ ...base, zIndex: 20 })
+                  }}
+                />
+              </div>
+            )}
             {playerToEdit?.plan ? (
               <div className="md:col-span-2 space-y-2">
                 <p className="text-sm font-medium text-gray-700">Assigned Plan</p>
@@ -981,7 +1115,8 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
                     }}
                     isClearable
                     isSearchable
-                    placeholder="Select a plan..."
+                    placeholder={locationId ? "Select a plan..." : "Select a location first"}
+                    isDisabled={!locationId}
                     className="mt-1"
                     options={[
                       {
@@ -990,7 +1125,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
                       },
                       {
                         label: 'Membership Tiers',
-                        options: tiers.filter(t => t.status === 'active').map(t => ({ value: `tier-${t.id}`, label: t.name }))
+                        options: filteredTiers.map(t => ({ value: `tier-${t.id}`, label: t.name }))
                       },
                       {
                         label: 'Free Trials',
@@ -1009,7 +1144,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
 
                 {selectedPlan?.value.startsWith('tier-') && (
                   <>
-                    <div><label htmlFor="planStartDate" className="block text-sm font-medium text-gray-700">Start Date</label><input type="date" id="planStartDate" value={planStartDate} onChange={(e) => setPlanStartDate(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
+                    <div><label htmlFor="planStartDate" className="block text-sm font-medium text-gray-700">Start Date</label><input type="date" id="planStartDate" value={planStartDate} onChange={(e) => setPlanStartDate(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
                   </>
                 )}
 
@@ -1139,16 +1274,18 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
                     setShowCreateGroup(false);
                     setNewGroupName('');
                   }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                  disabled={creatingGroup}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleCreateGroup}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                  disabled={creatingGroup}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Create Group
+                  {creatingGroup ? 'Creating...' : 'Create Group'}
                 </button>
               </div>
             </div>
@@ -1235,16 +1372,18 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
                     setNewPlanPrice('');
                     setNewPlanDuration('');
                   }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                  disabled={creatingPlan}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleCreatePlan}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                  disabled={creatingPlan}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Create Plan
+                  {creatingPlan ? 'Creating...' : 'Create Plan'}
                 </button>
               </div>
             </div>

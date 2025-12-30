@@ -332,6 +332,104 @@ export const getTrials = async (db, academyId) => {
   }
 };
 
+// ==================== LOCATION OPERATIONS ====================
+
+/**
+ * Get all locations for an academy
+ * @param {Object} db - Firestore instance
+ * @param {string} academyId - Academy ID
+ * @returns {Promise<Array>}
+ */
+export const getLocations = async (db, academyId) => {
+  try {
+    const locationsRef = getAcademyCollection(db, academyId, COLLECTIONS.LOCATIONS);
+    const snapshot = await getDocs(locationsRef);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error('Error fetching locations:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get location by ID
+ * @param {Object} db - Firestore instance
+ * @param {string} academyId - Academy ID
+ * @param {string} locationId - Location ID
+ * @returns {Promise<Object|null>}
+ */
+export const getLocation = async (db, academyId, locationId) => {
+  try {
+    const docRef = doc(db, getAcademyPath(academyId, COLLECTIONS.LOCATIONS), locationId);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+  } catch (error) {
+    console.error('Error fetching location:', error);
+    throw error;
+  }
+};
+
+/**
+ * Create location
+ * @param {Object} db - Firestore instance
+ * @param {string} academyId - Academy ID
+ * @param {Object} locationData - Location data
+ * @returns {Promise<string>} - Created location ID
+ */
+export const createLocation = async (db, academyId, locationData) => {
+  try {
+    const locationsRef = getAcademyCollection(db, academyId, COLLECTIONS.LOCATIONS);
+    const newDocRef = doc(locationsRef);
+    await setDoc(newDocRef, {
+      ...locationData,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    return newDocRef.id;
+  } catch (error) {
+    console.error('Error creating location:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update location
+ * @param {Object} db - Firestore instance
+ * @param {string} academyId - Academy ID
+ * @param {string} locationId - Location ID
+ * @param {Object} data - Data to update
+ * @returns {Promise<void>}
+ */
+export const updateLocation = async (db, academyId, locationId, data) => {
+  try {
+    const docRef = doc(db, getAcademyPath(academyId, COLLECTIONS.LOCATIONS), locationId);
+    await updateDoc(docRef, {
+      ...data,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error updating location:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete location
+ * @param {Object} db - Firestore instance
+ * @param {string} academyId - Academy ID
+ * @param {string} locationId - Location ID
+ * @returns {Promise<void>}
+ */
+export const deleteLocation = async (db, academyId, locationId) => {
+  try {
+    const docRef = doc(db, getAcademyPath(academyId, COLLECTIONS.LOCATIONS), locationId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error('Error deleting location:', error);
+    throw error;
+  }
+};
+
 // ==================== MEMBER OPERATIONS ====================
 
 /**

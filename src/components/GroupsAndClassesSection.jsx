@@ -3,11 +3,13 @@ import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc, where } 
 import { Plus, Edit, Trash2, MoreVertical, Users, Calendar, ArrowRightLeft, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import Select from 'react-select';
 import LoadingBar from './LoadingBar.jsx';
 import '../styles/sections.css';
 import { useAcademy } from '../contexts/AcademyContext';
 import { hasValidMembership } from '../utils/permissions';
 import { COLLECTIONS } from '../config/constants';
+import { getLocations } from '../services/firestore';
 
 export default function GroupsAndClassesSection({ user, db }) {
   const { academy, membership } = useAcademy();
@@ -23,8 +25,10 @@ export default function GroupsAndClassesSection({ user, db }) {
   const [activeGroupMenu, setActiveGroupMenu] = useState(null);
   const [actionsMenuPosition, setActionsMenuPosition] = useState({ x: 0, y: 0 });
   const actionsMenuRef = useRef(null);
-  const [groupForm, setGroupForm] = useState({ name: '', description: '', minAge: '', maxAge: '', coach: '', maxCapacity: '', status: 'active' });
+  const [groupForm, setGroupForm] = useState({ name: '', description: '', minAge: '', maxAge: '', coach: '', maxCapacity: '', status: 'active', locationId: '' });
   const [groupError, setGroupError] = useState(null);
+  const [locations, setLocations] = useState([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
 
   // States for Schedule
   const [schedules, setSchedules] = useState({}); // { groupId: [scheduleItem, ...] }
@@ -90,7 +94,21 @@ export default function GroupsAndClassesSection({ user, db }) {
 
   useEffect(() => {
     fetchGroups();
+    fetchLocationsData();
   }, [user, academy, membership]);
+
+  const fetchLocationsData = async () => {
+    if (!academy?.id || !db) return;
+    setLoadingLocations(true);
+    try {
+      const locationsData = await getLocations(db, academy.id);
+      setLocations(locationsData);
+    } catch (error) {
+      console.error('Error fetching locations:', error);
+    } finally {
+      setLoadingLocations(false);
+    }
+  };
 
   // Close actions menu on outside click
   useEffect(() => {
@@ -157,10 +175,11 @@ export default function GroupsAndClassesSection({ user, db }) {
         coach: group.coach || '',
         maxCapacity: group.maxCapacity || '',
         status: group.status || 'active',
+        locationId: group.locationId || '',
       });
     } else {
       setEditingGroup(null);
-      setGroupForm({ name: '', description: '', minAge: '', maxAge: '', coach: '', maxCapacity: '', status: 'active' });
+      setGroupForm({ name: '', description: '', minAge: '', maxAge: '', coach: '', maxCapacity: '', status: 'active', locationId: '' });
       setGroupError(null);
     }
     setShowGroupModal(true);
@@ -169,13 +188,19 @@ export default function GroupsAndClassesSection({ user, db }) {
   const handleAddOrUpdateGroup = async (e) => {
     e.preventDefault();
     if (!user || loadingGroups) return;
-    
+
     // Lógica de permisos corregida
     const userIsOwner = academy?.ownerId === user.uid;
     const userIsAdmin = membership?.role === 'admin';
 
     if (!userIsOwner && !userIsAdmin) {
       toast.error("You don't have permission to modify groups.");
+      return;
+    }
+
+    // Validate location is selected
+    if (!groupForm.locationId) {
+      toast.error("Please select a location for this group.");
       return;
     }
 
@@ -187,6 +212,7 @@ export default function GroupsAndClassesSection({ user, db }) {
       minAge: Number(groupForm.minAge) || 0,
       maxAge: Number(groupForm.maxAge) || 0,
       maxCapacity: groupForm.maxCapacity ? Number(groupForm.maxCapacity) : null,
+      locationId: groupForm.locationId,
       academyId: academy.id,
       updatedAt: new Date(),
     };
@@ -527,6 +553,22 @@ export default function GroupsAndClassesSection({ user, db }) {
             </div>
             <form onSubmit={handleAddOrUpdateGroup} className="space-y-4">
               <div><label htmlFor="name" className="block text-sm font-medium text-gray-700">Group Name</label><input type="text" name="name" value={groupForm.name} onChange={handleGroupFormChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
+              <div>
+                <label htmlFor="locationId" className="block text-sm font-medium text-gray-700">Location</label>
+                <Select
+                  id="locationId"
+                  value={locations.find(loc => loc.id === groupForm.locationId) ? { value: groupForm.locationId, label: locations.find(loc => loc.id === groupForm.locationId).name } : null}
+                  onChange={(option) => setGroupForm(prev => ({ ...prev, locationId: option?.value || '' }))}
+                  options={locations.filter(loc => loc.status === 'active').map(loc => ({ value: loc.id, label: loc.name }))}
+                  isClearable={false}
+                  isSearchable
+                  placeholder="Select a location"
+                  className="mt-1"
+                  styles={{
+                    menu: (base) => ({ ...base, zIndex: 20 })
+                  }}
+                />
+              </div>
               <div><label htmlFor="description" className="block text-sm font-medium text-gray-700">Description (Optional)</label><textarea name="description" value={groupForm.description} onChange={handleGroupFormChange} rows="3" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></textarea></div>
               <div className="grid grid-cols-2 gap-4">
                 <div><label htmlFor="minAge" className="block text-sm font-medium text-gray-700">Min Age</label><input type="number" name="minAge" value={groupForm.minAge} onChange={handleGroupFormChange} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
