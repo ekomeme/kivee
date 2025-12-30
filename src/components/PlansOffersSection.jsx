@@ -60,8 +60,6 @@ export default function PlansOffersSection({ user, db }) {
   const [productPrice, setProductPrice] = useState('');
   const [productLocationPricing, setProductLocationPricing] = useState('global'); // 'global' or 'specific'
   const [productLocationPrices, setProductLocationPrices] = useState({}); // { locationId: price }
-  const [availableDate, setAvailableDate] = useState('');
-  const [inventory, setInventory] = useState('');
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [productError, setProductError] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -73,6 +71,8 @@ export default function PlansOffersSection({ user, db }) {
   const [durationInDays, setDurationInDays] = useState('');
   const [classLimit, setClassLimit] = useState('');
   const [trialPrice, setTrialPrice] = useState('');
+  const [trialLocationPricing, setTrialLocationPricing] = useState('global'); // 'global' or 'specific'
+  const [trialLocationPrices, setTrialLocationPrices] = useState({}); // { locationId: price }
   const [convertsToTierId, setConvertsToTierId] = useState('');
   const [loadingTrials, setLoadingTrials] = useState(false);
   const [trialError, setTrialError] = useState(null);
@@ -269,8 +269,6 @@ export default function PlansOffersSection({ user, db }) {
       price: productLocationPricing === 'global' ? Number(productPrice) || 0 : 0,
       locationPricing: productLocationPricing,
       locationPrices: productLocationPricing === 'specific' ? productLocationPrices : null,
-      availableDate: availableDate || null,
-      inventory: inventory ? Number(inventory) : null,
       academyId: academy.id,
       createdAt: editingProduct ? editingProduct.createdAt : new Date(),
       updatedAt: new Date(),
@@ -305,8 +303,6 @@ export default function PlansOffersSection({ user, db }) {
       setProductPrice(product.price || '');
       setProductLocationPricing(product.locationPricing || 'global');
       setProductLocationPrices(product.locationPrices || {});
-      setAvailableDate(product.availableDate || '');
-      setInventory(product.inventory || '');
     } else {
       setEditingProduct(null);
       setProductName('');
@@ -315,8 +311,6 @@ export default function PlansOffersSection({ user, db }) {
       setProductPrice('');
       setProductLocationPricing('global');
       setProductLocationPrices({});
-      setAvailableDate('');
-      setInventory('');
       setProductError(null);
     }
     setShowProductModal(true);
@@ -339,7 +333,9 @@ export default function PlansOffersSection({ user, db }) {
       name: trialName,
       durationInDays: Number(durationInDays),
       classLimit: classLimit ? Number(classLimit) : 'unlimited',
-      price: Number(trialPrice) || 0,
+      price: trialLocationPricing === 'global' ? (Number(trialPrice) || 0) : 0,
+      locationPricing: trialLocationPricing,
+      locationPrices: trialLocationPricing === 'specific' ? trialLocationPrices : null,
       convertsToTierId: convertsToTierId || null,
       autoRenew: false, // Trials never auto-renew
       academyId: academy.id,
@@ -374,6 +370,8 @@ export default function PlansOffersSection({ user, db }) {
       setDurationInDays(trial.durationInDays);
       setClassLimit(trial.classLimit === 'unlimited' ? '' : trial.classLimit);
       setTrialPrice(trial.price);
+      setTrialLocationPricing(trial.locationPricing || 'global');
+      setTrialLocationPrices(trial.locationPrices || {});
       setConvertsToTierId(trial.convertsToTierId || '');
     } else {
       setEditingTrial(null);
@@ -381,6 +379,8 @@ export default function PlansOffersSection({ user, db }) {
       setDurationInDays('');
       setClassLimit('');
       setTrialPrice('');
+      setTrialLocationPricing('global');
+      setTrialLocationPrices({});
       setConvertsToTierId('');
       setTrialError(null);
     }
@@ -733,7 +733,6 @@ export default function PlansOffersSection({ user, db }) {
                       <th className="py-2 px-4 border-b text-left table-header">Name</th>
                       <th className="py-2 px-4 border-b text-left table-header">Type</th>
                       <th className="py-2 px-4 border-b text-left table-header">Price</th>
-                      <th className="py-2 px-4 border-b text-left table-header">Inventory</th>
                       <th className="py-2 px-4 border-b text-right table-header">Actions</th>
                     </tr>
                   </thead>
@@ -749,7 +748,6 @@ export default function PlansOffersSection({ user, db }) {
                             formatAcademyCurrency(product.price, academy)
                           )}
                         </td>
-                        <td className="py-3 px-4 border-b text-sm text-gray-600 table-cell">{product.inventory ?? 'N/A'}</td>
                         <td className="py-3 px-4 border-b text-right table-cell">
                         <button onClick={(e) => { e.stopPropagation(); setActiveProductMenu(product); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none" aria-label={`Actions for product ${product.name}`}>
                           <MoreVertical className="h-5 w-5 text-gray-500" />
@@ -772,21 +770,15 @@ export default function PlansOffersSection({ user, db }) {
                     </button>
                     <p className="font-semibold text-gray-900 text-lg">{product.name}</p>
                     <p className="text-sm text-gray-600 capitalize mt-1">{product.type}</p>
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-700">
-                      <div className="bg-gray-50 rounded-md p-2">
-                        <p className="text-xs text-gray-500">Price</p>
-                        <p className="font-medium">
-                          {product.locationPricing === 'specific' ? (
-                            <span className="text-sm text-gray-600 italic">Varies by location</span>
-                          ) : (
-                            formatAcademyCurrency(product.price, academy)
-                          )}
-                        </p>
-                      </div>
-                      <div className="bg-gray-50 rounded-md p-2">
-                        <p className="text-xs text-gray-500">Inventory</p>
-                        <p className="font-medium">{product.inventory ?? 'N/A'}</p>
-                      </div>
+                    <div className="mt-3 bg-gray-50 rounded-md p-2 text-sm text-gray-700">
+                      <p className="text-xs text-gray-500">Price</p>
+                      <p className="font-medium">
+                        {product.locationPricing === 'specific' ? (
+                          <span className="text-sm text-gray-600 italic">Varies by location</span>
+                        ) : (
+                          formatAcademyCurrency(product.price, academy)
+                        )}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -826,7 +818,13 @@ export default function PlansOffersSection({ user, db }) {
                         <td className="py-3 px-4 border-b text-base font-medium table-cell">{trial.name}</td>
                         <td className="py-3 px-4 border-b text-sm text-gray-600 table-cell">{trial.durationInDays} days</td>
                         <td className="py-3 px-4 border-b text-sm text-gray-600 capitalize table-cell">{trial.classLimit}</td>
-                        <td className="py-3 px-4 border-b text-base table-cell">{formatAcademyCurrency(trial.price, academy)}</td>
+                        <td className="py-3 px-4 border-b text-base table-cell">
+                          {trial.locationPricing === 'specific' ? (
+                            <span className="text-sm text-gray-600 italic">Varies by location</span>
+                          ) : (
+                            formatAcademyCurrency(trial.price, academy)
+                          )}
+                        </td>
                         <td className="py-3 px-4 border-b text-right table-cell">
                         <button onClick={(e) => { e.stopPropagation(); setActiveTrialMenu(trial); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none" aria-label={`Actions for trial ${trial.name}`}>
                           <MoreVertical className="h-5 w-5 text-gray-500" />
@@ -856,7 +854,13 @@ export default function PlansOffersSection({ user, db }) {
                       </div>
                       <div className="bg-gray-50 rounded-md p-2">
                         <p className="text-xs text-gray-500">Price</p>
-                        <p className="font-medium">{formatAcademyCurrency(trial.price, academy)}</p>
+                        <p className="font-medium">
+                          {trial.locationPricing === 'specific' ? (
+                            <span className="text-sm text-gray-600 italic">Varies by location</span>
+                          ) : (
+                            formatAcademyCurrency(trial.price, academy)
+                          )}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -1184,14 +1188,6 @@ export default function PlansOffersSection({ user, db }) {
                 </div>
               )}
 
-              <div>
-                <label htmlFor="inventory" className="block text-sm font-medium text-gray-700">Inventory (Optional)</label>
-                <input type="number" id="inventory" value={inventory} onChange={(e) => setInventory(e.target.value)} min="0" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
-              </div>
-              <div>
-                <label htmlFor="availableDate" className="block text-sm font-medium text-gray-700">Available Date (Optional)</label>
-                <input type="date" id="availableDate" value={availableDate} onChange={(e) => setAvailableDate(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
-              </div>
               {productError && <p className="text-red-500 text-sm mt-4">{productError}</p>}
               <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-section py-3 md:bg-transparent md:py-0">
                 <button type="button" onClick={() => setShowProductModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
@@ -1219,7 +1215,42 @@ export default function PlansOffersSection({ user, db }) {
             <form onSubmit={handleAddOrUpdateTrial} className="space-y-4">
               <div><label htmlFor="trialName" className="block text-sm font-medium text-gray-700">Trial Name</label><input type="text" id="trialName" value={trialName} onChange={(e) => setTrialName(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
               <div><label htmlFor="durationInDays" className="block text-sm font-medium text-gray-700">Duration (in days)</label><input type="number" id="durationInDays" value={durationInDays} onChange={(e) => setDurationInDays(e.target.value)} required min="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Location Pricing</label>
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      id="trialPricingGlobal"
+                      name="trialLocationPricing"
+                      value="global"
+                      checked={trialLocationPricing === 'global'}
+                      onChange={(e) => setTrialLocationPricing(e.target.value)}
+                      className="h-4 w-4 text-primary border-gray-300"
+                    />
+                    <label htmlFor="trialPricingGlobal" className="ml-2 text-sm text-gray-700">
+                      Same price for all locations
+                    </label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      id="trialPricingSpecific"
+                      name="trialLocationPricing"
+                      value="specific"
+                      checked={trialLocationPricing === 'specific'}
+                      onChange={(e) => setTrialLocationPricing(e.target.value)}
+                      className="h-4 w-4 text-primary border-gray-300"
+                    />
+                    <label htmlFor="trialPricingSpecific" className="ml-2 text-sm text-gray-700">
+                      Different price per location
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {trialLocationPricing === 'global' ? (
                 <div>
                   <label htmlFor="trialPrice" className="block text-sm font-medium text-gray-700">Price</label>
                   <div className="relative mt-1">
@@ -1229,6 +1260,40 @@ export default function PlansOffersSection({ user, db }) {
                     <input type="number" id="trialPrice" value={trialPrice} onChange={(e) => setTrialPrice(e.target.value)} required min="0" step="0.01" className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
                   </div>
                 </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Price per Location</label>
+                  {loadingLocations ? (
+                    <p className="text-sm text-gray-500">Loading locations...</p>
+                  ) : locations.length === 0 ? (
+                    <p className="text-sm text-gray-500">No locations available. Please create a location first.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {locations.map(location => (
+                        <div key={location.id} className="flex items-center space-x-2">
+                          <label className="text-sm text-gray-700 w-1/3">{location.name}</label>
+                          <div className="relative flex-1">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
+                            </div>
+                            <input
+                              type="number"
+                              value={trialLocationPrices[location.id] || ''}
+                              onChange={(e) => setTrialLocationPrices({ ...trialLocationPrices, [location.id]: e.target.value })}
+                              min="0"
+                              step="0.01"
+                              className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="classLimit" className="block text-sm font-medium text-gray-700">Class Limit (leave empty for unlimited)</label>
                   <input type="number" id="classLimit" value={classLimit} onChange={(e) => setClassLimit(e.target.value)} min="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />

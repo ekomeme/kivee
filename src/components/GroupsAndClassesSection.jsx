@@ -404,6 +404,7 @@ export default function GroupsAndClassesSection({ user, db }) {
                   <thead>
                     <tr>
                       <th className="py-2 px-4 border-b text-left table-header">Name</th>
+                      <th className="py-2 px-4 border-b text-left table-header">Location</th>
                       <th className="py-2 px-4 border-b text-left table-header">Age Range</th>
                       <th className="py-2 px-4 border-b text-left table-header">Coach</th>
                       <th className="py-2 px-4 border-b text-left table-header">Capacity</th>
@@ -412,55 +413,63 @@ export default function GroupsAndClassesSection({ user, db }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {groups.map(group => (
-                      <tr
-                        key={group.id}
-                        className="hover:bg-gray-50 cursor-pointer table-row-hover"
-                        onClick={() => navigate(`/groups/${group.id}`)}
-                      >
-                        <td className="py-3 px-4 border-b font-medium table-cell">{group.name}</td>
-                        <td className="py-3 px-4 border-b table-cell">{group.minAge}-{group.maxAge} years</td>
-                        <td className="py-3 px-4 border-b table-cell">{group.coach}</td>
-                        <td className="py-3 px-4 border-b table-cell">{group.maxCapacity || 'N/A'}</td>
-                        <td className="py-3 px-4 border-b table-cell"><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${group.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{group.status}</span></td>
-                        <td className="py-3 px-4 border-b text-right table-cell">
-                        <button onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(group); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none" aria-label={`Actions for group ${group.name}`}><MoreVertical className="h-5 w-5 text-gray-500" /></button>
-                        </td>
-                      </tr>
-                    ))}
+                    {groups.map(group => {
+                      const groupLocation = locations.find(loc => loc.id === group.locationId);
+                      return (
+                        <tr
+                          key={group.id}
+                          className="hover:bg-gray-50 cursor-pointer table-row-hover"
+                          onClick={() => navigate(`/groups/${group.id}`)}
+                        >
+                          <td className="py-3 px-4 border-b font-medium table-cell">{group.name}</td>
+                          <td className="py-3 px-4 border-b table-cell">{groupLocation?.name || 'N/A'}</td>
+                          <td className="py-3 px-4 border-b table-cell">{group.minAge}-{group.maxAge} years</td>
+                          <td className="py-3 px-4 border-b table-cell">{group.coach}</td>
+                          <td className="py-3 px-4 border-b table-cell">{group.maxCapacity || 'N/A'}</td>
+                          <td className="py-3 px-4 border-b table-cell"><span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${group.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{group.status}</span></td>
+                          <td className="py-3 px-4 border-b text-right table-cell">
+                          <button onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(group); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none" aria-label={`Actions for group ${group.name}`}><MoreVertical className="h-5 w-5 text-gray-500" /></button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
               <div className="grid gap-3 md:hidden">
-                {groups.map(group => (
-                  <div
-                    key={group.id}
-                    className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm relative"
-                    onClick={() => navigate(`/groups/${group.id}`)}
-                  >
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(group); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }}
-                      className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100"
-                      aria-label="More actions"
+                {groups.map(group => {
+                  const groupLocation = locations.find(loc => loc.id === group.locationId);
+                  return (
+                    <div
+                      key={group.id}
+                      className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm relative"
+                      onClick={() => navigate(`/groups/${group.id}`)}
                     >
-                      <MoreVertical className="h-5 w-5 text-gray-600" />
-                    </button>
-                    <div className="space-y-1">
-                      <p className="font-semibold text-gray-900 text-lg">{group.name}</p>
-                      <p className="text-sm text-gray-600">{group.minAge}-{group.maxAge} years • Coach: {group.coach || 'N/A'}</p>
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-700">
-                      <div className="bg-gray-50 rounded-md p-2">
-                        <p className="text-xs text-gray-500">Capacity</p>
-                        <p className="font-medium">{group.maxCapacity || 'N/A'}</p>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(group); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }}
+                        className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100"
+                        aria-label="More actions"
+                      >
+                        <MoreVertical className="h-5 w-5 text-gray-600" />
+                      </button>
+                      <div className="space-y-1">
+                        <p className="font-semibold text-gray-900 text-lg">{group.name}</p>
+                        <p className="text-sm text-gray-600">{groupLocation?.name || 'N/A'}</p>
+                        <p className="text-sm text-gray-600">{group.minAge}-{group.maxAge} years • Coach: {group.coach || 'N/A'}</p>
                       </div>
-                      <div className="bg-gray-50 rounded-md p-2">
-                        <p className="text-xs text-gray-500">Status</p>
-                        <p className="font-medium capitalize">{group.status}</p>
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-700">
+                        <div className="bg-gray-50 rounded-md p-2">
+                          <p className="text-xs text-gray-500">Capacity</p>
+                          <p className="font-medium">{group.maxCapacity || 'N/A'}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-md p-2">
+                          <p className="text-xs text-gray-500">Status</p>
+                          <p className="font-medium capitalize">{group.status}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { collection, addDoc, updateDoc, doc, getDocs, serverTimestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import toast from 'react-hot-toast';
@@ -23,7 +24,8 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
   const [birthday, setBirthday] = useState('');
   const [photoURL, setPhotoURL] = useState('');
   const [playerPhotoFile, setPlayerPhotoFile] = useState(null);
-  const fileInputRef = React.useRef(null); // Ref for hidden file input
+  const fileInputRef = useRef(null); // Ref for hidden file input
+  const scrollPositionRef = useRef(0); // Store scroll position
   const [uploadProgress, setUploadProgress] = useState(0);
   const [playerEmail, setPlayerEmail] = useState('');
   const [playerPhoneCountry, setPlayerPhoneCountry] = useState('US');
@@ -325,6 +327,31 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
     }
   }, [playerToEdit, tiers, trials, oneTimeProducts, academy.currency]); // academy.currency is a dependency
 
+  // Preserve scroll position before and after re-renders
+  useLayoutEffect(() => {
+    const drawer = document.getElementById('player-form-drawer');
+    if (!drawer) return;
+
+    // Always restore scroll position after any re-render
+    if (scrollPositionRef.current > 0) {
+      drawer.scrollTop = scrollPositionRef.current;
+    }
+  });
+
+  // Save scroll position before modal state changes
+  useLayoutEffect(() => {
+    const drawer = document.getElementById('player-form-drawer');
+    if (!drawer) return;
+
+    // Save scroll position whenever it changes
+    const handleScroll = () => {
+      scrollPositionRef.current = drawer.scrollTop;
+    };
+
+    drawer.addEventListener('scroll', handleScroll);
+    return () => drawer.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Validate phone number in real-time
   const validatePhone = (phoneNumber, country) => {
     if (!phoneNumber) return true; // Empty is valid (optional field)
@@ -390,6 +417,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
 
     try {
       setCreatingGroup(true);
+
       const groupData = {
         name: sanitizeText(newGroupName, 50),
         status: 'active',
@@ -461,6 +489,9 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
         const trialData = {
           name: sanitizeText(newPlanName, 50),
           durationInDays: parseInt(newPlanDuration),
+          price: 0, // Default price
+          locationPricing: 'global', // Default to global pricing
+          locationPrices: null,
           status: 'active',
           academyId: academy.id,
           createdAt: serverTimestamp(),
@@ -1249,8 +1280,8 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
         </form>
 
         {/* Create Group Modal */}
-        {showCreateGroup && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        {showCreateGroup && ReactDOM.createPortal(
+          <div className="fixed top-0 right-0 h-full w-full md:w-2/3 lg:w-1/2 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Group</h3>
               <div className="mb-4">
@@ -1289,12 +1320,13 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {/* Create Plan Modal */}
-        {showCreatePlan && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        {showCreatePlan && ReactDOM.createPortal(
+          <div className="fixed top-0 right-0 h-full w-full md:w-2/3 lg:w-1/2 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Plan</h3>
 
@@ -1387,7 +1419,8 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
     </>
   );

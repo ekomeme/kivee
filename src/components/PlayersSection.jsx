@@ -884,6 +884,7 @@ export default function PlayersSection({ user, db }) {
             onClick={handleCloseDrawer}
           />
           <div
+            id="player-form-drawer"
             className="fixed top-0 right-0 h-full w-full md:w-2/3 lg:w-1/2 bg-app shadow-2xl z-50 overflow-y-auto transform transition-transform"
             style={{
               transform: isDrawerOpen ? 'translateX(0)' : 'translateX(100%)',
@@ -909,6 +910,7 @@ export default function PlayersSection({ user, db }) {
                 onComplete={handlePlayerAdded}
               />
             </div>
+            <div id="player-form-modal-root"></div>
           </div>
         </>
       )}
@@ -921,6 +923,7 @@ export default function PlayersSection({ user, db }) {
             onClick={handleCloseDetailDrawer}
           />
           <div
+            id="player-form-drawer"
             className="fixed top-0 right-0 h-full w-full md:w-2/3 lg:w-1/2 bg-app shadow-2xl z-50 overflow-y-auto transform transition-transform"
             style={{
               transform: isDetailDrawerOpen ? 'translateX(0)' : 'translateX(100%)',
@@ -982,6 +985,7 @@ export default function PlayersSection({ user, db }) {
                 />
               )}
             </div>
+            <div id="player-form-modal-root"></div>
           </div>
         </>
       )}
