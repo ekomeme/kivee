@@ -966,23 +966,25 @@ export default function PlansOffersSection({ user, db }) {
                         className="h-4 w-4 text-primary border-gray-300"
                       />
                       <label htmlFor="pricingGlobal" className="ml-2 text-sm text-gray-700">
-                        Same price for all locations
+                        {locations.length > 1 ? 'Same price for all locations' : 'Price'}
                       </label>
                     </div>
-                    <div className="flex items-center">
-                      <input
-                        type="radio"
-                        id="pricingSpecific"
-                        name="locationPricing"
-                        value="specific"
-                        checked={locationPricing === 'specific'}
-                        onChange={(e) => setLocationPricing(e.target.value)}
-                        className="h-4 w-4 text-primary border-gray-300"
-                      />
-                      <label htmlFor="pricingSpecific" className="ml-2 text-sm text-gray-700">
-                        Different price per location
-                      </label>
-                    </div>
+                    {locations.length > 1 && (
+                      <div className="flex items-center">
+                        <input
+                          type="radio"
+                          id="pricingSpecific"
+                          name="locationPricing"
+                          value="specific"
+                          checked={locationPricing === 'specific'}
+                          onChange={(e) => setLocationPricing(e.target.value)}
+                          className="h-4 w-4 text-primary border-gray-300"
+                        />
+                        <label htmlFor="pricingSpecific" className="ml-2 text-sm text-gray-700">
+                          Different price per location
+                        </label>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1128,23 +1130,25 @@ export default function PlansOffersSection({ user, db }) {
                       className="h-4 w-4 text-primary border-gray-300"
                     />
                     <label htmlFor="productPricingGlobal" className="ml-2 text-sm text-gray-700">
-                      Same price for all locations
+                      {locations.length > 1 ? 'Same price for all locations' : 'Price'}
                     </label>
                   </div>
-                  <div className="flex items-center">
-                    <input
-                      type="radio"
-                      id="productPricingSpecific"
-                      name="productLocationPricing"
-                      value="specific"
-                      checked={productLocationPricing === 'specific'}
-                      onChange={(e) => setProductLocationPricing(e.target.value)}
-                      className="h-4 w-4 text-primary border-gray-300"
-                    />
-                    <label htmlFor="productPricingSpecific" className="ml-2 text-sm text-gray-700">
-                      Different price per location
-                    </label>
-                  </div>
+                  {locations.length > 1 && (
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        id="productPricingSpecific"
+                        name="productLocationPricing"
+                        value="specific"
+                        checked={productLocationPricing === 'specific'}
+                        onChange={(e) => setProductLocationPricing(e.target.value)}
+                        className="h-4 w-4 text-primary border-gray-300"
+                      />
+                      <label htmlFor="productPricingSpecific" className="ml-2 text-sm text-gray-700">
+                        Different price per location
+                      </label>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1230,23 +1234,25 @@ export default function PlansOffersSection({ user, db }) {
                       className="h-4 w-4 text-primary border-gray-300"
                     />
                     <label htmlFor="trialPricingGlobal" className="ml-2 text-sm text-gray-700">
-                      Same price for all locations
+                      {locations.length > 1 ? 'Same price for all locations' : 'Price'}
                     </label>
                   </div>
-                  <div className="flex items-center">
-                    <input
-                      type="radio"
-                      id="trialPricingSpecific"
-                      name="trialLocationPricing"
-                      value="specific"
-                      checked={trialLocationPricing === 'specific'}
-                      onChange={(e) => setTrialLocationPricing(e.target.value)}
-                      className="h-4 w-4 text-primary border-gray-300"
-                    />
-                    <label htmlFor="trialPricingSpecific" className="ml-2 text-sm text-gray-700">
-                      Different price per location
-                    </label>
-                  </div>
+                  {locations.length > 1 && (
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        id="trialPricingSpecific"
+                        name="trialLocationPricing"
+                        value="specific"
+                        checked={trialLocationPricing === 'specific'}
+                        onChange={(e) => setTrialLocationPricing(e.target.value)}
+                        className="h-4 w-4 text-primary border-gray-300"
+                      />
+                      <label htmlFor="trialPricingSpecific" className="ml-2 text-sm text-gray-700">
+                        Different price per location
+                      </label>
+                    </div>
+                  )}
                 </div>
               </div>
 
