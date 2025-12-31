@@ -254,7 +254,11 @@ export const AcademyProvider = ({ children, user, db }) => {
     groupLabelSingular: academy?.groupLabelSingular || 'Group',
     groupLabelPlural: academy?.groupLabelPlural || 'Groups',
     classLabelSingular: academy?.classLabelSingular || 'Class',
-    classLabelPlural: academy?.classLabelPlural || 'Classes'
+    classLabelPlural: academy?.classLabelPlural || 'Classes',
+    locationLabelSingular: academy?.locationLabelSingular || 'Location',
+    locationLabelPlural: academy?.locationLabelPlural || 'Locations',
+    facilityLabelSingular: academy?.facilityLabelSingular || 'Facility',
+    facilityLabelPlural: academy?.facilityLabelPlural || 'Facilities'
   };
 
   return (

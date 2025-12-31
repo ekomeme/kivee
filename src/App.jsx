@@ -407,7 +407,17 @@ export default function App() {
     setError(null); // Clear any previous errors
     try {
       const ref = doc(db, "academies", user.uid);
-      const data = { name: nameInput, ownerId: user.uid, createdAt: serverTimestamp(), studentLabelSingular: 'Student', studentLabelPlural: 'Students' };
+      const data = {
+        name: nameInput,
+        ownerId: user.uid,
+        createdAt: serverTimestamp(),
+        studentLabelSingular: 'Student',
+        studentLabelPlural: 'Students',
+        locationLabelSingular: 'Location',
+        locationLabelPlural: 'Locations',
+        facilityLabelSingular: 'Facility',
+        facilityLabelPlural: 'Facilities'
+      };
       await setDoc(ref, data); // Escribe la academia en Firestore
       await ensureOwnerMembership(ref.id, user);
 

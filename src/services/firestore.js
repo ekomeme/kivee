@@ -430,6 +430,95 @@ export const deleteLocation = async (db, academyId, locationId) => {
   }
 };
 
+// ==================== FACILITY OPERATIONS ====================
+
+/**
+ * Get all facilities for a location
+ * @param {Object} db - Firestore instance
+ * @param {string} academyId - Academy ID
+ * @param {string} locationId - Location ID
+ * @returns {Promise<Array>}
+ */
+export const getFacilities = async (db, academyId, locationId) => {
+  try {
+    const facilitiesRef = collection(db, `academies/${academyId}/locations/${locationId}/facilities`);
+    const snapshot = await getDocs(facilitiesRef);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error('Error fetching facilities:', error);
+    throw error;
+  }
+};
+
+/**
+ * Create a new facility
+ * @param {Object} db - Firestore instance
+ * @param {string} academyId - Academy ID
+ * @param {string} locationId - Location ID
+ * @param {Object} facilityData - Facility data
+ * @returns {Promise<string>} - Created facility ID
+ */
+export const createFacility = async (db, academyId, locationId, facilityData) => {
+  try {
+    const facilitiesRef = collection(db, `academies/${academyId}/locations/${locationId}/facilities`);
+    const newDocRef = doc(facilitiesRef);
+
+    const dataToSave = {
+      ...facilityData,
+      academyId,
+      locationId,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    await setDoc(newDocRef, dataToSave);
+    return newDocRef.id;
+  } catch (error) {
+    console.error('Error creating facility:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update a facility
+ * @param {Object} db - Firestore instance
+ * @param {string} academyId - Academy ID
+ * @param {string} locationId - Location ID
+ * @param {string} facilityId - Facility ID
+ * @param {Object} data - Data to update
+ * @returns {Promise<void>}
+ */
+export const updateFacility = async (db, academyId, locationId, facilityId, data) => {
+  try {
+    const docRef = doc(db, `academies/${academyId}/locations/${locationId}/facilities`, facilityId);
+    await updateDoc(docRef, {
+      ...data,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error updating facility:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete a facility
+ * @param {Object} db - Firestore instance
+ * @param {string} academyId - Academy ID
+ * @param {string} locationId - Location ID
+ * @param {string} facilityId - Facility ID
+ * @returns {Promise<void>}
+ */
+export const deleteFacility = async (db, academyId, locationId, facilityId) => {
+  try {
+    const docRef = doc(db, `academies/${academyId}/locations/${locationId}/facilities`, facilityId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.error('Error deleting facility:', error);
+    throw error;
+  }
+};
+
 // ==================== MEMBER OPERATIONS ====================
 
 /**

@@ -69,10 +69,22 @@ service cloud.firestore {
         match /schedule/{sessionId} {
           allow read, write: if isOwnerOrMember(academyId);
         }
+
+        match /members/{memberId} {
+          allow read, write: if isOwnerOrMember(academyId);
+        }
+      }
+
+      match /locations/{locationId} {
+        allow read, write: if isOwnerOrMember(academyId);
+
+        match /facilities/{facilityId} {
+          allow read, write: if isOwnerOrMember(academyId);
+        }
       }
 
       match /{subcollection}/{docId} {
-        allow read, write: if subcollection in ['players', 'tiers', 'trials', 'tutors', 'products', 'locations']
+        allow read, write: if subcollection in ['players', 'tiers', 'trials', 'tutors', 'products']
                               && isOwnerOrMember(academyId);
       }
     }

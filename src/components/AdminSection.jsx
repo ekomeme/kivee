@@ -26,6 +26,10 @@ export default function AdminSection({ user, db, onAcademyUpdate, pendingInvites
   const [logoPreview, setLogoPreview] = useState(academy.logoUrl || '');
   const [studentLabelSingular, setStudentLabelSingular] = useState(academy.studentLabelSingular || 'Student');
   const [studentLabelPlural, setStudentLabelPlural] = useState(academy.studentLabelPlural || 'Students');
+  const [locationLabelSingular, setLocationLabelSingular] = useState(academy.locationLabelSingular || 'Location');
+  const [locationLabelPlural, setLocationLabelPlural] = useState(academy.locationLabelPlural || 'Locations');
+  const [facilityLabelSingular, setFacilityLabelSingular] = useState(academy.facilityLabelSingular || 'Facility');
+  const [facilityLabelPlural, setFacilityLabelPlural] = useState(academy.facilityLabelPlural || 'Facilities');
   const logoInputRef = useRef(null);
   const [activeTab, setActiveTab] = useState('settings');
   const [teamMembers, setTeamMembers] = useState([]);
@@ -44,6 +48,10 @@ export default function AdminSection({ user, db, onAcademyUpdate, pendingInvites
     setLogoFile(null);
     setStudentLabelSingular(academy.studentLabelSingular || 'Student');
     setStudentLabelPlural(academy.studentLabelPlural || 'Students');
+    setLocationLabelSingular(academy.locationLabelSingular || 'Location');
+    setLocationLabelPlural(academy.locationLabelPlural || 'Locations');
+    setFacilityLabelSingular(academy.facilityLabelSingular || 'Facility');
+    setFacilityLabelPlural(academy.facilityLabelPlural || 'Facilities');
   }, [academy]);
 
   useEffect(() => {
@@ -253,6 +261,10 @@ export default function AdminSection({ user, db, onAcademyUpdate, pendingInvites
     const sanitizedOtherCategory = sanitizeText(otherCategory, 100);
     const sanitizedStudentSingular = sanitizeText(studentLabelSingular, 50) || 'Student';
     const sanitizedStudentPlural = sanitizeText(studentLabelPlural, 50) || 'Students';
+    const sanitizedLocationSingular = sanitizeText(locationLabelSingular, 50) || 'Location';
+    const sanitizedLocationPlural = sanitizeText(locationLabelPlural, 50) || 'Locations';
+    const sanitizedFacilitySingular = sanitizeText(facilityLabelSingular, 50) || 'Facility';
+    const sanitizedFacilityPlural = sanitizeText(facilityLabelPlural, 50) || 'Facilities';
 
     if (!sanitizedName) {
       toast.error("El nombre de la academia no puede estar vacío.");
@@ -321,6 +333,10 @@ export default function AdminSection({ user, db, onAcademyUpdate, pendingInvites
         logoPath: logoPath || null,
         studentLabelSingular: sanitizedStudentSingular,
         studentLabelPlural: sanitizedStudentPlural,
+        locationLabelSingular: sanitizedLocationSingular,
+        locationLabelPlural: sanitizedLocationPlural,
+        facilityLabelSingular: sanitizedFacilitySingular,
+        facilityLabelPlural: sanitizedFacilityPlural,
       });
       await onAcademyUpdate(); // Llama a la función para refrescar los datos en App.jsx
       toast.success("Academy settings updated successfully.");
@@ -489,26 +505,80 @@ export default function AdminSection({ user, db, onAcademyUpdate, pendingInvites
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
               </div>
             )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
-                <label className="block font-medium text-gray-700">Students (singular)</label>
-                <input
-                  type="text"
-                  value={studentLabelSingular}
-                  onChange={(e) => setStudentLabelSingular(e.target.value)}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                  placeholder="Student"
-                />
+                <h3 className="text-base font-semibold text-gray-900 mb-3">Terminology Customization</h3>
+                <p className="text-sm text-gray-600 mb-4">Customize the labels used throughout the platform to match your academy's terminology.</p>
               </div>
-              <div>
-                <label className="block font-medium text-gray-700">Students (plural)</label>
-                <input
-                  type="text"
-                  value={studentLabelPlural}
-                  onChange={(e) => setStudentLabelPlural(e.target.value)}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                  placeholder="Students"
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-medium text-gray-700">Students (singular)</label>
+                  <input
+                    type="text"
+                    value={studentLabelSingular}
+                    onChange={(e) => setStudentLabelSingular(e.target.value)}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                    placeholder="Student"
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium text-gray-700">Students (plural)</label>
+                  <input
+                    type="text"
+                    value={studentLabelPlural}
+                    onChange={(e) => setStudentLabelPlural(e.target.value)}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                    placeholder="Students"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-medium text-gray-700">Locations (singular)</label>
+                  <input
+                    type="text"
+                    value={locationLabelSingular}
+                    onChange={(e) => setLocationLabelSingular(e.target.value)}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                    placeholder="Location"
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium text-gray-700">Locations (plural)</label>
+                  <input
+                    type="text"
+                    value={locationLabelPlural}
+                    onChange={(e) => setLocationLabelPlural(e.target.value)}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                    placeholder="Locations"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-medium text-gray-700">Facilities (singular)</label>
+                  <input
+                    type="text"
+                    value={facilityLabelSingular}
+                    onChange={(e) => setFacilityLabelSingular(e.target.value)}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                    placeholder="e.g., Court, Studio, Lane"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Physical spaces within a location (courts, studios, etc.)</p>
+                </div>
+                <div>
+                  <label className="block font-medium text-gray-700">Facilities (plural)</label>
+                  <input
+                    type="text"
+                    value={facilityLabelPlural}
+                    onChange={(e) => setFacilityLabelPlural(e.target.value)}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                    placeholder="e.g., Courts, Studios, Lanes"
+                  />
+                </div>
               </div>
             </div>
             <div>

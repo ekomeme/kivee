@@ -9,7 +9,7 @@ import '../styles/sections.css';
 import { useAcademy } from '../contexts/AcademyContext';
 import { hasValidMembership } from '../utils/permissions';
 import { COLLECTIONS } from '../config/constants';
-import { getLocations } from '../services/firestore';
+import { getLocations, getFacilities } from '../services/firestore';
 
 export default function GroupsAndClassesSection({ user, db }) {
   const { academy, membership } = useAcademy();
@@ -37,9 +37,12 @@ export default function GroupsAndClassesSection({ user, db }) {
   const [activeScheduleGroupId, setActiveScheduleGroupId] = useState('');
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
-  const [scheduleForm, setScheduleForm] = useState({ day: 'Monday', startTime: '', endTime: '' });
+  const [scheduleForm, setScheduleForm] = useState({ day: 'Monday', startTime: '', endTime: '', facilityId: '', attendeeIds: [] });
   const [scheduleError, setScheduleError] = useState(null);
+  const [facilities, setFacilities] = useState({}); // { locationId: [facility, ...] }
   const [groupMembers, setGroupMembers] = useState({}); // { groupId: [players] }
+  const [showAttendeesModal, setShowAttendeesModal] = useState(false);
+  const [managingSession, setManagingSession] = useState(null);
   const [selectedGroupId, setSelectedGroupId] = useState(null);
   const [expandedGroups, setExpandedGroups] = useState({});
   const navigate = useNavigate();
@@ -103,6 +106,26 @@ export default function GroupsAndClassesSection({ user, db }) {
     try {
       const locationsData = await getLocations(db, academy.id);
       setLocations(locationsData);
+
+      // Fetch facilities for all locations
+      const facilitiesPromises = locationsData.map(async (location) => {
+        try {
+          const facilitiesData = await getFacilities(db, academy.id, location.id);
+          return { locationId: location.id, facilitiesData };
+        } catch (error) {
+          console.error(`Error fetching facilities for location ${location.id}:`, error);
+          return { locationId: location.id, facilitiesData: [] };
+        }
+      });
+
+      const facilitiesResults = await Promise.all(facilitiesPromises);
+
+      // Update facilities state
+      const facilitiesMap = {};
+      facilitiesResults.forEach(({ locationId, facilitiesData }) => {
+        facilitiesMap[locationId] = facilitiesData;
+      });
+      setFacilities(facilitiesMap);
     } catch (error) {
       console.error('Error fetching locations:', error);
     } finally {
@@ -267,10 +290,12 @@ export default function GroupsAndClassesSection({ user, db }) {
         day: scheduleItem.day || 'Monday',
         startTime: scheduleItem.startTime || '',
         endTime: scheduleItem.endTime || '',
+        facilityId: scheduleItem.facilityId || '',
+        attendeeIds: scheduleItem.attendeeIds || []
       });
     } else {
       setEditingSchedule(null);
-      setScheduleForm({ day: 'Monday', startTime: '', endTime: '' });
+      setScheduleForm({ day: 'Monday', startTime: '', endTime: '', facilityId: '', attendeeIds: [] });
       setScheduleError(null);
     }
     setScheduleSaving(false);
@@ -334,6 +359,95 @@ export default function GroupsAndClassesSection({ user, db }) {
         </div>
       </div>
     ), { duration: 6000 });;
+  };
+
+  // Attendees Management
+  const fetchGroupMembers = async (groupId) => {
+    try {
+      const groupDoc = await getDocs(query(
+        collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.GROUPS}/${groupId}/members`)
+      ));
+
+      const memberIds = groupDoc.docs.map(doc => doc.data().playerId);
+
+      // Fetch player details for each member
+      const playersPromises = memberIds.map(async (playerId) => {
+        const playerDoc = await getDocs(query(
+          collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.PLAYERS}`),
+          where('__name__', '==', playerId)
+        ));
+        if (!playerDoc.empty) {
+          return { id: playerId, ...playerDoc.docs[0].data() };
+        }
+        return null;
+      });
+
+      const players = (await Promise.all(playersPromises)).filter(p => p !== null);
+
+      setGroupMembers(prev => ({
+        ...prev,
+        [groupId]: players
+      }));
+    } catch (error) {
+      console.error("Error fetching group members:", error);
+      toast.error("Failed to load group members");
+    }
+  };
+
+  const handleOpenAttendeesModal = async (groupId, session) => {
+    setManagingSession({ groupId, session });
+    // Cargar students del grupo si no están cargados
+    if (!groupMembers[groupId]) {
+      await fetchGroupMembers(groupId);
+    }
+    setShowAttendeesModal(true);
+  };
+
+  const handleToggleAttendee = (playerId) => {
+    setManagingSession(prev => {
+      const currentAttendeeIds = prev.session.attendeeIds || [];
+      const isAttending = currentAttendeeIds.includes(playerId);
+
+      const updatedAttendeeIds = isAttending
+        ? currentAttendeeIds.filter(id => id !== playerId)
+        : [...currentAttendeeIds, playerId];
+
+      return {
+        ...prev,
+        session: {
+          ...prev.session,
+          attendeeIds: updatedAttendeeIds
+        }
+      };
+    });
+  };
+
+  const handleSaveAttendees = async () => {
+    if (!managingSession) return;
+
+    const { groupId, session } = managingSession;
+
+    try {
+      const scheduleDocRef = doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.GROUPS}/${groupId}/schedule`, session.id);
+      await updateDoc(scheduleDocRef, {
+        attendeeIds: session.attendeeIds || []
+      });
+
+      // Update local state
+      setSchedules(prev => ({
+        ...prev,
+        [groupId]: prev[groupId].map(s =>
+          s.id === session.id ? { ...s, attendeeIds: session.attendeeIds } : s
+        )
+      }));
+
+      toast.success("Attendees updated successfully");
+      setShowAttendeesModal(false);
+      setManagingSession(null);
+    } catch (error) {
+      console.error("Error saving attendees:", error);
+      toast.error("Failed to save attendees");
+    }
   };
 
   const handleTabTouchStart = (e) => {
@@ -507,15 +621,34 @@ export default function GroupsAndClassesSection({ user, db }) {
                 {isOpen && (
                   <div className="p-4 space-y-2">
                     {groupSchedules.length > 0 ? (
-                      groupSchedules.map(session => (
-                        <div key={session.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md border">
-                          <p className="font-medium">{session.day}: <span className="font-normal">{session.startTime} - {session.endTime}</span></p>
-                          <div className="space-x-2">
-                            <button onClick={() => handleOpenScheduleModal(group.id, session)} className="p-1 text-gray-500 hover:text-primary"><Edit size={18} /></button>
-                            <button onClick={() => handleDeleteSchedule(group.id, session.id)} className="p-1 text-gray-500 hover:text-red-600"><Trash2 size={18} /></button>
+                      groupSchedules.map(session => {
+                        const facilityName = session.facilityId ?
+                          facilities[group.locationId]?.find(f => f.id === session.facilityId)?.name : null;
+
+                        const attendeeCount = session.attendeeIds?.length || 0;
+
+                        return (
+                          <div key={session.id} className="flex justify-between items-start p-3 bg-gray-50 rounded-md border">
+                            <div className="flex-1">
+                              <p className="font-medium">{session.day}: <span className="font-normal">{session.startTime} - {session.endTime}</span></p>
+                              {facilityName && (
+                                <p className="text-xs text-gray-500 mt-1">📍 {facilityName}</p>
+                              )}
+                              <p className="text-xs text-gray-600 mt-1">👥 {attendeeCount} {attendeeCount === 1 ? 'student' : 'students'}</p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => handleOpenAttendeesModal(group.id, session)}
+                                className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors"
+                              >
+                                Manage
+                              </button>
+                              <button onClick={() => handleOpenScheduleModal(group.id, session)} className="p-1 text-gray-500 hover:text-primary"><Edit size={18} /></button>
+                              <button onClick={() => handleDeleteSchedule(group.id, session.id)} className="p-1 text-gray-500 hover:text-red-600"><Trash2 size={18} /></button>
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     ) : (
                       <div className="border-2 border-dashed border-gray-300 rounded-md p-4 text-center text-gray-500">
                         Empty
@@ -621,6 +754,28 @@ export default function GroupsAndClassesSection({ user, db }) {
                 <div><label htmlFor="startTime" className="block text-sm font-medium text-gray-700">Start Time</label><input type="time" name="startTime" id="startTime" value={scheduleForm.startTime} onChange={(e) => setScheduleForm(prev => ({ ...prev, startTime: e.target.value }))} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
                 <div><label htmlFor="endTime" className="block text-sm font-medium text-gray-700">End Time</label><input type="time" name="endTime" id="endTime" value={scheduleForm.endTime} onChange={(e) => setScheduleForm(prev => ({ ...prev, endTime: e.target.value }))} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
               </div>
+              <div>
+                <label htmlFor="facilityId" className="block text-sm font-medium text-gray-700">{academy?.facilityLabelSingular || 'Facility'} (Optional)</label>
+                <select
+                  name="facilityId"
+                  id="facilityId"
+                  value={scheduleForm.facilityId}
+                  onChange={(e) => setScheduleForm(prev => ({ ...prev, facilityId: e.target.value }))}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                >
+                  <option value="">No specific {academy?.facilityLabelSingular?.toLowerCase() || 'facility'}</option>
+                  {(() => {
+                    const currentGroup = groups.find(g => g.id === activeScheduleGroupId);
+                    const locationId = currentGroup?.locationId;
+                    const locationFacilities = locationId ? (facilities[locationId] || []) : [];
+                    return locationFacilities
+                      .filter(f => f.status === 'active')
+                      .map(facility => (
+                        <option key={facility.id} value={facility.id}>{facility.name}</option>
+                      ));
+                  })()}
+                </select>
+              </div>
               {scheduleError && <p className="text-red-500 text-sm mt-4">{scheduleError}</p>}
               <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-section py-3 md:bg-transparent md:py-0">
                 <button type="button" onClick={() => setShowScheduleModal(false)} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
@@ -633,6 +788,89 @@ export default function GroupsAndClassesSection({ user, db }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Attendees Management Modal */}
+      {showAttendeesModal && managingSession && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Manage Attendees</h3>
+              <button
+                onClick={() => {
+                  setShowAttendeesModal(false);
+                  setManagingSession(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-sm text-gray-600">
+                {managingSession.session.day}: {managingSession.session.startTime} - {managingSession.session.endTime}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Select students attending this session
+              </p>
+            </div>
+
+            <div className="space-y-2 max-h-96 overflow-y-auto mb-4">
+              {(groupMembers[managingSession.groupId] || []).length > 0 ? (
+                (groupMembers[managingSession.groupId] || []).map(player => {
+                  const isAttending = (managingSession.session.attendeeIds || []).includes(player.id);
+                  return (
+                    <label
+                      key={player.id}
+                      className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                        isAttending
+                          ? 'border-primary bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isAttending}
+                        onChange={() => handleToggleAttendee(player.id)}
+                        className="mr-3 h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{player.name}</p>
+                        {player.email && (
+                          <p className="text-xs text-gray-500">{player.email}</p>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No students in this group</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center space-x-3 pt-4 border-t">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAttendeesModal(false);
+                  setManagingSession(null);
+                }}
+                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveAttendees}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-hover transition-colors"
+              >
+                Save Attendees
+              </button>
+            </div>
           </div>
         </div>
       )}

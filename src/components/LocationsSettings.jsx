@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Plus, Edit, Trash2, X, Check } from 'lucide-react';
+import { MapPin, Plus, Edit, Trash2, X, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getLocations, createLocation, updateLocation, deleteLocation } from '../services/firestore';
 import { sanitizeText } from '../utils/validators';
+import FacilitiesSettings from './FacilitiesSettings';
 
 export default function LocationsSettings({ db, academy }) {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingLocation, setEditingLocation] = useState(null);
+  const [expandedLocationId, setExpandedLocationId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     status: 'active'
@@ -178,64 +180,83 @@ export default function LocationsSettings({ db, academy }) {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="space-y-4">
           {locations.map(location => (
             <div
               key={location.id}
-              className={`bg-white rounded-lg border-2 p-4 ${
+              className={`bg-white rounded-lg border-2 ${
                 location.status === 'active' ? 'border-green-200' : 'border-gray-200'
               }`}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                  <MapPin className={`h-5 w-5 ${location.status === 'active' ? 'text-green-600' : 'text-gray-400'}`} />
-                  <h4 className="font-semibold text-gray-900">{location.name}</h4>
+              {/* Location Header */}
+              <div className="p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center space-x-2 flex-1">
+                    <button
+                      onClick={() => setExpandedLocationId(expandedLocationId === location.id ? null : location.id)}
+                      className="text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                      {expandedLocationId === location.id ? (
+                        <ChevronDown className="h-5 w-5" />
+                      ) : (
+                        <ChevronRight className="h-5 w-5" />
+                      )}
+                    </button>
+                    <MapPin className={`h-5 w-5 ${location.status === 'active' ? 'text-green-600' : 'text-gray-400'}`} />
+                    <h4 className="font-semibold text-gray-900">{location.name}</h4>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {location.isDefault && (
+                      <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                        Default
+                      </span>
+                    )}
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      location.status === 'active'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {location.status === 'active' ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
                 </div>
-                {location.isDefault && (
-                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                    Default
-                  </span>
-                )}
-              </div>
 
-              <div className="flex items-center space-x-2 mb-4">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  location.status === 'active'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}>
-                  {location.status === 'active' ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => handleOpenEditModal(location)}
-                  className="flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
-                >
-                  <Edit className="mr-1 h-4 w-4" />
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleToggleStatus(location)}
-                  className={`flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                    location.status === 'active'
-                      ? 'text-gray-700 bg-gray-100 hover:bg-gray-200'
-                      : 'text-green-700 bg-green-100 hover:bg-green-200'
-                  }`}
-                >
-                  <Check className="mr-1 h-4 w-4" />
-                  {location.status === 'active' ? 'Deactivate' : 'Activate'}
-                </button>
-                {!location.isDefault && (
+                <div className="flex items-center space-x-2 ml-12">
                   <button
-                    onClick={() => handleDelete(location.id)}
-                    className="px-3 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 transition-colors"
+                    onClick={() => handleOpenEditModal(location)}
+                    className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Edit className="mr-1 h-4 w-4" />
+                    Edit
                   </button>
-                )}
+                  <button
+                    onClick={() => handleToggleStatus(location)}
+                    className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                      location.status === 'active'
+                        ? 'text-gray-700 bg-gray-100 hover:bg-gray-200'
+                        : 'text-green-700 bg-green-100 hover:bg-green-200'
+                    }`}
+                  >
+                    <Check className="mr-1 h-4 w-4" />
+                    {location.status === 'active' ? 'Deactivate' : 'Activate'}
+                  </button>
+                  {!location.isDefault && (
+                    <button
+                      onClick={() => handleDelete(location.id)}
+                      className="px-3 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {/* Facilities Section (Expanded) */}
+              {expandedLocationId === location.id && (
+                <div className="border-t border-gray-200 bg-gray-50 p-4">
+                  <FacilitiesSettings db={db} location={location} />
+                </div>
+              )}
             </div>
           ))}
         </div>
