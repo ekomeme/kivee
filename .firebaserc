@@ -1,15 +1,20 @@
 {
   "projects": {
-    "default": "kivee-f4c53"
+    "default": "kivee-f4c53",
+    "production": "kivee-production"
   },
   "targets": {
     "kivee-f4c53": {
       "hosting": {
-        "prod": [
-          "kivee-f4c53"
-        ],
         "staging": [
           "kivee-staging"
+        ]
+      }
+    },
+    "kivee-production": {
+      "hosting": {
+        "prod": [
+          "kivee-production"
         ]
       }
     }

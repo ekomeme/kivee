@@ -5,9 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
+    "dev:staging": "vite --host --mode staging",
+    "dev:production": "vite --host --mode production",
     "build": "tsc -b && vite build",
+    "build:staging": "tsc -b && vite build --mode staging",
+    "build:production": "tsc -b && vite build --mode production",
+    "deploy:staging": "npm run build:staging && firebase use default && firebase deploy --only hosting:staging",
+    "deploy:production": "npm run build:production && firebase use default && firebase deploy --only hosting:prod",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "preview:staging": "vite preview --mode staging",
+    "preview:production": "vite preview --mode production"
   },
   "dependencies": {
     "dompurify": "^3.3.0",
