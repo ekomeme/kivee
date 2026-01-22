@@ -20,14 +20,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Log environment info in development
-if (import.meta.env.DEV) {
-  const env = import.meta.env.VITE_ENV || 'development';
-  const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
-  console.log(`🔥 Firebase initialized in ${env.toUpperCase()} mode`);
-  console.log(`📦 Project ID: ${projectId}`);
-}
-
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);

@@ -225,7 +225,6 @@ export default function App() {
             academyId: d.ref.parent.parent.id,
             ...d.data(),
           }));
-          console.log('[debugInvites] email:', targetEmail, 'invites:', invites);
           setPendingInvites(invites.filter(inv => inv.status === 'pending'));
           return invites;
         } catch (err) {

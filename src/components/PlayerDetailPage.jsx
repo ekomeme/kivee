@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { doc, getDoc, collection, getDocs, updateDoc } from 'firebase/firestore';
+import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 import PlayerDetail from '../components/PlayerDetail.jsx';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Edit } from 'lucide-react';
+import { sanitizeFilename } from '../utils/validators';
 
 export default function PlayerDetailPage({ user, academy, db, membership }) {
   const { playerId } = useParams();
@@ -182,14 +184,56 @@ export default function PlayerDetailPage({ user, academy, db, membership }) {
     fetchPlayerDetails();
   }, [fetchPlayerDetails, membership]);
 
-  const handleMarkProductAsPaid = async (productIndex, paymentMethod, paymentDate) => {
+  const uploadReceiptFile = async (file, targetPlayerId) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+    const maxSize = 5 * 1024 * 1024;
+
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('Receipt must be an image or PDF.');
+    }
+    if (file.size > maxSize) {
+      throw new Error('Receipt must be smaller than 5MB.');
+    }
+    if (!academy?.id) {
+      throw new Error('Academy not available.');
+    }
+
+    const storage = getStorage();
+    const sanitizedFilename = sanitizeFilename(file.name);
+    const storagePath = `academies/${academy.id}/payment_receipts/${targetPlayerId}/${Date.now()}_${sanitizedFilename}`;
+    const storageRef = ref(storage, storagePath);
+    await uploadBytes(storageRef, file);
+    const receiptUrl = await getDownloadURL(storageRef);
+
+    return {
+      receiptUrl,
+      receiptPath: storagePath,
+      receiptName: file.name,
+      receiptType: file.type,
+    };
+  };
+
+  const handleMarkProductAsPaid = async (productIndex, paymentMethod, paymentDate, receiptFile) => {
     const paidDate = paymentDate ? new Date(paymentDate) : new Date();
     const updatedProducts = [...player.oneTimeProducts];
+    let receiptData = null;
+
+    if (receiptFile) {
+      try {
+        receiptData = await uploadReceiptFile(receiptFile, playerId);
+      } catch (error) {
+        console.error('Error uploading receipt:', error);
+        toast.error(error.message || 'Failed to upload receipt.');
+        return;
+      }
+    }
+
     updatedProducts[productIndex] = {
       ...updatedProducts[productIndex],
       status: 'paid',
       paymentMethod: paymentMethod,
       paidAt: paidDate,
+      ...(receiptData || {}),
     };
 
     // This is the key fix: Clean the *entire* array before sending it to Firestore.

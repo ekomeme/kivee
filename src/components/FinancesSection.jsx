@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { collection, query, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 import { Link } from 'react-router-dom';
-import { CheckCircle, Clock, Plus, X } from 'lucide-react';
+import { CheckCircle, Clock, FileText, Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingBar from './LoadingBar.jsx';
 import '../styles/sections.css';
@@ -9,6 +10,7 @@ import { useAcademy } from '../contexts/AcademyContext';
 import { hasValidMembership } from '../utils/permissions';
 import { formatAcademyCurrency } from '../utils/formatters';
 import { COLLECTIONS } from '../config/constants';
+import { sanitizeFilename } from '../utils/validators';
 
 export default function FinancesSection({ user, db }) {
     const { academy, membership, studentLabelPlural } = useAcademy();
@@ -57,6 +59,8 @@ export default function FinancesSection({ user, db }) {
                             status: paymentItem.status,
                             paidAt: paymentItem.paidAt,
                             paymentMethod: paymentItem.paymentMethod,
+                            receiptUrl: paymentItem.receiptUrl,
+                            receiptName: paymentItem.receiptName,
                             originalIndex: index,
                             paymentFor: paymentItem.paymentFor,
                             productId: paymentItem.productId,
@@ -115,6 +119,35 @@ export default function FinancesSection({ user, db }) {
         return new Date(date).toLocaleDateString(); // It's a string date like 'YYYY-MM-DD'
     };
 
+    const uploadReceiptFile = async (file, studentId) => {
+        const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+        const maxSize = 5 * 1024 * 1024;
+
+        if (!allowedTypes.includes(file.type)) {
+            throw new Error('Receipt must be an image or PDF.');
+        }
+        if (file.size > maxSize) {
+            throw new Error('Receipt must be smaller than 5MB.');
+        }
+        if (!academyId) {
+            throw new Error('Academy not available.');
+        }
+
+        const storage = getStorage();
+        const sanitizedFilename = sanitizeFilename(file.name);
+        const storagePath = `academies/${academyId}/payment_receipts/${studentId}/${Date.now()}_${sanitizedFilename}`;
+        const uploadRef = ref(storage, storagePath);
+        await uploadBytes(uploadRef, file);
+        const receiptUrl = await getDownloadURL(uploadRef);
+
+        return {
+            receiptUrl,
+            receiptPath: storagePath,
+            receiptName: file.name,
+            receiptType: file.type,
+        };
+    };
+
     const renderTable = (payments, isPaidTab = false, onPay = null) => ( 
         <>
             <div className="overflow-x-auto hidden md:block">
@@ -126,6 +159,7 @@ export default function FinancesSection({ user, db }) {
                             <th className="py-2 px-4 border-b text-left table-header">Amount</th>
                             <th className="py-2 px-4 border-b text-left table-header">{isPaidTab ? 'Paid Date' : 'Due Date'}</th> 
                             {isPaidTab && <th className="py-2 px-4 border-b text-left table-header">Method</th>}
+                            {isPaidTab && <th className="py-2 px-4 border-b text-left table-header">Receipt</th>}
                             {!isPaidTab && <th className="py-2 px-4 border-b text-left table-header">Actions</th>}
                         </tr>
                     </thead>
@@ -144,7 +178,28 @@ export default function FinancesSection({ user, db }) {
                                 </td>
                                 <td className="py-3 px-4 border-b table-cell">{formatDate(isPaidTab ? payment.paidAt : payment.dueDate)}</td>
 
-                                {isPaidTab && <td className="py-3 px-4 border-b table-cell">{payment.paymentMethod}</td>}
+                                {isPaidTab && (
+                                    <td className="py-3 px-4 border-b table-cell">
+                                        <span>{payment.paymentMethod}</span>
+                                    </td>
+                                )}
+                                {isPaidTab && (
+                                    <td className="py-3 px-4 border-b table-cell">
+                                        {payment.receiptUrl ? (
+                                            <a
+                                                href={payment.receiptUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="inline-flex items-center text-primary hover:text-primary-hover"
+                                                aria-label="View receipt"
+                                            >
+                                                <FileText className="h-4 w-4" />
+                                            </a>
+                                        ) : (
+                                            <span className="text-gray-400">—</span>
+                                        )}
+                                    </td>
+                                )}
                                 {!isPaidTab && (
                                     <td className="py-3 px-4 border-b table-cell">
                 <button
@@ -198,6 +253,16 @@ export default function FinancesSection({ user, db }) {
                                 <div className="bg-gray-50 rounded-md p-2 col-span-2">
                                     <p className="text-xs text-gray-500">Method</p>
                                     <p className="font-medium">{payment.paymentMethod}</p>
+                                    {payment.receiptUrl && (
+                                        <a
+                                            href={payment.receiptUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-primary hover:underline text-xs mt-1 inline-block"
+                                        >
+                                            View receipt
+                                        </a>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -210,11 +275,44 @@ export default function FinancesSection({ user, db }) {
         const PaymentModal = ({ payment, onClose }) => {
         const [paymentMethod, setPaymentMethod] = useState('Cash');
         const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+        const [receiptFile, setReceiptFile] = useState(null);
+        const [receiptError, setReceiptError] = useState('');
         const [isSubmitting, setIsSubmitting] = useState(false);
+
+        const handleReceiptChange = (e) => {
+            const file = e.target.files?.[0];
+            if (!file) {
+                setReceiptFile(null);
+                setReceiptError('');
+                return;
+            }
+
+            const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+            const maxSize = 5 * 1024 * 1024;
+
+            if (!allowedTypes.includes(file.type)) {
+                setReceiptError('Receipt must be an image or PDF.');
+                e.target.value = '';
+                return;
+            }
+
+            if (file.size > maxSize) {
+                setReceiptError('Receipt must be smaller than 5MB.');
+                e.target.value = '';
+                return;
+            }
+
+            setReceiptError('');
+            setReceiptFile(file);
+        };
 
         const handleSubmit = async (e) => {
             e.preventDefault();
             try {
+                if (receiptError) {
+                    toast.error(receiptError);
+                    return;
+                }
                 const picked = new Date(paymentDate);
                 const today = new Date();
                 picked.setHours(0,0,0,0);
@@ -232,9 +330,25 @@ export default function FinancesSection({ user, db }) {
                 }
 
                 const playerData = playerDoc.data();
+                let receiptData = null;
+                if (receiptFile) {
+                    try {
+                        receiptData = await uploadReceiptFile(receiptFile, payment.studentId);
+                    } catch (error) {
+                        console.error('Error uploading receipt:', error);
+                        toast.error(error.message || 'Failed to upload receipt.');
+                        return;
+                    }
+                }
                 const updatedPayments = playerData.oneTimeProducts.map((p, idx) => {
                     if (idx === payment.originalIndex) {
-                        return { ...p, status: 'paid', paidAt: new Date(paymentDate), paymentMethod: paymentMethod };
+                        return {
+                            ...p,
+                            status: 'paid',
+                            paidAt: new Date(paymentDate),
+                            paymentMethod: paymentMethod,
+                            ...(receiptData || {}),
+                        };
                     }
                     return p;
                 });
@@ -270,6 +384,22 @@ export default function FinancesSection({ user, db }) {
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div><label htmlFor="paymentMethod" className="block text-sm font-medium text-gray-700">Payment Method</label><select id="paymentMethod" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"><option>Cash</option><option>Credit Card</option><option>Bank Transfer</option><option>Other</option></select></div>
                         <div><label htmlFor="paymentDate" className="block text-sm font-medium text-gray-700">Payment Date</label><input type="date" id="paymentDate" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
+                        <div>
+                            <label htmlFor="receiptFile" className="block text-sm font-medium text-gray-700">Receipt (optional)</label>
+                            <input
+                                type="file"
+                                id="receiptFile"
+                                accept="image/jpeg,image/png,application/pdf"
+                                onChange={handleReceiptChange}
+                                className="mt-1 block w-full text-sm text-gray-700"
+                            />
+                            {receiptFile && (
+                                <p className="text-xs text-gray-500 mt-1">{receiptFile.name}</p>
+                            )}
+                            {receiptError && (
+                                <p className="text-xs text-red-600 mt-1">{receiptError}</p>
+                            )}
+                        </div>
                         <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-section py-3 md:bg-transparent md:py-0">
                             <button type="button" onClick={onClose} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-md w-full md:w-auto">Cancel</button>
                             <button type="submit" disabled={isSubmitting} className="btn-primary w-full md:w-auto">{isSubmitting ? 'Saving...' : 'Confirm Payment'}</button>

@@ -14,6 +14,24 @@ import { getLocations } from '../services/firestore';
 // Register English locale for nationality adjectives
 registerLocale(en);
 
+const removeUndefinedFields = (value) => {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item) => item !== undefined)
+      .map((item) => removeUndefinedFields(item));
+  }
+
+  if (value && value.constructor === Object) {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, item]) => item !== undefined)
+        .map(([key, item]) => [key, removeUndefinedFields(item)])
+    );
+  }
+
+  return value;
+};
+
 export default function PlayerForm({ user, academy, db, membership, onComplete, playerToEdit }) {
   const studentLabelSingular = academy?.studentLabelSingular || 'Student';
   const studentLabelPlural = academy?.studentLabelPlural || 'Students';
@@ -51,6 +69,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
   const [selectedPlan, setSelectedPlan] = useState(null); // This will hold the selected plan object from react-select
   const [planStartDate, setPlanStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [productCart, setProductCart] = useState([]); // Cart: [{ productId, quantity }]
   const [notes, setNotes] = useState('');
 
   // Component State
@@ -190,7 +209,6 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
           .filter(n => n !== null) // Remove entries where getName failed
           .sort((a, b) => a.label.localeCompare(b.label));
 
-        console.log('Nationalities sample:', nationalitiesList.slice(0, 5));
         setNationalities(nationalitiesList);
 
         // Set default country based on academy country, only for new players
@@ -309,19 +327,13 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
         setPlanStartDate(playerToEdit.plan.startDate || new Date().toISOString().split('T')[0]);
       } else { // For backward compatibility with old data structure
         if (playerToEdit.tierId && tiers.length > 0) {
-            const tierToSet = tiers.find(t => t.id === playerToEdit.tierId); // This part seems to have an issue, but let's keep it for now.
+            const tierToSet = tiers.find(t => t.id === playerToEdit.tierId);
             if (tierToSet) {
                 setSelectedPlan({ value: `tier-${tierToSet.id}`, label: tierToSet.name });
             }
         }
-        if (playerToEdit.oneTimeProducts && oneTimeProducts.length > 0) {
-          // When editing, we only want to manage products added *during this edit session*.
-          // The final save will merge existing and new products.
-          // So we start with an empty array for new products.
-          setSelectedProducts([]);
-        } else {
-          setSelectedProducts([]);
-        }
+        // When editing, start with empty cart (user can add new products during this session)
+        setProductCart([]);
       }
       setNotes(playerToEdit.notes || '');
     }
@@ -770,14 +782,22 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
       }
     }
 
-    // Combine existing products with newly added ones for this session.
+    // Combine existing products with newly added ones from cart.
     const existingProducts = playerToEdit?.oneTimeProducts || [];
-    const newProducts = selectedProducts || [];
+
+    // Convert cart items to individual product entries (expand by quantity)
+    const newProducts = productCart.flatMap(cartItem =>
+      Array(cartItem.quantity).fill(null).map(() => ({
+        productId: cartItem.productId,
+        status: 'unpaid'
+      }))
+    );
+
     const combinedProducts = [...existingProducts, ...newProducts];
 
     // This is the key fix for the "Product not found" bug.
     // We process and clean each payment item according to its type.
-    const finalProductsData = combinedProducts.map(item => {
+    let finalProductsData = combinedProducts.map(item => {
       if (item.paymentFor === 'tier') {
         // This is a subscription payment, keep its structure.
         return item;
@@ -805,6 +825,19 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
             status: 'unpaid',
         };
         finalProductsData.push(firstPayment); // We'll rename oneTimeProducts to payments later
+    }
+
+    // If editing an existing player with a tier plan, update the start date of unpaid tier payments
+    if (playerToEdit?.plan && playerToEdit.plan.type === 'tier') {
+        finalProductsData = finalProductsData.map(item => {
+            if (item.paymentFor === 'tier' && item.status === 'unpaid') {
+                return {
+                    ...item,
+                    dueDate: planStartDate
+                };
+            }
+            return item;
+        });
     }
 
     const playerData = {
@@ -840,7 +873,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
       if (playerToEdit) {
         playerId = playerToEdit.id;
         const playerDocRef = doc(db, `academies/${academyId}/players`, playerId);
-        await updateDoc(playerDocRef, playerData);
+        await updateDoc(playerDocRef, removeUndefinedFields(playerData));
 
         // Sync group membership: handle group changes
         const oldGroupId = playerToEdit.groupId;
@@ -864,7 +897,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
         toast.success("Player updated successfully.");
       } else {
         const playersCollectionRef = collection(db, `academies/${academyId}/players`);
-        const docRef = await addDoc(playersCollectionRef, playerData);
+        const docRef = await addDoc(playersCollectionRef, removeUndefinedFields(playerData));
         playerId = docRef.id;
 
         // Sync group membership: add to group if assigned
@@ -1156,11 +1189,41 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
               </div>
             )}
             {playerToEdit?.plan ? (
-              <div className="md:col-span-2 space-y-2">
-                <p className="text-sm font-medium text-gray-700">Assigned Plan</p>
-                <p className="text-gray-900 font-semibold">{selectedPlan?.label || 'Unknown plan'}</p>
-                <p className="text-sm text-gray-700">Start date: <span className="font-semibold">{formatDate(existingPlanStartDate)}</span></p>
-              </div>
+              <>
+                <div className="md:col-span-2 space-y-2">
+                  <p className="text-sm font-medium text-gray-700">Assigned Plan</p>
+                  <p className="text-gray-900 font-semibold">{selectedPlan?.label || 'Unknown plan'}</p>
+                </div>
+                {(() => {
+                  // Check if plan is unpaid by looking at payment records
+                  const tierPayments = (playerToEdit.oneTimeProducts || []).filter(p => p.paymentFor === 'tier');
+                  const hasUnpaidPayment = tierPayments.some(p => p.status === 'unpaid');
+
+                  if (hasUnpaidPayment) {
+                    // Allow editing start date if plan is unpaid
+                    return (
+                      <div>
+                        <label htmlFor="planStartDate" className="block text-sm font-medium text-gray-700">Start Date</label>
+                        <input
+                          type="date"
+                          id="planStartDate"
+                          value={planStartDate}
+                          onChange={(e) => setPlanStartDate(e.target.value)}
+                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Editable while plan is unpaid</p>
+                      </div>
+                    );
+                  } else {
+                    // Show read-only start date if plan is paid
+                    return (
+                      <div>
+                        <p className="text-sm text-gray-700">Start date: <span className="font-semibold">{formatDate(existingPlanStartDate)}</span></p>
+                      </div>
+                    );
+                  }
+                })()}
+              </>
             ) : (
               <>
                 <div>
@@ -1249,43 +1312,82 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
         {/* Additional Products Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
           <legend className="text-xl font-semibold text-gray-900 px-2">Additional Products</legend>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
-            {/* Left side: Available products */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Available Products</h4>
-              <div className="space-y-2 max-h-60 overflow-y-auto border p-2 rounded-md">
-                {oneTimeProducts.map(product => (
-                  <div key={product.id} className="flex justify-between items-center p-2 hover:bg-gray-50">
-                    <div>
-                      <p>{product.name}</p>
-                      <p className="text-sm text-gray-500">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(product.price)}</p>
-                    </div>
-                    <button type="button" onClick={() => setSelectedProducts([...selectedProducts, { productId: product.id, status: 'unpaid' }])} className="bg-blue-100 text-blue-800 text-xs font-bold py-1 px-3 rounded-md">Add</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Right side: Product History */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Product History</h4>
-              <div className="space-y-2 max-h-60 overflow-y-auto border p-2 rounded-md bg-gray-50">
-                {[...(playerToEdit?.oneTimeProducts || []), ...selectedProducts].filter(p => !p.paymentFor).length > 0 ? (
-                  [...(playerToEdit?.oneTimeProducts || []), ...selectedProducts].filter(p => !p.paymentFor).map((p, index) => {
-                    const productDetails = oneTimeProducts.find(op => op.id === p.productId);
-                    return (
-                      <div key={`history-${p.productId}-${index}`} className="flex justify-between items-center p-2 rounded-md">
-                        <div>
-                          <p className="font-medium">{productDetails?.name || 'Product not found'}</p>
-                          {p.status === 'paid' && p.paidAt && (
-                            <p className="text-xs text-gray-500">Paid on {new Date(p.paidAt.seconds * 1000).toLocaleDateString()}</p>
-                          )}
-                        </div>
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${p.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{p.status}</span>
+          <div className="mt-4">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Available Products</h4>
+            <div className="space-y-2 max-h-80 overflow-y-auto border p-3 rounded-md">
+              {filteredProducts.length > 0 ? (
+                filteredProducts.map(product => {
+                  const cartItem = productCart.find(item => item.productId === product.id);
+                  const quantity = cartItem?.quantity || 0;
+
+                  // Get price for the selected location
+                  const productPrice = locationId && product.locationPrices?.[locationId]
+                    ? product.locationPrices[locationId]
+                    : 0;
+
+                  return (
+                    <div key={product.id} className="flex justify-between items-center p-3 hover:bg-gray-50 rounded-md border border-gray-200">
+                      <div className="flex-1">
+                        <p className="font-medium">{product.name}</p>
+                        <p className="text-sm text-gray-500">
+                          {new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(productPrice)} each
+                        </p>
                       </div>
-                    );
-                  })
-                ) : <p className="text-sm text-gray-500 p-2">No products assigned yet.</p>}
-              </div>
+                      <div className="flex items-center space-x-2">
+                        {quantity > 0 ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (quantity === 1) {
+                                  setProductCart(productCart.filter(item => item.productId !== product.id));
+                                } else {
+                                  setProductCart(productCart.map(item =>
+                                    item.productId === product.id
+                                      ? { ...item, quantity: item.quantity - 1 }
+                                      : item
+                                  ));
+                                }
+                              }}
+                              className="bg-gray-200 text-gray-700 w-8 h-8 rounded-md hover:bg-gray-300 font-bold"
+                            >
+                              -
+                            </button>
+                            <span className="w-12 text-center font-semibold">{quantity}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setProductCart(productCart.map(item =>
+                                  item.productId === product.id
+                                    ? { ...item, quantity: item.quantity + 1 }
+                                    : item
+                                ));
+                              }}
+                              className="bg-gray-200 text-gray-700 w-8 h-8 rounded-md hover:bg-gray-300 font-bold"
+                            >
+                              +
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProductCart([...productCart, { productId: product.id, quantity: 1 }]);
+                            }}
+                            className="bg-blue-100 text-blue-800 text-xs font-bold py-2 px-4 rounded-md hover:bg-blue-200"
+                          >
+                            Add Item
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-gray-500 p-2">
+                  {locationId ? 'No products available for this location.' : 'Select a location to view products.'}
+                </p>
+              )}
             </div>
           </div>
         </fieldset>

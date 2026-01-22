@@ -52,13 +52,47 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
   const PaymentModal = ({ product, productIndex, onClose }) => {
     const [paymentMethod, setPaymentMethod] = useState('Cash');
     const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+    const [receiptFile, setReceiptFile] = useState(null);
+    const [receiptError, setReceiptError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const isSubscription = product.paymentFor === 'tier';
     const name = isSubscription ? product.itemName : product.productDetails?.name;
     const amount = isSubscription ? product.amount : product.productDetails?.price;
+
+    const handleReceiptChange = (e) => {
+      const file = e.target.files?.[0];
+      if (!file) {
+        setReceiptFile(null);
+        setReceiptError('');
+        return;
+      }
+
+      const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+      const maxSize = 5 * 1024 * 1024;
+
+      if (!allowedTypes.includes(file.type)) {
+        setReceiptError('Receipt must be an image or PDF.');
+        e.target.value = '';
+        return;
+      }
+
+      if (file.size > maxSize) {
+        setReceiptError('Receipt must be smaller than 5MB.');
+        e.target.value = '';
+        return;
+      }
+
+      setReceiptError('');
+      setReceiptFile(file);
+    };
+
     const handleSubmit = (e) => {
       e.preventDefault();
+      if (receiptError) {
+        toast.error(receiptError);
+        return;
+      }
       const picked = new Date(paymentDate);
       const today = new Date();
       today.setHours(0,0,0,0);
@@ -68,7 +102,7 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
         return;
       }
       setIsSubmitting(true);
-      onMarkAsPaid(productIndex, paymentMethod, paymentDate);
+      onMarkAsPaid(productIndex, paymentMethod, paymentDate, receiptFile);
       setIsSubmitting(false);
       onClose();
     };
@@ -109,6 +143,22 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
                   onChange={(e) => setPaymentDate(e.target.value)}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
                 />
+              </div>
+              <div>
+                <label htmlFor="receiptFile" className="block text-sm font-medium text-gray-700">Receipt (optional)</label>
+                <input
+                  type="file"
+                  id="receiptFile"
+                  accept="image/jpeg,image/png,application/pdf"
+                  onChange={handleReceiptChange}
+                  className="mt-1 block w-full text-sm text-gray-700"
+                />
+                {receiptFile && (
+                  <p className="text-xs text-gray-500 mt-1">{receiptFile.name}</p>
+                )}
+                {receiptError && (
+                  <p className="text-xs text-red-600 mt-1">{receiptError}</p>
+                )}
               </div>
             </div>
             <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-section py-3 md:bg-transparent md:py-0">
@@ -319,7 +369,19 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
                       </button>
                     )}
                     {p.status === 'paid' && p.paidAt && (
-                      <p className="text-xs text-gray-500">Paid on {new Date(p.paidAt.seconds * 1000).toLocaleDateString()} via {p.paymentMethod}</p>
+                      <div className="flex items-center space-x-2 text-xs text-gray-500">
+                        <p>Paid on {new Date(p.paidAt.seconds * 1000).toLocaleDateString()} via {p.paymentMethod}</p>
+                        {p.receiptUrl && (
+                          <a
+                            href={p.receiptUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary hover:underline"
+                          >
+                            View receipt
+                          </a>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

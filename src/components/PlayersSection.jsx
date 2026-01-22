@@ -1,24 +1,29 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, getDocs, doc, deleteDoc, getDoc, updateDoc } from 'firebase/firestore';
-import { deleteObject, ref as storageRef } from 'firebase/storage';
+import { collection, query, getDocs, doc, deleteDoc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
+import { deleteObject, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase';
 import toast from 'react-hot-toast';
 import { useAcademy } from '../contexts/AcademyContext';
 import { calculateAge } from '../utils/formatters';
 import { hasValidMembership } from '../utils/permissions';
+import { sanitizeFilename } from '../utils/validators';
 import LoadingBar from './LoadingBar.jsx';
 import PlayerForm from './PlayerForm.jsx';
 import PlayerDetail from './PlayerDetail.jsx';
 import '../styles/sections.css';
 
-import { Plus, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Filter, ChevronRight, Check, X } from 'lucide-react';
+import { Plus, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Filter, ChevronRight, Check, X, Download, Users as UsersIcon } from 'lucide-react';
 export default function PlayersSection({ user, db }) {
   const { academy, membership, studentLabelPlural, studentLabelSingular } = useAcademy();
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+
+  // Bulk actions state
+  const [selectedPlayers, setSelectedPlayers] = useState(new Set());
+  const [showBulkActionsMenu, setShowBulkActionsMenu] = useState(false);
 
   // Cache for reference data
   const [tiersCache, setTiersCache] = useState(new Map());
@@ -234,16 +239,57 @@ export default function PlayersSection({ user, db }) {
     }
   };
 
-  const handleMarkProductAsPaid = async (productIndex, paymentMethod, paymentDate) => {
+  const uploadReceiptFile = async (file, targetPlayerId) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+    const maxSize = 5 * 1024 * 1024;
+
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('Receipt must be an image or PDF.');
+    }
+    if (file.size > maxSize) {
+      throw new Error('Receipt must be smaller than 5MB.');
+    }
+    if (!academy?.id) {
+      throw new Error('Academy not available.');
+    }
+
+    const sanitizedFilename = sanitizeFilename(file.name);
+    const storagePath = `academies/${academy.id}/payment_receipts/${targetPlayerId}/${Date.now()}_${sanitizedFilename}`;
+    const uploadRef = storageRef(storage, storagePath);
+    await uploadBytes(uploadRef, file);
+    const receiptUrl = await getDownloadURL(uploadRef);
+
+    return {
+      receiptUrl,
+      receiptPath: storagePath,
+      receiptName: file.name,
+      receiptType: file.type,
+    };
+  };
+
+  const handleMarkProductAsPaid = async (productIndex, paymentMethod, paymentDate, receiptFile) => {
     if (!selectedPlayer) return;
 
     const paidDate = paymentDate ? new Date(paymentDate) : new Date();
     const updatedProducts = [...selectedPlayer.oneTimeProducts];
+    let receiptData = null;
+
+    if (receiptFile) {
+      try {
+        receiptData = await uploadReceiptFile(receiptFile, selectedPlayer.id);
+      } catch (error) {
+        console.error('Error uploading receipt:', error);
+        toast.error(error.message || 'Failed to upload receipt.');
+        return;
+      }
+    }
+
     updatedProducts[productIndex] = {
       ...updatedProducts[productIndex],
       status: 'paid',
       paymentMethod: paymentMethod,
       paidAt: paidDate,
+      ...(receiptData || {}),
     };
 
     const finalProductsForDB = updatedProducts.map(p => {
@@ -332,6 +378,182 @@ export default function PlayersSection({ user, db }) {
     ), {
       duration: 6000,
     });
+  };
+
+  // Bulk selection handlers
+  const handleSelectAll = () => {
+    if (selectedPlayers.size === filteredAndSortedPlayers.length) {
+      setSelectedPlayers(new Set());
+    } else {
+      setSelectedPlayers(new Set(filteredAndSortedPlayers.map(p => p.id)));
+    }
+  };
+
+  const handleSelectPlayer = (playerId) => {
+    const newSelected = new Set(selectedPlayers);
+    if (newSelected.has(playerId)) {
+      newSelected.delete(playerId);
+    } else {
+      newSelected.add(playerId);
+    }
+    setSelectedPlayers(newSelected);
+  };
+
+  // Bulk actions
+  const handleBulkAssignGroup = async (groupId) => {
+    if (selectedPlayers.size === 0) return;
+
+    const loadingToast = toast.loading(`Assigning group to ${selectedPlayers.size} ${studentLabelPlural.toLowerCase()}...`);
+
+    try {
+      const playerIds = Array.from(selectedPlayers);
+
+      // Process all players in parallel
+      await Promise.all(playerIds.map(async (playerId) => {
+        const playerRef = doc(db, `academies/${academy.id}/players`, playerId);
+        const playerSnap = await getDoc(playerRef);
+
+        if (playerSnap.exists()) {
+          const playerData = playerSnap.data();
+          const oldGroupId = playerData.groupId;
+
+          // Update player's groupId
+          await updateDoc(playerRef, { groupId });
+
+          // Sync group membership
+          if (oldGroupId && oldGroupId !== groupId) {
+            // Remove from old group
+            const oldMemberRef = doc(db, `academies/${academy.id}/groups/${oldGroupId}/members`, playerId);
+            await deleteDoc(oldMemberRef);
+          }
+
+          if (groupId) {
+            // Add to new group
+            const newMemberRef = doc(db, `academies/${academy.id}/groups/${groupId}/members`, playerId);
+            await setDoc(newMemberRef, { playerId });
+          }
+        }
+      }));
+
+      toast.success(`${selectedPlayers.size} ${studentLabelPlural.toLowerCase()} assigned to group successfully.`, { id: loadingToast });
+      setSelectedPlayers(new Set());
+      fetchPlayers();
+    } catch (error) {
+      console.error('Error in bulk assign group:', error);
+      toast.error('Failed to assign group to some students.', { id: loadingToast });
+    }
+  };
+
+  const handleBulkChangeStatus = async (newStatus) => {
+    if (selectedPlayers.size === 0) return;
+
+    const loadingToast = toast.loading(`Updating status for ${selectedPlayers.size} ${studentLabelPlural.toLowerCase()}...`);
+
+    try {
+      const playerIds = Array.from(selectedPlayers);
+
+      await Promise.all(playerIds.map(async (playerId) => {
+        const playerRef = doc(db, `academies/${academy.id}/players`, playerId);
+        await updateDoc(playerRef, { status: newStatus });
+      }));
+
+      toast.success(`${selectedPlayers.size} ${studentLabelPlural.toLowerCase()} ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully.`, { id: loadingToast });
+      setSelectedPlayers(new Set());
+      fetchPlayers();
+    } catch (error) {
+      console.error('Error in bulk status change:', error);
+      toast.error('Failed to update status for some students.', { id: loadingToast });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedPlayers.size === 0) return;
+
+    const deleteAction = async () => {
+      const loadingToast = toast.loading(`Deleting ${selectedPlayers.size} ${studentLabelPlural.toLowerCase()}...`);
+
+      try {
+        const playerIds = Array.from(selectedPlayers);
+
+        await Promise.all(playerIds.map(async (playerId) => {
+          const playerSnapshot = await getDoc(doc(db, `academies/${academy.id}/players`, playerId));
+          const playerData = playerSnapshot.exists() ? playerSnapshot.data() : null;
+
+          await deleteDoc(doc(db, `academies/${academy.id}/players`, playerId));
+
+          if (playerData?.photoPath) {
+            try {
+              await deleteObject(storageRef(storage, playerData.photoPath));
+            } catch (storageErr) {
+              console.warn("Failed to delete player photo from storage", storageErr);
+            }
+          }
+        }));
+
+        toast.success(`${selectedPlayers.size} ${studentLabelPlural.toLowerCase()} deleted successfully.`, { id: loadingToast });
+        setSelectedPlayers(new Set());
+        fetchPlayers();
+      } catch (error) {
+        console.error('Error in bulk delete:', error);
+        toast.error('Failed to delete some students.', { id: loadingToast });
+      }
+    };
+
+    toast((t) => (
+      <div className="bg-section p-4 rounded-lg shadow-lg flex flex-col items-center">
+        <p className="text-center mb-4">Are you sure you want to delete {selectedPlayers.size} {studentLabelPlural.toLowerCase()}?</p>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => { toast.dismiss(t.id); deleteAction(); }}
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Confirm
+          </button>
+          <button onClick={() => toast.dismiss(t.id)} className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), {
+      duration: 6000,
+    });
+  };
+
+  const handleBulkExport = () => {
+    if (selectedPlayers.size === 0) return;
+
+    const selectedPlayersData = players.filter(p => selectedPlayers.has(p.id));
+
+    // Create CSV content
+    const headers = ['ID', 'Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Birthday', 'Group', 'Tier', 'Status'];
+    const csvContent = [
+      headers.join(','),
+      ...selectedPlayersData.map(player => [
+        player.studentId || '',
+        player.name || '',
+        player.lastName || '',
+        player.email || '',
+        player.contactPhone || '',
+        player.gender || '',
+        player.birthday || '',
+        player.groupName || '',
+        player.tierName || '',
+        player.status || 'active'
+      ].map(field => `"${field}"`).join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `students_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success(`${selectedPlayers.size} ${studentLabelPlural.toLowerCase()} exported successfully.`);
   };
 
   const handleRowClick = async (player) => {
@@ -701,6 +923,108 @@ export default function PlayersSection({ user, db }) {
     );
   };
 
+  const BulkActionsToolbar = () => {
+    const menuRef = useRef(null);
+    useOutsideClick(menuRef, () => setShowBulkActionsMenu(false));
+
+    return (
+      <div className="bg-primary text-white px-4 py-3 rounded-lg flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          <UsersIcon className="h-5 w-5" />
+          <span className="font-medium">{selectedPlayers.size} {studentLabelPlural.toLowerCase()} selected</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setShowBulkActionsMenu(!showBulkActionsMenu)}
+              className="bg-white text-primary px-4 py-2 rounded-md hover:bg-gray-100 font-medium"
+            >
+              Actions
+            </button>
+            {showBulkActionsMenu && (
+              <div className="absolute right-0 mt-2 w-64 bg-section border border-gray-border rounded-md shadow-lg z-50">
+                <ul className="py-1">
+                  <li>
+                    <div className="px-4 py-2 text-sm font-semibold text-gray-500">Assign Group</div>
+                    <ul className="max-h-40 overflow-y-auto">
+                      {groups.map(group => (
+                        <li key={group.id}>
+                          <button
+                            onClick={() => {
+                              handleBulkAssignGroup(group.id);
+                              setShowBulkActionsMenu(false);
+                            }}
+                            className="w-full text-left px-6 py-2 text-gray-800 hover:bg-gray-100"
+                          >
+                            {group.name}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                  <li className="border-t border-gray-200">
+                    <button
+                      onClick={() => {
+                        handleBulkChangeStatus('active');
+                        setShowBulkActionsMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center"
+                    >
+                      <Check className="mr-3 h-4 w-4" />
+                      <span>Activate</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => {
+                        handleBulkChangeStatus('inactive');
+                        setShowBulkActionsMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center"
+                    >
+                      <X className="mr-3 h-4 w-4" />
+                      <span>Deactivate</span>
+                    </button>
+                  </li>
+                  <li className="border-t border-gray-200">
+                    <button
+                      onClick={() => {
+                        handleBulkExport();
+                        setShowBulkActionsMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center"
+                    >
+                      <Download className="mr-3 h-4 w-4" />
+                      <span>Export to CSV</span>
+                    </button>
+                  </li>
+                  <li className="border-t border-gray-200">
+                    <button
+                      onClick={() => {
+                        handleBulkDelete();
+                        setShowBulkActionsMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center"
+                    >
+                      <Trash2 className="mr-3 h-4 w-4" />
+                      <span>Delete</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => setSelectedPlayers(new Set())}
+            className="bg-white bg-opacity-20 text-white px-4 py-2 rounded-md hover:bg-opacity-30"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+    );
+  };
+
 
   return (
     <div className="section-container">
@@ -719,6 +1043,10 @@ export default function PlayersSection({ user, db }) {
 
       <div className="content-card-responsive">
       <LoadingBar loading={loading} />
+
+      {/* Bulk Actions Toolbar */}
+      {selectedPlayers.size > 0 && <BulkActionsToolbar />}
+
       {/* Filters Section */}
       <div className="flex items-center space-x-4 mb-4 p-4 bg-app rounded-lg">
         <div className="flex items-center space-x-4">
@@ -757,6 +1085,14 @@ export default function PlayersSection({ user, db }) {
             <table className="min-w-full bg-section">
               <thead>
                 <tr>
+                  <th className="py-2 px-4 border-b text-left table-header w-12">
+                    <input
+                      type="checkbox"
+                      checked={selectedPlayers.size === filteredAndSortedPlayers.length && filteredAndSortedPlayers.length > 0}
+                      onChange={handleSelectAll}
+                      className="h-4 w-4 text-primary border-gray-300 rounded"
+                    />
+                  </th>
                   <th className="py-2 px-4 border-b text-left table-header">
                     <button onClick={() => handleSort('name')} className="table-header flex items-center">
                       Name {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />)}
@@ -772,6 +1108,14 @@ export default function PlayersSection({ user, db }) {
               <tbody>
                 {filteredAndSortedPlayers.map(player => (
                   <tr key={player.id} className="group hover:bg-gray-100 cursor-pointer table-row-hover" onClick={() => handleRowClick(player)}>
+                    <td className="py-2 px-4 border-b table-cell w-12" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedPlayers.has(player.id)}
+                        onChange={() => handleSelectPlayer(player.id)}
+                        className="h-4 w-4 text-primary border-gray-300 rounded"
+                      />
+                    </td>
                     <td className="py-2 px-4 border-b table-cell">
                       <div className="flex items-center space-x-4">
                         <Avatar player={player} />
@@ -815,7 +1159,7 @@ export default function PlayersSection({ user, db }) {
             </table>
           </div>
 
-          {/* Mobile cards */} 
+          {/* Mobile cards */}
           <div className="grid gap-3 md:hidden">
             {filteredAndSortedPlayers.map(player => {
               const playerPhone = player.contactPhone || player.contactPhoneNumber || '';
@@ -825,6 +1169,16 @@ export default function PlayersSection({ user, db }) {
                   className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm relative"
                   onClick={() => handleRowClick(player)}
                 >
+                  <input
+                    type="checkbox"
+                    checked={selectedPlayers.has(player.id)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      handleSelectPlayer(player.id);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute top-3 left-3 h-5 w-5 text-primary border-gray-300 rounded"
+                  />
                   <button
                     onClick={(e) => handleOpenActionsMenu(player, e)}
                     className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100"
@@ -832,7 +1186,7 @@ export default function PlayersSection({ user, db }) {
                   >
                     <MoreVertical className="h-5 w-5 text-gray-600" />
                   </button>
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-3 ml-8">
                     <Avatar player={player} />
                     <div>
                       <p className="font-semibold text-gray-900">{player.name} {player.lastName}</p>
