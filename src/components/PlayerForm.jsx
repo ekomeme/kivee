@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { collection, addDoc, updateDoc, doc, getDocs, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, getDocs, serverTimestamp, setDoc, deleteDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import toast from 'react-hot-toast';
 import Select from 'react-select'; // Import Select for country codes
@@ -835,13 +835,44 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
     };
 
     try {
+      let playerId;
+
       if (playerToEdit) {
-        const playerDocRef = doc(db, `academies/${academyId}/players`, playerToEdit.id);
+        playerId = playerToEdit.id;
+        const playerDocRef = doc(db, `academies/${academyId}/players`, playerId);
         await updateDoc(playerDocRef, playerData);
+
+        // Sync group membership: handle group changes
+        const oldGroupId = playerToEdit.groupId;
+        const newGroupId = groupId || null;
+
+        // If group changed, update the members subcollection
+        if (oldGroupId !== newGroupId) {
+          // Remove from old group if it existed
+          if (oldGroupId) {
+            const oldMemberRef = doc(db, `academies/${academyId}/groups/${oldGroupId}/members`, playerId);
+            await deleteDoc(oldMemberRef);
+          }
+
+          // Add to new group if it exists
+          if (newGroupId) {
+            const newMemberRef = doc(db, `academies/${academyId}/groups/${newGroupId}/members`, playerId);
+            await setDoc(newMemberRef, { playerId });
+          }
+        }
+
         toast.success("Player updated successfully.");
       } else {
         const playersCollectionRef = collection(db, `academies/${academyId}/players`);
-        await addDoc(playersCollectionRef, playerData);
+        const docRef = await addDoc(playersCollectionRef, playerData);
+        playerId = docRef.id;
+
+        // Sync group membership: add to group if assigned
+        if (groupId) {
+          const memberRef = doc(db, `academies/${academyId}/groups/${groupId}/members`, playerId);
+          await setDoc(memberRef, { playerId });
+        }
+
         toast.success("Player added successfully.");
       }
       onComplete();

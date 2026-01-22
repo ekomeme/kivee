@@ -36,11 +36,12 @@ export default function PlansOffersSection({ user, db }) {
   const [newTierDescription, setNewTierDescription] = useState('');
   const [pricingModel, setPricingModel] = useState('monthly'); // 'monthly', 'semi-annual', 'annual', 'term'
   const [price, setPrice] = useState('');
-  const [locationPricing, setLocationPricing] = useState('global'); // 'global' or 'specific'
+  const [enabledLocations, setEnabledLocations] = useState({}); // { locationId: true/false }
   const [locationPrices, setLocationPrices] = useState({}); // { locationId: price }
   const [termStartDate, setTermStartDate] = useState('');
   const [termEndDate, setTermEndDate] = useState('');
   const [classesPerWeek, setClassesPerWeek] = useState('');
+  const [classDuration, setClassDuration] = useState(''); // Duration in minutes
   const [classLimitPerCycle, setClassLimitPerCycle] = useState('');
   const [autoRenew, setAutoRenew] = useState(true);
   const [requiresEnrollmentFee, setRequiresEnrollmentFee] = useState(false);
@@ -58,7 +59,7 @@ export default function PlansOffersSection({ user, db }) {
   const [productType, setProductType] = useState('enrollment');
   const [productDescription, setProductDescription] = useState('');
   const [productPrice, setProductPrice] = useState('');
-  const [productLocationPricing, setProductLocationPricing] = useState('global'); // 'global' or 'specific'
+  const [productEnabledLocations, setProductEnabledLocations] = useState({}); // { locationId: true/false }
   const [productLocationPrices, setProductLocationPrices] = useState({}); // { locationId: price }
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [productError, setProductError] = useState(null);
@@ -71,7 +72,7 @@ export default function PlansOffersSection({ user, db }) {
   const [durationInDays, setDurationInDays] = useState('');
   const [classLimit, setClassLimit] = useState('');
   const [trialPrice, setTrialPrice] = useState('');
-  const [trialLocationPricing, setTrialLocationPricing] = useState('global'); // 'global' or 'specific'
+  const [trialEnabledLocations, setTrialEnabledLocations] = useState({}); // { locationId: true/false }
   const [trialLocationPrices, setTrialLocationPrices] = useState({}); // { locationId: price }
   const [convertsToTierId, setConvertsToTierId] = useState('');
   const [loadingTrials, setLoadingTrials] = useState(false);
@@ -154,16 +155,25 @@ export default function PlansOffersSection({ user, db }) {
     setLoadingTiers(true);
     setTierError(null);
 
+    // Filter only enabled locations with prices
+    const filteredLocationPrices = {};
+    Object.keys(enabledLocations).forEach(locId => {
+      if (enabledLocations[locId] && locationPrices[locId]) {
+        filteredLocationPrices[locId] = Number(locationPrices[locId]) || 0;
+      }
+    });
+
     const tierData = {
       name: newTierName,
       ...(newTierDescription && { description: newTierDescription }), // Only include if not empty
       pricingModel: pricingModel,
-      price: locationPricing === 'global' ? Number(price) || 0 : 0,
-      locationPricing: locationPricing,
-      locationPrices: locationPricing === 'specific' ? locationPrices : null,
+      price: 0, // No longer used, kept for backward compatibility
+      enabledLocations: enabledLocations,
+      locationPrices: filteredLocationPrices,
       termStartDate: pricingModel === 'term' ? termStartDate : null,
       termEndDate: pricingModel === 'term' ? termEndDate : null,
       classesPerWeek: Number(classesPerWeek) || 0,
+      classDuration: Number(classDuration) || 0, // Duration in minutes
       classLimitPerCycle: classLimitPerCycle ? Number(classLimitPerCycle) : null,
       autoRenew,
       requiresEnrollmentFee,
@@ -214,11 +224,12 @@ export default function PlansOffersSection({ user, db }) {
     setNewTierDescription(tier.description);
     setPricingModel(tier.pricingModel || 'monthly');
     setPrice(tier.price || '');
-    setLocationPricing(tier.locationPricing || 'global');
+    setEnabledLocations(tier.enabledLocations || {});
     setLocationPrices(tier.locationPrices || {});
     setTermStartDate(tier.termStartDate || '');
     setTermEndDate(tier.termEndDate || '');
     setClassesPerWeek(tier.classesPerWeek || '');
+    setClassDuration(tier.classDuration || '');
     setClassLimitPerCycle(tier.classLimitPerCycle || '');
     setAutoRenew(tier.autoRenew === false ? false : true);
     setRequiresEnrollmentFee(tier.requiresEnrollmentFee || false);
@@ -229,17 +240,23 @@ export default function PlansOffersSection({ user, db }) {
     if (tier) {
       handleEditClick(tier);
     } else {
-      // Clear fields for a new tier
+      // Clear fields for a new tier - enable all locations by default
+      const defaultEnabledLocations = {};
+      locations.filter(loc => loc.status === 'active').forEach(loc => {
+        defaultEnabledLocations[loc.id] = true;
+      });
+
       setEditingTier(null);
       setNewTierName('');
       setNewTierDescription('');
       setPricingModel('monthly');
       setPrice('');
-      setLocationPricing('global');
+      setEnabledLocations(defaultEnabledLocations);
       setLocationPrices({});
       setTermStartDate('');
       setTermEndDate('');
       setClassesPerWeek('');
+      setClassDuration('');
       setClassLimitPerCycle('');
       setAutoRenew(true);
       setRequiresEnrollmentFee(false);
@@ -262,13 +279,21 @@ export default function PlansOffersSection({ user, db }) {
     setLoadingProducts(true);
     setProductError(null);
 
+    // Filter only enabled locations with prices
+    const filteredProductPrices = {};
+    Object.keys(productEnabledLocations).forEach(locId => {
+      if (productEnabledLocations[locId] && productLocationPrices[locId]) {
+        filteredProductPrices[locId] = Number(productLocationPrices[locId]) || 0;
+      }
+    });
+
     const productData = {
       name: productName,
       type: productType,
       ...(productDescription && { description: productDescription }), // Only include if not empty
-      price: productLocationPricing === 'global' ? Number(productPrice) || 0 : 0,
-      locationPricing: productLocationPricing,
-      locationPrices: productLocationPricing === 'specific' ? productLocationPrices : null,
+      price: 0, // No longer used
+      enabledLocations: productEnabledLocations,
+      locationPrices: filteredProductPrices,
       academyId: academy.id,
       createdAt: editingProduct ? editingProduct.createdAt : new Date(),
       updatedAt: new Date(),
@@ -301,15 +326,21 @@ export default function PlansOffersSection({ user, db }) {
       setProductType(product.type);
       setProductDescription(product.description || '');
       setProductPrice(product.price || '');
-      setProductLocationPricing(product.locationPricing || 'global');
+      setProductEnabledLocations(product.enabledLocations || {});
       setProductLocationPrices(product.locationPrices || {});
     } else {
+      // Enable all locations by default for new product
+      const defaultEnabledLocations = {};
+      locations.filter(loc => loc.status === 'active').forEach(loc => {
+        defaultEnabledLocations[loc.id] = true;
+      });
+
       setEditingProduct(null);
       setProductName('');
       setProductType('enrollment');
       setProductDescription('');
       setProductPrice('');
-      setProductLocationPricing('global');
+      setProductEnabledLocations(defaultEnabledLocations);
       setProductLocationPrices({});
       setProductError(null);
     }
@@ -329,13 +360,21 @@ export default function PlansOffersSection({ user, db }) {
     setLoadingTrials(true);
     setTrialError(null);
 
+    // Filter only enabled locations with prices
+    const filteredTrialPrices = {};
+    Object.keys(trialEnabledLocations).forEach(locId => {
+      if (trialEnabledLocations[locId] && trialLocationPrices[locId]) {
+        filteredTrialPrices[locId] = Number(trialLocationPrices[locId]) || 0;
+      }
+    });
+
     const trialData = {
       name: trialName,
       durationInDays: Number(durationInDays),
       classLimit: classLimit ? Number(classLimit) : 'unlimited',
-      price: trialLocationPricing === 'global' ? (Number(trialPrice) || 0) : 0,
-      locationPricing: trialLocationPricing,
-      locationPrices: trialLocationPricing === 'specific' ? trialLocationPrices : null,
+      price: 0, // No longer used
+      enabledLocations: trialEnabledLocations,
+      locationPrices: filteredTrialPrices,
       convertsToTierId: convertsToTierId || null,
       autoRenew: false, // Trials never auto-renew
       academyId: academy.id,
@@ -370,16 +409,22 @@ export default function PlansOffersSection({ user, db }) {
       setDurationInDays(trial.durationInDays);
       setClassLimit(trial.classLimit === 'unlimited' ? '' : trial.classLimit);
       setTrialPrice(trial.price);
-      setTrialLocationPricing(trial.locationPricing || 'global');
+      setTrialEnabledLocations(trial.enabledLocations || {});
       setTrialLocationPrices(trial.locationPrices || {});
       setConvertsToTierId(trial.convertsToTierId || '');
     } else {
+      // Enable all locations by default for new trial
+      const defaultEnabledLocations = {};
+      locations.filter(loc => loc.status === 'active').forEach(loc => {
+        defaultEnabledLocations[loc.id] = true;
+      });
+
       setEditingTrial(null);
       setTrialName('');
       setDurationInDays('');
       setClassLimit('');
       setTrialPrice('');
-      setTrialLocationPricing('global');
+      setTrialEnabledLocations(defaultEnabledLocations);
       setTrialLocationPrices({});
       setConvertsToTierId('');
       setTrialError(null);
@@ -627,21 +672,23 @@ export default function PlansOffersSection({ user, db }) {
                             <td className="py-3 px-4 border-b text-base font-medium table-cell">{tier.name}</td>
                             <td className="py-3 px-4 border-b text-sm text-gray-600 max-w-xs truncate table-cell">{tier.description}</td>
                             <td className="py-3 px-4 border-b text-base table-cell">
-                              {tier.locationPricing === 'specific' ? (
-                                <span className="text-sm text-gray-600 italic">Varies by location</span>
+                              {tier.locationPrices && Object.keys(tier.locationPrices).length > 0 ? (
+                                (() => {
+                                  const prices = Object.values(tier.locationPrices);
+                                  const uniquePrices = [...new Set(prices)];
+                                  const suffix = tier.pricingModel === 'monthly' ? '/mo' :
+                                               tier.pricingModel === 'semi-annual' ? '/6mo' :
+                                               tier.pricingModel === 'annual' ? '/yr' :
+                                               tier.pricingModel === 'term' ? '/term' : '';
+
+                                  if (uniquePrices.length === 1) {
+                                    return <span>{formatAcademyCurrency(uniquePrices[0], academy)}{suffix}</span>;
+                                  } else {
+                                    return <span className="text-sm text-gray-600 italic">Varies by location</span>;
+                                  }
+                                })()
                               ) : (
-                                <>
-                                  {tier.pricingModel === 'monthly' && `${formatAcademyCurrency(tier.price, academy)}/mo`}
-                                  {tier.pricingModel === 'semi-annual' && `${formatAcademyCurrency(tier.price, academy)}/6mo`}
-                                  {tier.pricingModel === 'annual' && `${formatAcademyCurrency(tier.price, academy)}/yr`}
-                                  {tier.pricingModel === 'term' && (
-                                    <div>
-                                      <p>{formatAcademyCurrency(tier.price, academy)}/term</p>
-                                      <p className="text-xs text-gray-500">{tier.termStartDate} - {tier.termEndDate}</p>
-                                    </div>
-                                  )}
-                                  {!tier.pricingModel && `${formatAcademyCurrency(tier.price, academy)}`}
-                                </>
+                                <span className="text-sm text-gray-500">No price set</span>
                               )}
                             </td>
                             <td className="py-3 px-4 border-b text-sm text-gray-600 table-cell">{tier.classesPerWeek ? `${tier.classesPerWeek} per week` : 'N/A'}</td>
@@ -676,16 +723,23 @@ export default function PlansOffersSection({ user, db }) {
                           <div className="bg-gray-50 rounded-md p-2">
                             <p className="text-xs text-gray-500">Price</p>
                             <p className="font-medium">
-                              {tier.locationPricing === 'specific' ? (
-                                <span className="text-sm text-gray-600 italic">Varies by location</span>
+                              {tier.locationPrices && Object.keys(tier.locationPrices).length > 0 ? (
+                                (() => {
+                                  const prices = Object.values(tier.locationPrices);
+                                  const uniquePrices = [...new Set(prices)];
+                                  const suffix = tier.pricingModel === 'monthly' ? '/mo' :
+                                               tier.pricingModel === 'semi-annual' ? '/6mo' :
+                                               tier.pricingModel === 'annual' ? '/yr' :
+                                               tier.pricingModel === 'term' ? '/term' : '';
+
+                                  if (uniquePrices.length === 1) {
+                                    return <span>{formatAcademyCurrency(uniquePrices[0], academy)}{suffix}</span>;
+                                  } else {
+                                    return <span className="text-sm text-gray-600 italic">Varies by location</span>;
+                                  }
+                                })()
                               ) : (
-                                <>
-                                  {tier.pricingModel === 'monthly' && `${formatAcademyCurrency(tier.price, academy)}/mo`}
-                                  {tier.pricingModel === 'semi-annual' && `${formatAcademyCurrency(tier.price, academy)}/6mo`}
-                                  {tier.pricingModel === 'annual' && `${formatAcademyCurrency(tier.price, academy)}/yr`}
-                                  {tier.pricingModel === 'term' && `${formatAcademyCurrency(tier.price, academy)}/term`}
-                                  {!tier.pricingModel && `${formatAcademyCurrency(tier.price, academy)}`}
-                                </>
+                                <span className="text-sm text-gray-500">No price set</span>
                               )}
                             </p>
                           </div>
@@ -742,10 +796,18 @@ export default function PlansOffersSection({ user, db }) {
                         <td className="py-3 px-4 border-b text-base font-medium table-cell">{product.name}</td>
                         <td className="py-3 px-4 border-b text-sm text-gray-600 capitalize table-cell">{product.type}</td>
                         <td className="py-3 px-4 border-b text-base table-cell">
-                          {product.locationPricing === 'specific' ? (
-                            <span className="text-sm text-gray-600 italic">Varies by location</span>
+                          {product.locationPrices && Object.keys(product.locationPrices).length > 0 ? (
+                            (() => {
+                              const prices = Object.values(product.locationPrices);
+                              const uniquePrices = [...new Set(prices)];
+                              if (uniquePrices.length === 1) {
+                                return formatAcademyCurrency(uniquePrices[0], academy);
+                              } else {
+                                return <span className="text-sm text-gray-600 italic">Varies by location</span>;
+                              }
+                            })()
                           ) : (
-                            formatAcademyCurrency(product.price, academy)
+                            <span className="text-sm text-gray-500">No price set</span>
                           )}
                         </td>
                         <td className="py-3 px-4 border-b text-right table-cell">
@@ -773,10 +835,18 @@ export default function PlansOffersSection({ user, db }) {
                     <div className="mt-3 bg-gray-50 rounded-md p-2 text-sm text-gray-700">
                       <p className="text-xs text-gray-500">Price</p>
                       <p className="font-medium">
-                        {product.locationPricing === 'specific' ? (
-                          <span className="text-sm text-gray-600 italic">Varies by location</span>
+                        {product.locationPrices && Object.keys(product.locationPrices).length > 0 ? (
+                          (() => {
+                            const prices = Object.values(product.locationPrices);
+                            const uniquePrices = [...new Set(prices)];
+                            if (uniquePrices.length === 1) {
+                              return formatAcademyCurrency(uniquePrices[0], academy);
+                            } else {
+                              return <span className="text-sm text-gray-600 italic">Varies by location</span>;
+                            }
+                          })()
                         ) : (
-                          formatAcademyCurrency(product.price, academy)
+                          <span className="text-sm text-gray-500">No price set</span>
                         )}
                       </p>
                     </div>
@@ -819,10 +889,18 @@ export default function PlansOffersSection({ user, db }) {
                         <td className="py-3 px-4 border-b text-sm text-gray-600 table-cell">{trial.durationInDays} days</td>
                         <td className="py-3 px-4 border-b text-sm text-gray-600 capitalize table-cell">{trial.classLimit}</td>
                         <td className="py-3 px-4 border-b text-base table-cell">
-                          {trial.locationPricing === 'specific' ? (
-                            <span className="text-sm text-gray-600 italic">Varies by location</span>
+                          {trial.locationPrices && Object.keys(trial.locationPrices).length > 0 ? (
+                            (() => {
+                              const prices = Object.values(trial.locationPrices);
+                              const uniquePrices = [...new Set(prices)];
+                              if (uniquePrices.length === 1) {
+                                return formatAcademyCurrency(uniquePrices[0], academy);
+                              } else {
+                                return <span className="text-sm text-gray-600 italic">Varies by location</span>;
+                              }
+                            })()
                           ) : (
-                            formatAcademyCurrency(trial.price, academy)
+                            <span className="text-sm text-gray-500">No price set</span>
                           )}
                         </td>
                         <td className="py-3 px-4 border-b text-right table-cell">
@@ -855,10 +933,18 @@ export default function PlansOffersSection({ user, db }) {
                       <div className="bg-gray-50 rounded-md p-2">
                         <p className="text-xs text-gray-500">Price</p>
                         <p className="font-medium">
-                          {trial.locationPricing === 'specific' ? (
-                            <span className="text-sm text-gray-600 italic">Varies by location</span>
+                          {trial.locationPrices && Object.keys(trial.locationPrices).length > 0 ? (
+                            (() => {
+                              const prices = Object.values(trial.locationPrices);
+                              const uniquePrices = [...new Set(prices)];
+                              if (uniquePrices.length === 1) {
+                                return formatAcademyCurrency(uniquePrices[0], academy);
+                              } else {
+                                return <span className="text-sm text-gray-600 italic">Varies by location</span>;
+                              }
+                            })()
                           ) : (
-                            formatAcademyCurrency(trial.price, academy)
+                            <span className="text-sm text-gray-500">No price set</span>
                           )}
                         </p>
                       </div>
@@ -952,82 +1038,6 @@ export default function PlansOffersSection({ user, db }) {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Location Pricing</label>
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <input
-                        type="radio"
-                        id="pricingGlobal"
-                        name="locationPricing"
-                        value="global"
-                        checked={locationPricing === 'global'}
-                        onChange={(e) => setLocationPricing(e.target.value)}
-                        className="h-4 w-4 text-primary border-gray-300"
-                      />
-                      <label htmlFor="pricingGlobal" className="ml-2 text-sm text-gray-700">
-                        {locations.length > 1 ? 'Same price for all locations' : 'Price'}
-                      </label>
-                    </div>
-                    {locations.length > 1 && (
-                      <div className="flex items-center">
-                        <input
-                          type="radio"
-                          id="pricingSpecific"
-                          name="locationPricing"
-                          value="specific"
-                          checked={locationPricing === 'specific'}
-                          onChange={(e) => setLocationPricing(e.target.value)}
-                          className="h-4 w-4 text-primary border-gray-300"
-                        />
-                        <label htmlFor="pricingSpecific" className="ml-2 text-sm text-gray-700">
-                          Different price per location
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {locationPricing === 'global' && (
-                  <div>
-                    <label htmlFor="price" className="block text-sm font-medium text-gray-700">Price</label>
-                    <div className="relative mt-1">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
-                      </div>
-                      <input type="number" id="price" value={price} onChange={(e) => setPrice(e.target.value)} required min="0" step="0.01" className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
-                    </div>
-                  </div>
-                )}
-
-                {locationPricing === 'specific' && (
-                  <div className="p-4 bg-gray-50 rounded-md border space-y-3">
-                    <p className="text-sm font-medium text-gray-700">Price per Location</p>
-                    {locations.filter(loc => loc.status === 'active').map(location => (
-                      <div key={location.id}>
-                        <label htmlFor={`price-${location.id}`} className="block text-sm text-gray-700 mb-1">
-                          {location.name}
-                        </label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
-                          </div>
-                          <input
-                            type="number"
-                            id={`price-${location.id}`}
-                            value={locationPrices[location.id] || ''}
-                            onChange={(e) => setLocationPrices(prev => ({ ...prev, [location.id]: e.target.value }))}
-                            required
-                            min="0"
-                            step="0.01"
-                            className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
                 {pricingModel === 'term' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-md border">
                     <div>
@@ -1041,35 +1051,87 @@ export default function PlansOffersSection({ user, db }) {
                   </div>
                 )}
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Price per Location
+                  </label>
+                  <div className="p-4 bg-gray-50 rounded-md border space-y-3">
+                    {loadingLocations ? (
+                      <p className="text-sm text-gray-500">Loading locations...</p>
+                    ) : locations.filter(loc => loc.status === 'active').length === 0 ? (
+                      <p className="text-sm text-gray-500">No active locations available.</p>
+                    ) : (
+                      locations.filter(loc => loc.status === 'active').map(location => (
+                        <div key={location.id} className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id={`enabled-${location.id}`}
+                            checked={enabledLocations[location.id] || false}
+                            onChange={(e) => {
+                              const isChecked = e.target.checked;
+                              setEnabledLocations(prev => ({ ...prev, [location.id]: isChecked }));
+                              // Clear price if disabled
+                              if (!isChecked) {
+                                setLocationPrices(prev => {
+                                  const updated = { ...prev };
+                                  delete updated[location.id];
+                                  return updated;
+                                });
+                              }
+                            }}
+                            className="h-4 w-4 text-primary border-gray-300 rounded"
+                          />
+                          <label htmlFor={`enabled-${location.id}`} className="text-sm text-gray-700 min-w-[120px]">
+                            {location.name}
+                          </label>
+                          <div className="relative flex-1">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
+                            </div>
+                            <input
+                              type="number"
+                              id={`price-${location.id}`}
+                              value={locationPrices[location.id] || ''}
+                              onChange={(e) => setLocationPrices(prev => ({ ...prev, [location.id]: e.target.value }))}
+                              disabled={!enabledLocations[location.id]}
+                              required={enabledLocations[location.id]}
+                              min="0"
+                              step="0.01"
+                              className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="classesPerWeek" className="block text-sm font-medium text-gray-700">Classes per week</label>
                     <input type="number" id="classesPerWeek" value={classesPerWeek} onChange={(e) => setClassesPerWeek(e.target.value)} required min="0" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
                   </div>
                   <div>
-                    <label htmlFor="classLimitPerCycle" className="block text-sm font-medium text-gray-700">Class limit per cycle (Optional)</label>
-                    <input type="number" id="classLimitPerCycle" value={classLimitPerCycle} onChange={(e) => setClassLimitPerCycle(e.target.value)} min="0" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                    <label htmlFor="classDuration" className="block text-sm font-medium text-gray-700">Class duration (minutes)</label>
+                    <input type="number" id="classDuration" value={classDuration} onChange={(e) => setClassDuration(e.target.value)} required min="0" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="e.g., 30, 45, 60" />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                  <div className="flex items-center space-x-3">
-                    <input id="autoRenew" type="checkbox" checked={autoRenew} onChange={(e) => setAutoRenew(e.target.checked)} className="h-4 w-4 text-primary border-gray-300 rounded" />
-                    <label htmlFor="autoRenew" className="text-sm font-medium text-gray-700">Auto-renew</label>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <input id="requiresEnrollmentFee" type="checkbox" checked={requiresEnrollmentFee} onChange={(e) => setRequiresEnrollmentFee(e.target.checked)} className="h-4 w-4 text-primary border-gray-300 rounded" />
-                    <label htmlFor="requiresEnrollmentFee" className="text-sm font-medium text-gray-700">Requires enrollment fee</label>
-                  </div>
+                <div className="flex items-center space-x-3">
+                  <input id="autoRenew" type="checkbox" checked={autoRenew} onChange={(e) => setAutoRenew(e.target.checked)} className="h-4 w-4 text-primary border-gray-300 rounded" />
+                  <label htmlFor="autoRenew" className="text-sm font-medium text-gray-700">Auto-renew</label>
                 </div>
 
-                <div>
-                  <label htmlFor="status" className="block text-sm font-medium text-gray-700">Status</label>
-                  <select id="status" value={status} onChange={(e) => setStatus(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
+                {editingTier && (
+                  <div>
+                    <label htmlFor="status" className="block text-sm font-medium text-gray-700">Status</label>
+                    <select id="status" value={status} onChange={(e) => setStatus(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+                )}
 
               </div>
               {tierError && <p className="text-red-500 text-sm mt-4">{tierError}</p>}
@@ -1117,80 +1179,59 @@ export default function PlansOffersSection({ user, db }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Location Pricing</label>
-                <div className="space-y-2">
-                  <div className="flex items-center">
-                    <input
-                      type="radio"
-                      id="productPricingGlobal"
-                      name="productLocationPricing"
-                      value="global"
-                      checked={productLocationPricing === 'global'}
-                      onChange={(e) => setProductLocationPricing(e.target.value)}
-                      className="h-4 w-4 text-primary border-gray-300"
-                    />
-                    <label htmlFor="productPricingGlobal" className="ml-2 text-sm text-gray-700">
-                      {locations.length > 1 ? 'Same price for all locations' : 'Price'}
-                    </label>
-                  </div>
-                  {locations.length > 1 && (
-                    <div className="flex items-center">
-                      <input
-                        type="radio"
-                        id="productPricingSpecific"
-                        name="productLocationPricing"
-                        value="specific"
-                        checked={productLocationPricing === 'specific'}
-                        onChange={(e) => setProductLocationPricing(e.target.value)}
-                        className="h-4 w-4 text-primary border-gray-300"
-                      />
-                      <label htmlFor="productPricingSpecific" className="ml-2 text-sm text-gray-700">
-                        Different price per location
-                      </label>
-                    </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Price per Location
+                </label>
+                <div className="p-4 bg-gray-50 rounded-md border space-y-3">
+                  {loadingLocations ? (
+                    <p className="text-sm text-gray-500">Loading locations...</p>
+                  ) : locations.filter(loc => loc.status === 'active').length === 0 ? (
+                    <p className="text-sm text-gray-500">No active locations available.</p>
+                  ) : (
+                    locations.filter(loc => loc.status === 'active').map(location => (
+                      <div key={location.id} className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          id={`product-enabled-${location.id}`}
+                          checked={productEnabledLocations[location.id] || false}
+                          onChange={(e) => {
+                            const isChecked = e.target.checked;
+                            setProductEnabledLocations(prev => ({ ...prev, [location.id]: isChecked }));
+                            if (!isChecked) {
+                              setProductLocationPrices(prev => {
+                                const updated = { ...prev };
+                                delete updated[location.id];
+                                return updated;
+                              });
+                            }
+                          }}
+                          className="h-4 w-4 text-primary border-gray-300 rounded"
+                        />
+                        <label htmlFor={`product-enabled-${location.id}`} className="text-sm text-gray-700 min-w-[120px]">
+                          {location.name}
+                        </label>
+                        <div className="relative flex-1">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
+                          </div>
+                          <input
+                            type="number"
+                            id={`product-price-${location.id}`}
+                            value={productLocationPrices[location.id] || ''}
+                            onChange={(e) => setProductLocationPrices(prev => ({ ...prev, [location.id]: e.target.value }))}
+                            disabled={!productEnabledLocations[location.id]}
+                            required={productEnabledLocations[location.id]}
+                            min="0"
+                            step="0.01"
+                            className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
-
-              {productLocationPricing === 'global' && (
-                <div>
-                  <label htmlFor="productPrice" className="block text-sm font-medium text-gray-700">Price</label>
-                  <div className="relative mt-1">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
-                    </div>
-                    <input type="number" id="productPrice" value={productPrice} onChange={(e) => setProductPrice(e.target.value)} required min="0" step="0.01" className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
-                  </div>
-                </div>
-              )}
-
-              {productLocationPricing === 'specific' && (
-                <div className="p-4 bg-gray-50 rounded-md border space-y-3">
-                  <p className="text-sm font-medium text-gray-700">Price per Location</p>
-                  {locations.filter(loc => loc.status === 'active').map(location => (
-                    <div key={location.id}>
-                      <label htmlFor={`product-price-${location.id}`} className="block text-sm text-gray-700 mb-1">
-                        {location.name}
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
-                        </div>
-                        <input
-                          type="number"
-                          id={`product-price-${location.id}`}
-                          value={productLocationPrices[location.id] || ''}
-                          onChange={(e) => setProductLocationPrices(prev => ({ ...prev, [location.id]: e.target.value }))}
-                          required
-                          min="0"
-                          step="0.01"
-                          className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
 
               {productError && <p className="text-red-500 text-sm mt-4">{productError}</p>}
               <div className="mt-6 flex justify-end space-x-3 md:static sticky bottom-0 left-0 right-0 bg-section py-3 md:bg-transparent md:py-0">
@@ -1221,83 +1262,59 @@ export default function PlansOffersSection({ user, db }) {
               <div><label htmlFor="durationInDays" className="block text-sm font-medium text-gray-700">Duration (in days)</label><input type="number" id="durationInDays" value={durationInDays} onChange={(e) => setDurationInDays(e.target.value)} required min="1" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Location Pricing</label>
-                <div className="space-y-2">
-                  <div className="flex items-center">
-                    <input
-                      type="radio"
-                      id="trialPricingGlobal"
-                      name="trialLocationPricing"
-                      value="global"
-                      checked={trialLocationPricing === 'global'}
-                      onChange={(e) => setTrialLocationPricing(e.target.value)}
-                      className="h-4 w-4 text-primary border-gray-300"
-                    />
-                    <label htmlFor="trialPricingGlobal" className="ml-2 text-sm text-gray-700">
-                      {locations.length > 1 ? 'Same price for all locations' : 'Price'}
-                    </label>
-                  </div>
-                  {locations.length > 1 && (
-                    <div className="flex items-center">
-                      <input
-                        type="radio"
-                        id="trialPricingSpecific"
-                        name="trialLocationPricing"
-                        value="specific"
-                        checked={trialLocationPricing === 'specific'}
-                        onChange={(e) => setTrialLocationPricing(e.target.value)}
-                        className="h-4 w-4 text-primary border-gray-300"
-                      />
-                      <label htmlFor="trialPricingSpecific" className="ml-2 text-sm text-gray-700">
-                        Different price per location
-                      </label>
-                    </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Price per Location
+                </label>
+                <div className="p-4 bg-gray-50 rounded-md border space-y-3">
+                  {loadingLocations ? (
+                    <p className="text-sm text-gray-500">Loading locations...</p>
+                  ) : locations.filter(loc => loc.status === 'active').length === 0 ? (
+                    <p className="text-sm text-gray-500">No active locations available.</p>
+                  ) : (
+                    locations.filter(loc => loc.status === 'active').map(location => (
+                      <div key={location.id} className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          id={`trial-enabled-${location.id}`}
+                          checked={trialEnabledLocations[location.id] || false}
+                          onChange={(e) => {
+                            const isChecked = e.target.checked;
+                            setTrialEnabledLocations(prev => ({ ...prev, [location.id]: isChecked }));
+                            if (!isChecked) {
+                              setTrialLocationPrices(prev => {
+                                const updated = { ...prev };
+                                delete updated[location.id];
+                                return updated;
+                              });
+                            }
+                          }}
+                          className="h-4 w-4 text-primary border-gray-300 rounded"
+                        />
+                        <label htmlFor={`trial-enabled-${location.id}`} className="text-sm text-gray-700 min-w-[120px]">
+                          {location.name}
+                        </label>
+                        <div className="relative flex-1">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
+                          </div>
+                          <input
+                            type="number"
+                            id={`trial-price-${location.id}`}
+                            value={trialLocationPrices[location.id] || ''}
+                            onChange={(e) => setTrialLocationPrices(prev => ({ ...prev, [location.id]: e.target.value }))}
+                            disabled={!trialEnabledLocations[location.id]}
+                            required={trialEnabledLocations[location.id]}
+                            min="0"
+                            step="0.01"
+                            className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
-
-              {trialLocationPricing === 'global' ? (
-                <div>
-                  <label htmlFor="trialPrice" className="block text-sm font-medium text-gray-700">Price</label>
-                  <div className="relative mt-1">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
-                    </div>
-                    <input type="number" id="trialPrice" value={trialPrice} onChange={(e) => setTrialPrice(e.target.value)} required min="0" step="0.01" className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Price per Location</label>
-                  {loadingLocations ? (
-                    <p className="text-sm text-gray-500">Loading locations...</p>
-                  ) : locations.length === 0 ? (
-                    <p className="text-sm text-gray-500">No locations available. Please create a location first.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {locations.map(location => (
-                        <div key={location.id} className="flex items-center space-x-2">
-                          <label className="text-sm text-gray-700 w-1/3">{location.name}</label>
-                          <div className="relative flex-1">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
-                            </div>
-                            <input
-                              type="number"
-                              value={trialLocationPrices[location.id] || ''}
-                              onChange={(e) => setTrialLocationPrices({ ...trialLocationPrices, [location.id]: e.target.value })}
-                              min="0"
-                              step="0.01"
-                              className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-                              placeholder="0.00"
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>

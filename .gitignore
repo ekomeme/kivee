@@ -12,6 +12,9 @@ dist-ssr/
 .env.production
 *.local
 
+# Firebase service account keys (NEVER COMMIT THESE)
+serviceAccountKey*.json
+
 # Firebase local state
 .firebase/
 

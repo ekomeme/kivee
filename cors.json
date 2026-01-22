@@ -1,0 +1,7 @@
+[
+  {
+    "origin": ["https://kivee.app", "https://www.kivee.app", "https://kivee-production.web.app", "https://kivee-production.firebaseapp.com"],
+    "method": ["GET", "POST", "PUT", "DELETE", "HEAD"],
+    "maxAgeSeconds": 3600
+  }
+]

@@ -11,7 +11,7 @@
     "build:staging": "tsc -b && vite build --mode staging",
     "build:production": "tsc -b && vite build --mode production",
     "deploy:staging": "npm run build:staging && firebase use default && firebase deploy --only hosting:staging",
-    "deploy:production": "npm run build:production && firebase use default && firebase deploy --only hosting:prod",
+    "deploy:production": "npm run build:production && firebase use production && firebase deploy --only hosting:prod",
     "lint": "eslint .",
     "preview": "vite preview",
     "preview:staging": "vite preview --mode staging",
