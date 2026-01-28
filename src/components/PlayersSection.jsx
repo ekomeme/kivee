@@ -674,11 +674,28 @@ export default function PlayersSection({ user, db }) {
         }
 
         if (playerData.oneTimeProducts) {
-          playerData.oneTimeProducts = playerData.oneTimeProducts.map(p => ({
-            ...p,
-            productDetails: productsCache.get(p.productId),
-            tierDetails: p.paymentFor === 'tier' ? tiersCache.get(p.itemId) : undefined,
-          }));
+          playerData.oneTimeProducts = playerData.oneTimeProducts.map(p => {
+            const baseProduct = productsCache.get(p.productId);
+            let productDetails = baseProduct;
+
+            // If product exists and uses location pricing, get the correct price for this player's location
+            if (baseProduct && playerData.locationId && baseProduct.locationPrices) {
+              const locationPrice = baseProduct.locationPrices[playerData.locationId];
+              if (locationPrice !== undefined) {
+                // Override the price field with location-specific price
+                productDetails = {
+                  ...baseProduct,
+                  price: locationPrice
+                };
+              }
+            }
+
+            return {
+              ...p,
+              productDetails,
+              tierDetails: p.paymentFor === 'tier' ? tiersCache.get(p.itemId) : undefined,
+            };
+          });
         }
 
         const updated = await ensureSubscriptionPaymentsAreCurrent(playerData, tiersCache, playerRef);

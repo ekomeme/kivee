@@ -57,8 +57,8 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const isSubscription = product.paymentFor === 'tier';
-    const name = isSubscription ? product.itemName : product.productDetails?.name;
-    const amount = isSubscription ? product.amount : product.productDetails?.price;
+    const name = isSubscription ? product.itemName : (product.productName || product.productDetails?.name);
+    const amount = isSubscription ? product.amount : (product.amount || product.productDetails?.price || 0);
 
     const handleReceiptChange = (e) => {
       const file = e.target.files?.[0];
@@ -311,8 +311,8 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
                 {productPayments.map((p) => (
                   <div key={`prod-detail-${p.originalIndex}`} className="flex justify-between items-center p-3 bg-gray-50 rounded-md border">
                     <div>
-                      <p className="font-medium">{p.productDetails?.name || 'Product not found'}</p>
-                      <p className="text-sm text-gray-600">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(p.productDetails?.price || 0)}</p>
+                      <p className="font-medium">{p.productName || p.productDetails?.name || 'Product not found'}</p>
+                      <p className="text-sm text-gray-600">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(p.amount || p.productDetails?.price || 0)}</p>
                     </div>
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${p.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{p.status}</span>
                   </div>
@@ -346,8 +346,8 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
               return (
                 <div key={`pay-${p.originalIndex}-${idx}`} className="flex justify-between items-center p-3 bg-gray-50 rounded-md border">
                   <div>
-                    <p className="font-medium">{isSubscription ? (p.itemName || 'Subscription Item') : (p.productDetails?.name || 'Product not found')}</p>
-                    <p className="text-sm text-gray-600">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(isSubscription ? p.amount || 0 : p.productDetails?.price || 0)}</p>
+                    <p className="font-medium">{isSubscription ? (p.itemName || 'Subscription Item') : (p.productName || p.productDetails?.name || 'Product not found')}</p>
+                    <p className="text-sm text-gray-600">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(isSubscription ? (p.amount || 0) : (p.amount || p.productDetails?.price || 0))}</p>
                     {isSubscription && (
                       <p className="text-sm text-gray-600">
                         <span className={expiryClass}>{expiryLabel}</span>

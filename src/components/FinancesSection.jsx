@@ -73,8 +73,14 @@ export default function FinancesSection({ user, db }) {
                             details.dueDate = paymentItem.dueDate;
                         } else {
                             const productInfo = productsMap.get(paymentItem.productId);
-                            details.itemName = productInfo?.name || 'Product not found';
-                            details.amount = productInfo?.price || 0;
+                            details.itemName = paymentItem.productName || productInfo?.name || 'Product not found';
+
+                            // Try to get amount from saved data first, then from location pricing, then fallback to base price
+                            let productAmount = paymentItem.amount;
+                            if (!productAmount && productInfo && playerData.locationId && productInfo.locationPrices) {
+                                productAmount = productInfo.locationPrices[playerData.locationId];
+                            }
+                            details.amount = productAmount || productInfo?.price || 0;
                             // One-time products don't have a due date unless specified, so we can leave it null
                         }
                         paymentsList.push(details);

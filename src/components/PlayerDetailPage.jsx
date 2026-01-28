@@ -152,11 +152,28 @@ export default function PlayerDetailPage({ user, academy, db, membership }) {
 
         // Get one-time product details
         if (playerData.oneTimeProducts) {
-          playerData.oneTimeProducts = playerData.oneTimeProducts.map(p => ({
-            ...p,
-            productDetails: productsMap.get(p.productId),
-            tierDetails: p.paymentFor === 'tier' ? tiersMap.get(p.itemId) : undefined,
-          }));
+          playerData.oneTimeProducts = playerData.oneTimeProducts.map(p => {
+            const baseProduct = productsMap.get(p.productId);
+            let productDetails = baseProduct;
+
+            // If product exists and uses location pricing, get the correct price
+            if (baseProduct && playerData.locationId && baseProduct.locationPrices) {
+              const locationPrice = baseProduct.locationPrices[playerData.locationId];
+              if (locationPrice !== undefined) {
+                // Override the price field with location-specific price
+                productDetails = {
+                  ...baseProduct,
+                  price: locationPrice
+                };
+              }
+            }
+
+            return {
+              ...p,
+              productDetails,
+              tierDetails: p.paymentFor === 'tier' ? tiersMap.get(p.itemId) : undefined,
+            };
+          });
         }
 
         // Auto-create next subscription period payments if the last one expired

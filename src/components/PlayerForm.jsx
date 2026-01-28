@@ -786,12 +786,20 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
     const existingProducts = playerToEdit?.oneTimeProducts || [];
 
     // Convert cart items to individual product entries (expand by quantity)
-    const newProducts = productCart.flatMap(cartItem =>
-      Array(cartItem.quantity).fill(null).map(() => ({
+    const newProducts = productCart.flatMap(cartItem => {
+      const product = filteredProducts.find(p => p.id === cartItem.productId);
+      const productPrice = locationId && product?.locationPrices?.[locationId]
+        ? product.locationPrices[locationId]
+        : 0;
+
+      return Array(cartItem.quantity).fill(null).map(() => ({
         productId: cartItem.productId,
+        productName: product?.name || 'Unknown Product',
+        amount: productPrice,
+        locationId: locationId,
         status: 'unpaid'
-      }))
-    );
+      }));
+    });
 
     const combinedProducts = [...existingProducts, ...newProducts];
 
@@ -805,9 +813,15 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
       // This is a one-time product.
       return {
         productId: item.productId,
+        productName: item.productName,
+        amount: item.amount,
+        locationId: item.locationId,
         status: item.status,
         paidAt: item.paidAt || null,
         paymentMethod: item.paymentMethod || null,
+        receiptUrl: item.receiptUrl || null,
+        receiptPath: item.receiptPath || null,
+        receiptName: item.receiptName || null,
       };
     });
 
