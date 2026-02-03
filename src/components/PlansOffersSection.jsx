@@ -621,7 +621,22 @@ export default function PlansOffersSection({ user, db }) {
 
   // Helper function to get price display for tier
   const getTierPriceDisplay = (tier) => {
-    // Check if tier uses new price variants structure
+    // Check for location-based pricing (new structure with variants per location)
+    if (tier.differentPricesByLocation && tier.priceVariantsByLocation) {
+      // Get all variants from all locations
+      const allLocationVariants = Object.values(tier.priceVariantsByLocation);
+      const hasAnyValidVariants = allLocationVariants.some(locationVariants =>
+        Array.isArray(locationVariants) && locationVariants.some(v => v.billingPeriod && v.price)
+      );
+
+      if (!hasAnyValidVariants) {
+        return { type: 'none', display: <span className="text-sm text-gray-500">No price set</span> };
+      }
+
+      return { type: 'multiple', display: <span className="text-sm text-gray-600 italic">Price variants</span> };
+    }
+
+    // Check if tier uses new price variants structure (default for all locations)
     if (tier.defaultPriceVariants && tier.defaultPriceVariants.length > 0) {
       // Check if all variants have the same billing period and price
       const validVariants = tier.defaultPriceVariants.filter(v => v.billingPeriod && v.price);
@@ -645,11 +660,6 @@ export default function PlansOffersSection({ user, db }) {
       }
 
       // Multiple variants
-      return { type: 'multiple', display: <span className="text-sm text-gray-600 italic">Price variants</span> };
-    }
-
-    // Check for location-based pricing (new structure with variants per location)
-    if (tier.differentPricesByLocation && tier.priceVariantsByLocation) {
       return { type: 'multiple', display: <span className="text-sm text-gray-600 italic">Price variants</span> };
     }
 

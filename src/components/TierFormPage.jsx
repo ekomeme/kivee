@@ -378,6 +378,22 @@ export default function TierFormPage({ user, db }) {
                             });
                             setActiveLocationTab(mainLocation.id);
                           }
+                        } else {
+                          // When disabling different prices by location,
+                          // copy main location prices to default price variants
+                          let mainLocation = locations.find(loc => loc.isDefault && loc.status === 'active');
+                          if (!mainLocation) {
+                            mainLocation = locations.find(loc => loc.status === 'active');
+                          }
+
+                          if (mainLocation) {
+                            const mainLocationData = priceVariants[mainLocation.id] || [];
+                            const hasValidData = mainLocationData.some(v => v.billingPeriod && v.price);
+
+                            if (hasValidData) {
+                              setDefaultPriceVariants(JSON.parse(JSON.stringify(mainLocationData)));
+                            }
+                          }
                         }
 
                         setDifferentPricesByLocation(isChecked);
@@ -419,14 +435,14 @@ export default function TierFormPage({ user, db }) {
               </div>
 
               {/* Tab Content */}
-              <div className="bg-gray-50 rounded-md pb-6">
+              <div className="rounded-md pb-6">
                 {differentPricesByLocation ? (
                   <div className="space-y-4">
                     {/* Price variants for active location */}
                     {(priceVariants[activeLocationTab] || []).map((variant, index) => {
                       const activeVariants = priceVariants[activeLocationTab] || [];
                       return (
-                        <div key={index} className="space-y-3 bg-white rounded-md pb-4">
+                        <div key={index} className={`space-y-3 rounded-md pb-4 ${variant.billingPeriod === 'custom-term' || variant.billingPeriod === 'custom-duration' ? 'bg-gray-50 -mx-2 px-2 py-4' : 'bg-white'}`}>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                             <div>
                               {index === 0 && (
@@ -587,7 +603,7 @@ export default function TierFormPage({ user, db }) {
                     <button
                       type="button"
                       onClick={() => addPriceVariant(activeLocationTab)}
-                      className="flex items-center gap-2 text-primary hover:text-primary-dark font-medium text-sm py-2 px-4 rounded-md bg-primary-light hover:bg-primary-lighter transition-colors"
+                      className="flex items-center gap-2 text-primary hover:text-primary-dark font-medium text-sm py-2 px-4 rounded-md bg-gray-100 hover:bg-gray-200 transition-colors"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -599,7 +615,7 @@ export default function TierFormPage({ user, db }) {
                   <div className="space-y-4">
                     {/* Multiple default pricing variants when switch is off */}
                     {defaultPriceVariants.map((variant, index) => (
-                      <div key={index} className="space-y-3 bg-white rounded-md pb-4">
+                      <div key={index} className={`space-y-3 rounded-md pb-4 ${variant.billingPeriod === 'custom-term' || variant.billingPeriod === 'custom-duration' ? 'bg-gray-50 -mx-2 px-2 py-4' : 'bg-white'}`}>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                           <div>
                             {index === 0 && (
@@ -759,7 +775,7 @@ export default function TierFormPage({ user, db }) {
                     <button
                       type="button"
                       onClick={addDefaultPriceVariant}
-                      className="flex items-center gap-2 text-primary hover:text-primary-dark font-medium text-sm py-2 px-4 rounded-md bg-primary-light hover:bg-primary-lighter transition-colors"
+                      className="flex items-center gap-2 text-primary hover:text-primary-dark font-medium text-sm py-2 px-4 rounded-md bg-gray-100 hover:bg-gray-200 transition-colors"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
