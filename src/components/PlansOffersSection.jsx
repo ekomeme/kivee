@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
 import { Plus, Edit, Trash2, MoreVertical, Package, Tag, Zap, X } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -23,6 +24,7 @@ const removeUndefinedFields = (obj) => {
 
 export default function PlansOffersSection({ user, db }) {
   const { academy, membership } = useAcademy();
+  const navigate = useNavigate();
   const [tiers, setTiers] = useState([]);
   const [oneTimeProducts, setOneTimeProducts] = useState([]);
   const [trials, setTrials] = useState([]);
@@ -540,7 +542,7 @@ export default function PlansOffersSection({ user, db }) {
       <div className="fixed bg-section border border-gray-border rounded-md shadow-lg z-50" ref={menuRef} style={style}>
         <ul className="py-1">
           <li className="text-base w-32">
-            <button onClick={(e) => { e.stopPropagation(); handleOpenTierModal(tier); onClose(); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center">
+            <button onClick={(e) => { e.stopPropagation(); navigate(`/plans/tiers/${tier.id}/edit`); onClose(); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center">
               <Edit className="mr-3 h-4 w-4" />
               <span>Edit</span>
             </button>
@@ -643,7 +645,7 @@ export default function PlansOffersSection({ user, db }) {
           {activeTab === 'tiers' && (
             <>
               <div className="flex justify-end mb-4">
-                <button onClick={() => handleOpenTierModal()} className="btn-primary">
+                <button onClick={() => navigate('/plans/tiers/new')} className="btn-primary">
                   <Plus className="mr-2 h-5 w-5" /> Add New Tier
                 </button>
               </div>

@@ -9,6 +9,7 @@ import PlayerDetailPage from "./components/PlayerDetailPage.jsx";
 import EditPlayerPage from "./components/EditPlayerPage.jsx";
 import PlayersSection from "./components/PlayersSection.jsx";
 import PlansOffersSection from "./components/PlansOffersSection.jsx";
+import TierFormPage from "./components/TierFormPage.jsx";
 import GroupsAndClassesSection from "./components/GroupsAndClassesSection.jsx";
 import AdminSection from "./components/AdminSection.jsx";
 import FinancesSection from "./components/FinancesSection.jsx";
@@ -779,6 +780,8 @@ export default function App() {
             <Route path="/students/:playerId" element={<PlayerDetailPage user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/students/:playerId/edit" element={<EditPlayerPage user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/plans" element={<PlansOffersSection user={user} db={db} />} />
+            <Route path="/plans/tiers/new" element={<TierFormPage user={user} db={db} />} />
+            <Route path="/plans/tiers/:tierId/edit" element={<TierFormPage user={user} db={db} />} />
             <Route path="/finances" element={<FinancesSection user={user} db={db} />} />
             <Route path="/groups" element={<GroupsAndClassesSection user={user} db={db} />} />
             <Route path="/groups/:groupId" element={<GroupDetailPage user={user} db={db} />} />
