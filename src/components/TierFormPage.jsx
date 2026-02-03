@@ -340,15 +340,44 @@ export default function TierFormPage({ user, db }) {
 
             {/* Pricing Section with Location Tabs */}
             <div className="space-y-4">
-              {/* Switch for Different Prices by Location */}
-              <div className="flex justify-end items-center">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <span className="text-sm font-medium text-gray-700">Different prices by location</span>
-                  <div className="relative">
-                    <input
-                      type="checkbox"
-                      checked={differentPricesByLocation}
-                      onChange={(e) => {
+              {/* Location Tabs Section */}
+              <div className="border-b border-gray-200 relative">
+                {/* Location Tabs */}
+                <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                  {locations
+                    .filter(loc => loc.status === 'active')
+                    .map(location => (
+                      <button
+                        key={location.id}
+                        type="button"
+                        onClick={() => differentPricesByLocation && setActiveLocationTab(location.id)}
+                        disabled={!differentPricesByLocation}
+                        className={`
+                          whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+                          ${activeLocationTab === location.id && differentPricesByLocation
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-gray-500'
+                          }
+                          ${!differentPricesByLocation
+                            ? 'cursor-not-allowed opacity-50'
+                            : 'hover:text-gray-700 hover:border-gray-300'
+                          }
+                        `}
+                      >
+                        {location.name}
+                      </button>
+                    ))}
+                </nav>
+
+                {/* Switch for Different Prices by Location - Floating Right */}
+                <div className="absolute right-0 top-0 bottom-0 flex items-center">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <span className="text-sm font-medium text-gray-700">Different prices by location</span>
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        checked={differentPricesByLocation}
+                        onChange={(e) => {
                         const isChecked = e.target.checked;
 
                         // When enabling different prices by location for the first time,
@@ -405,8 +434,7 @@ export default function TierFormPage({ user, db }) {
                 </label>
               </div>
 
-              {/* Location Tabs */}
-              <div className="border-b border-gray-200">
+                {/* Location Tabs */}
                 <nav className="-mb-px flex space-x-8" aria-label="Tabs">
                   {locations
                     .filter(loc => loc.status === 'active')
@@ -502,18 +530,16 @@ export default function TierFormPage({ user, db }) {
                                   />
                                 </div>
                               </div>
-                              {index > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={() => removePriceVariant(activeLocationTab, index)}
-                                  className="mb-0 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full -mr-12"
-                                  title="Remove variant"
-                                >
-                                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  </svg>
-                                </button>
-                              )}
+                              <button
+                                type="button"
+                                onClick={() => removePriceVariant(activeLocationTab, index)}
+                                className="mb-0 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full -mr-12"
+                                title="Remove variant"
+                              >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </button>
                             </div>
                           </div>
 
@@ -675,18 +701,16 @@ export default function TierFormPage({ user, db }) {
                                 />
                               </div>
                             </div>
-                            {index > 0 && (
-                              <button
-                                type="button"
-                                onClick={() => removeDefaultPriceVariant(index)}
-                                className="mb-0 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full -mr-12"
-                                title="Remove variant"
-                              >
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeDefaultPriceVariant(index)}
+                              className="mb-0 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full -mr-12"
+                              title="Remove variant"
+                            >
+                              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </button>
                           </div>
                         </div>
 

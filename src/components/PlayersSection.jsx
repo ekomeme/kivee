@@ -903,7 +903,13 @@ export default function PlayersSection({ user, db }) {
         </button>
             <ul className="py-1">
               <li className="text-base">
-                <button onClick={(e) => { e.stopPropagation(); navigate(`/students/${player.id}/edit`); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center">
+                <button onClick={async (e) => {
+                  e.stopPropagation();
+                  setIsDetailDrawerOpen(true);
+                  setDrawerMode('edit');
+                  await fetchPlayerDetail(player.id);
+                  onClose();
+                }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center">
                   <Edit className="mr-3 h-4 w-4" />
                   <span>Edit</span>
                 </button>

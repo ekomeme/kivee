@@ -250,7 +250,31 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
   // Filter tiers by selected location
   const filteredTiers = useMemo(() => {
     if (!locationId) return [];
-    return tiers.filter(t => t.status === 'active');
+    const filtered = tiers.filter(t => {
+      if (t.status !== 'active') return false;
+
+      // Check if tier has prices for the selected location
+      if (t.differentPricesByLocation && t.priceVariantsByLocation) {
+        // Check if the location has any valid price variants
+        const locationVariants = t.priceVariantsByLocation[locationId];
+        if (!locationVariants || !Array.isArray(locationVariants)) return false;
+        const hasValidVariants = locationVariants.some(v => v.billingPeriod && v.price);
+        return hasValidVariants;
+      } else if (t.defaultPriceVariants && t.defaultPriceVariants.length > 0) {
+        // Tier uses default prices for all locations
+        const hasValidVariants = t.defaultPriceVariants.some(v => v.billingPeriod && v.price);
+        return hasValidVariants;
+      }
+
+      return false;
+    });
+
+    // Sort by creation date (newest first)
+    return filtered.sort((a, b) => {
+      const dateA = a.createdAt?.seconds ? new Date(a.createdAt.seconds * 1000) : new Date(0);
+      const dateB = b.createdAt?.seconds ? new Date(b.createdAt.seconds * 1000) : new Date(0);
+      return dateB - dateA; // Descending order (newest first)
+    });
   }, [tiers, locationId]);
 
   // Filter products by selected location
@@ -1321,36 +1345,100 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
             )}
             {playerToEdit?.plan ? (
               <>
-                <div className="md:col-span-2 space-y-2">
-                  <p className="text-sm font-medium text-gray-700">Assigned Plan</p>
-                  <p className="text-gray-900 font-semibold">{selectedPlan?.label || 'Unknown plan'}</p>
-                </div>
                 {(() => {
                   // Check if plan is unpaid by looking at payment records
                   const tierPayments = (playerToEdit.oneTimeProducts || []).filter(p => p.paymentFor === 'tier');
                   const hasUnpaidPayment = tierPayments.some(p => p.status === 'unpaid');
 
                   if (hasUnpaidPayment) {
-                    // Allow editing start date if plan is unpaid
+                    // Allow editing plan, billing type, and start date if plan is unpaid
                     return (
-                      <div>
-                        <label htmlFor="planStartDate" className="block text-sm font-medium text-gray-700">Start Date</label>
-                        <input
-                          type="date"
-                          id="planStartDate"
-                          value={planStartDate}
-                          onChange={(e) => setPlanStartDate(e.target.value)}
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Editable while plan is unpaid</p>
-                      </div>
+                      <>
+                        <div className="md:col-span-2 space-y-2">
+                          <label htmlFor="planType" className="block text-sm font-medium text-gray-700">Assigned Plan</label>
+                          <Select
+                            id="planType"
+                            value={selectedPlan}
+                            onChange={(option) => {
+                              if (option?.value === '__create_new__') {
+                                setShowCreatePlan(true);
+                              } else {
+                                setSelectedPlan(option);
+                                setSelectedPriceVariant(null); // Reset price variant when plan changes
+                              }
+                            }}
+                            isClearable
+                            isSearchable
+                            placeholder={locationId ? "Select a plan..." : "Select a location first"}
+                            isDisabled={!locationId}
+                            className="mt-1"
+                            options={[
+                              {
+                                label: 'Actions',
+                                options: [{ value: '__create_new__', label: '+ Create New Plan' }]
+                              },
+                              {
+                                label: 'Membership Tiers',
+                                options: filteredTiers.map(t => ({ value: `tier-${t.id}`, label: t.name }))
+                              },
+                              {
+                                label: 'Free Trials',
+                                options: trials.map(tr => ({ value: `trial-${tr.id}`, label: tr.name }))
+                              }
+                            ]}
+                            styles={{
+                              option: (base, state) => ({
+                                ...base,
+                                fontWeight: state.data.value === '__create_new__' ? 600 : 400,
+                                color: state.data.value === '__create_new__' ? '#2563eb' : base.color,
+                              })
+                            }}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">Editable while plan is unpaid</p>
+                        </div>
+
+                        {selectedPlan?.value.startsWith('tier-') && priceVariantOptions.length > 0 && (
+                          <div>
+                            <label htmlFor="priceVariant" className="block text-sm font-medium text-gray-700">Billing Type</label>
+                            <Select
+                              id="priceVariant"
+                              value={selectedPriceVariant}
+                              onChange={(option) => setSelectedPriceVariant(option)}
+                              isClearable
+                              isSearchable
+                              placeholder="Select a billing type..."
+                              className="mt-1"
+                              options={priceVariantOptions}
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Editable while plan is unpaid</p>
+                          </div>
+                        )}
+
+                        <div>
+                          <label htmlFor="planStartDate" className="block text-sm font-medium text-gray-700">Start Date</label>
+                          <input
+                            type="date"
+                            id="planStartDate"
+                            value={planStartDate}
+                            onChange={(e) => setPlanStartDate(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">Editable while plan is unpaid</p>
+                        </div>
+                      </>
                     );
                   } else {
-                    // Show read-only start date if plan is paid
+                    // Show read-only plan info if plan is paid
                     return (
-                      <div>
-                        <p className="text-sm text-gray-700">Start date: <span className="font-semibold">{formatDate(existingPlanStartDate)}</span></p>
-                      </div>
+                      <>
+                        <div className="md:col-span-2 space-y-2">
+                          <p className="text-sm font-medium text-gray-700">Assigned Plan</p>
+                          <p className="text-gray-900 font-semibold">{selectedPlan?.label || 'Unknown plan'}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-700">Start date: <span className="font-semibold">{formatDate(existingPlanStartDate)}</span></p>
+                        </div>
+                      </>
                     );
                   }
                 })()}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
-import { Plus, Edit, Trash2, MoreVertical, Package, Tag, Zap, X, Copy } from 'lucide-react';
+import { Plus, Edit, Trash2, MoreVertical, Package, Tag, Zap, X, Copy, ArrowUp, ArrowDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingBar from './LoadingBar.jsx';
 import '../styles/sections.css';
@@ -88,6 +88,9 @@ export default function PlansOffersSection({ user, db }) {
   const productMenuRef = useRef(null);
   const trialMenuRef = useRef(null);
 
+  // Sorting state for tiers
+  const [tiersSortConfig, setTiersSortConfig] = useState({ key: null, direction: 'ascending' });
+
   const fetchTiers = async () => {
     if (!user || !academy || !membership) return;
     if (!hasValidMembership(membership)) {
@@ -97,6 +100,14 @@ export default function PlansOffersSection({ user, db }) {
     const q = query(tiersRef);
     const querySnapshot = await getDocs(q);
     const tiersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    // Sort by creation date (newest first)
+    tiersData.sort((a, b) => {
+      const dateA = a.createdAt?.seconds ? new Date(a.createdAt.seconds * 1000) : new Date(0);
+      const dateB = b.createdAt?.seconds ? new Date(b.createdAt.seconds * 1000) : new Date(0);
+      return dateB - dateA; // Descending order (newest first)
+    });
+
     setTiers(tiersData);
   };
 
@@ -109,6 +120,14 @@ export default function PlansOffersSection({ user, db }) {
     const q = query(productsRef);
     const querySnapshot = await getDocs(q);
     const productsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    // Sort by creation date (newest first)
+    productsData.sort((a, b) => {
+      const dateA = a.createdAt?.seconds ? new Date(a.createdAt.seconds * 1000) : new Date(0);
+      const dateB = b.createdAt?.seconds ? new Date(b.createdAt.seconds * 1000) : new Date(0);
+      return dateB - dateA; // Descending order (newest first)
+    });
+
     setOneTimeProducts(productsData);
   };
 
@@ -121,6 +140,14 @@ export default function PlansOffersSection({ user, db }) {
     const q = query(trialsRef);
     const querySnapshot = await getDocs(q);
     const trialsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    // Sort by creation date (newest first)
+    trialsData.sort((a, b) => {
+      const dateA = a.createdAt?.seconds ? new Date(a.createdAt.seconds * 1000) : new Date(0);
+      const dateB = b.createdAt?.seconds ? new Date(b.createdAt.seconds * 1000) : new Date(0);
+      return dateB - dateA; // Descending order (newest first)
+    });
+
     setTrials(trialsData);
   };
 
@@ -142,6 +169,98 @@ export default function PlansOffersSection({ user, db }) {
     } finally {
       setLoadingLocations(false);
     }
+  };
+
+  // Helper function to get active locations for a tier
+  const getTierActiveLocations = (tier) => {
+    if (!tier || !locations || locations.length === 0) return [];
+
+    const activeLocations = [];
+
+    if (tier.differentPricesByLocation && tier.priceVariantsByLocation) {
+      // Check which locations have valid price variants
+      Object.keys(tier.priceVariantsByLocation).forEach(locationId => {
+        const locationVariants = tier.priceVariantsByLocation[locationId];
+        if (locationVariants && Array.isArray(locationVariants)) {
+          const hasValidVariants = locationVariants.some(v => v.billingPeriod && v.price);
+          if (hasValidVariants) {
+            const location = locations.find(loc => loc.id === locationId);
+            if (location) activeLocations.push(location.name);
+          }
+        }
+      });
+    } else if (tier.defaultPriceVariants && tier.defaultPriceVariants.length > 0) {
+      // Uses default prices - available for all active locations
+      const hasValidVariants = tier.defaultPriceVariants.some(v => v.billingPeriod && v.price);
+      if (hasValidVariants) {
+        locations.forEach(loc => {
+          if (loc.status === 'active') activeLocations.push(loc.name);
+        });
+      }
+    }
+
+    return activeLocations;
+  };
+
+  // Helper function to format locations display
+  const formatLocationsDisplay = (tier) => {
+    const activeLocationNames = getTierActiveLocations(tier);
+
+    if (activeLocationNames.length === 0) {
+      return <span className="text-sm text-gray-500">No locations</span>;
+    }
+
+    if (activeLocationNames.length === 1) {
+      return <span className="text-sm text-gray-700">{activeLocationNames[0]}</span>;
+    }
+
+    if (activeLocationNames.length === 2) {
+      return <span className="text-sm text-gray-700">{activeLocationNames.join(', ')}</span>;
+    }
+
+    // Show first 2 and count the rest
+    const firstTwo = activeLocationNames.slice(0, 2).join(', ');
+    const remaining = activeLocationNames.length - 2;
+    return (
+      <span className="text-sm text-gray-700">
+        {firstTwo}, <span className="text-gray-500">+{remaining}</span>
+      </span>
+    );
+  };
+
+  // Sorting functions for tiers
+  const handleTiersSort = (key) => {
+    let direction = 'ascending';
+    if (tiersSortConfig.key === key && tiersSortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setTiersSortConfig({ key, direction });
+  };
+
+  const getSortedTiers = () => {
+    if (!tiersSortConfig.key) return tiers;
+
+    const sorted = [...tiers].sort((a, b) => {
+      let aVal, bVal;
+
+      if (tiersSortConfig.key === 'name') {
+        aVal = (a.name || '').toLowerCase();
+        bVal = (b.name || '').toLowerCase();
+      } else if (tiersSortConfig.key === 'classes') {
+        aVal = Number(a.classesPerWeek) || 0;
+        bVal = Number(b.classesPerWeek) || 0;
+      }
+
+      if (aVal < bVal) {
+        return tiersSortConfig.direction === 'ascending' ? -1 : 1;
+      }
+      if (aVal > bVal) {
+        return tiersSortConfig.direction === 'ascending' ? 1 : -1;
+      }
+      return 0;
+    });
+
+    return sorted;
   };
 
   const handleAddOrUpdateTier = async (e) => {
@@ -742,9 +861,10 @@ export default function PlansOffersSection({ user, db }) {
                 <button role="tab" aria-selected={activeTab === 'products'} onClick={handleTabClick(() => setActiveTab('products'))} className={`tab-button ${activeTab === 'products' ? 'active' : ''}`}>
                   <Package /> One-time Products
                 </button>
-                <button role="tab" aria-selected={activeTab === 'trials'} onClick={handleTabClick(() => setActiveTab('trials'))} className={`tab-button ${activeTab === 'trials' ? 'active' : ''}`}>
+                {/* Trials tab temporarily disabled */}
+                {/* <button role="tab" aria-selected={activeTab === 'trials'} onClick={handleTabClick(() => setActiveTab('trials'))} className={`tab-button ${activeTab === 'trials' ? 'active' : ''}`}>
                   <Tag /> Trials
-                </button>
+                </button> */}
               </nav>
               <div className="tabs-scroll-gradient md:hidden" aria-hidden />
             </div>
@@ -769,25 +889,39 @@ export default function PlansOffersSection({ user, db }) {
                     <table className="min-w-full bg-section">
                       <thead>
                         <tr>
-                          <th className="py-2 px-4 border-b text-left table-header">Name</th>
-                          <th className="py-2 px-4 border-b text-left table-header">Price</th>
-                          <th className="py-2 px-4 border-b text-left table-header">Classes</th>
+                          <th className="py-2 px-4 border-b text-left table-header">
+                            <button onClick={() => handleTiersSort('name')} className="flex items-center hover:text-gray-900">
+                              Name
+                              {tiersSortConfig.key === 'name' && (
+                                tiersSortConfig.direction === 'ascending' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                              )}
+                            </button>
+                          </th>
+                          <th className="py-2 px-4 border-b text-left table-header">
+                            <button onClick={() => handleTiersSort('classes')} className="flex items-center hover:text-gray-900">
+                              Classes
+                              {tiersSortConfig.key === 'classes' && (
+                                tiersSortConfig.direction === 'ascending' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                              )}
+                            </button>
+                          </th>
+                          <th className="py-2 px-4 border-b text-left table-header">Locations</th>
                           <th className="py-2 px-4 border-b text-left table-header">Status</th>
                           <th className="py-2 px-4 border-b text-right table-header">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {tiers.map(tier => (
+                        {getSortedTiers().map(tier => (
                           <tr
                             key={tier.id}
                             className="hover:bg-gray-50 table-row-hover cursor-pointer"
                             onClick={() => navigate(`/plans/tiers/${tier.id}/edit`)}
                           >
                             <td className="py-3 px-4 border-b text-base font-medium table-cell">{tier.name}</td>
-                            <td className="py-3 px-4 border-b text-base table-cell">
-                              {getTierPriceDisplay(tier).display}
-                            </td>
                             <td className="py-3 px-4 border-b text-sm text-gray-600 table-cell">{tier.classesPerWeek ? `${tier.classesPerWeek} per week` : 'N/A'}</td>
+                            <td className="py-3 px-4 border-b text-base table-cell">
+                              {formatLocationsDisplay(tier)}
+                            </td>
                             <td className="py-3 px-4 border-b table-cell">
                               <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${tier.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                                 {tier.status}
@@ -804,7 +938,7 @@ export default function PlansOffersSection({ user, db }) {
                     </table>
                   </div>
                   <div className="grid gap-3 md:hidden">
-                    {tiers.map(tier => (
+                    {getSortedTiers().map(tier => (
                       <div
                         key={tier.id}
                         className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm relative cursor-pointer"
@@ -820,14 +954,12 @@ export default function PlansOffersSection({ user, db }) {
                         <p className="font-semibold text-gray-900 text-lg">{tier.name}</p>
                         <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-700">
                           <div className="bg-gray-50 rounded-md p-2">
-                            <p className="text-xs text-gray-500">Price</p>
-                            <p className="font-medium">
-                              {getTierPriceDisplay(tier).display}
-                            </p>
-                          </div>
-                          <div className="bg-gray-50 rounded-md p-2">
                             <p className="text-xs text-gray-500">Classes</p>
                             <p className="font-medium">{tier.classesPerWeek ? `${tier.classesPerWeek}/week` : 'N/A'}</p>
+                          </div>
+                          <div className="bg-gray-50 rounded-md p-2">
+                            <p className="text-xs text-gray-500">Locations</p>
+                            <p className="font-medium">{formatLocationsDisplay(tier)}</p>
                           </div>
                           <div className="bg-gray-50 rounded-md p-2">
                             <p className="text-xs text-gray-500">Status</p>
@@ -939,7 +1071,8 @@ export default function PlansOffersSection({ user, db }) {
           )}
         </>
       )}
-      {activeTab === 'trials' && (
+      {/* Trials section temporarily disabled */}
+      {/* {activeTab === 'trials' && (
         <>
           <div className="flex justify-end mb-4">
             <button onClick={() => handleOpenTrialModal()} className="btn-primary">
@@ -1037,7 +1170,7 @@ export default function PlansOffersSection({ user, db }) {
             </>
           )}
         </>
-      )}
+      )} */}
       {/* Actions Menu - Rendered outside the table to avoid clipping */}
       {activeTierMenu && (
         <ActionsMenu
