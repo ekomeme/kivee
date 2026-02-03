@@ -10,6 +10,7 @@ import { parsePhoneNumberWithError, isValidPhoneNumber, getCountries, getCountry
 import { getName, registerLocale } from 'i18n-nationality';
 import en from 'i18n-nationality/langs/en.json';
 import { getLocations } from '../services/firestore';
+import { formatAcademyCurrency } from '../utils/formatters';
 
 // Register English locale for nationality adjectives
 registerLocale(en);
@@ -67,6 +68,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
 
   // Payment Info
   const [selectedPlan, setSelectedPlan] = useState(null); // This will hold the selected plan object from react-select
+  const [selectedPriceVariant, setSelectedPriceVariant] = useState(null); // Selected price variant for the tier
   const [planStartDate, setPlanStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [productCart, setProductCart] = useState([]); // Cart: [{ productId, quantity }]
@@ -257,6 +259,76 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
     return oneTimeProducts;
   }, [oneTimeProducts, locationId]);
 
+  // Helper function to generate price variant label
+  const getPriceVariantLabel = (variant) => {
+    let periodLabel = '';
+
+    if (variant.billingPeriod === 'monthly') {
+      periodLabel = 'Monthly';
+    } else if (variant.billingPeriod === 'semi-annual') {
+      periodLabel = 'Semi-Annual';
+    } else if (variant.billingPeriod === 'annual') {
+      periodLabel = 'Annual';
+    } else if (variant.billingPeriod === 'custom-term') {
+      periodLabel = variant.customTermName || 'Custom Term';
+    } else if (variant.billingPeriod === 'custom-duration') {
+      const amount = Number(variant.durationAmount);
+      let unit = variant.durationUnit || 'period';
+      if (Number.isFinite(amount) && amount === 1 && unit.endsWith('s')) {
+        unit = unit.slice(0, -1);
+      } else if (Number.isFinite(amount) && amount !== 1 && !unit.endsWith('s')) {
+        unit = `${unit}s`;
+      }
+      periodLabel = `${variant.durationAmount} ${unit}`;
+    } else {
+      periodLabel = 'Custom';
+    }
+
+    const price = formatAcademyCurrency(variant.price, academy);
+    return `${periodLabel} ${price}`;
+  };
+
+  // Get price variant options for the selected tier
+  const priceVariantOptions = useMemo(() => {
+    if (!selectedPlan || !selectedPlan.value.startsWith('tier-')) return [];
+
+    const tierId = selectedPlan.value.split('-')[1];
+    const tier = tiers.find(t => t.id === tierId);
+    if (!tier) return [];
+
+    const options = [];
+
+    // Check if tier uses new price variants structure
+    if (tier.differentPricesByLocation && tier.priceVariantsByLocation) {
+      // Get variants for the selected location
+      const locationVariants = tier.priceVariantsByLocation[locationId] || [];
+      locationVariants.forEach((variant, index) => {
+        if (variant.billingPeriod && variant.price !== undefined && variant.price !== null && variant.price !== '') {
+          const label = getPriceVariantLabel(variant);
+          options.push({
+            value: `location-${locationId}-${index}`,
+            label: label,
+            variant: variant
+          });
+        }
+      });
+    } else if (tier.defaultPriceVariants && tier.defaultPriceVariants.length > 0) {
+      // Use default price variants
+      tier.defaultPriceVariants.forEach((variant, index) => {
+        if (variant.billingPeriod && variant.price !== undefined && variant.price !== null && variant.price !== '') {
+          const label = getPriceVariantLabel(variant);
+          options.push({
+            value: `default-${index}`,
+            label: label,
+            variant: variant
+          });
+        }
+      });
+    }
+
+    return options;
+  }, [selectedPlan, tiers, locationId, academy]);
+
   // Populate form if editing a player
   useEffect(() => {
     if (playerToEdit) {
@@ -323,6 +395,22 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
         const planToSet = allOptions.find(opt => opt.value === planValue);
         if (planToSet) {
           setSelectedPlan(planToSet);
+
+          // If it's a tier, try to load the selected price variant from payment data
+          if (playerToEdit.plan.type === 'tier' && playerToEdit.oneTimeProducts) {
+            const tierPayment = playerToEdit.oneTimeProducts.find(
+              item => item.paymentFor === 'tier' && item.itemId === playerToEdit.plan.id
+            );
+            if (tierPayment && tierPayment.priceVariant) {
+              // Reconstruct the price variant option
+              const label = getPriceVariantLabel(tierPayment.priceVariant);
+              setSelectedPriceVariant({
+                value: `saved-variant`,
+                label: label,
+                variant: tierPayment.priceVariant
+              });
+            }
+          }
         }
         setPlanStartDate(playerToEdit.plan.startDate || new Date().toISOString().split('T')[0]);
       } else { // For backward compatibility with old data structure
@@ -622,6 +710,12 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
       return;
     }
 
+    // Validate price variant selection for tiers with multiple options
+    if (selectedPlan && selectedPlan.value.startsWith('tier-') && priceVariantOptions.length > 0 && !selectedPriceVariant) {
+      toast.error("Please select a billing period and price for the tier.");
+      return;
+    }
+
     // Parse phone numbers to E.164 format
     let playerPhoneE164 = null;
     let playerPhoneData = null;
@@ -830,11 +924,34 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
     if (selectedPlan && selectedPlan.value.startsWith('tier-') && !playerToEdit?.plan) {
         const [type, id] = selectedPlan.value.split('-');
         const tierDetails = tiers.find(t => t.id === id);
+
+        // Get price from selected variant, or fallback to legacy price
+        let amount = tierDetails.price || 0;
+        let billingPeriod = 'monthly'; // default
+        let priceVariantData = null;
+
+        if (selectedPriceVariant && selectedPriceVariant.variant) {
+          amount = selectedPriceVariant.variant.price;
+          billingPeriod = selectedPriceVariant.variant.billingPeriod;
+          // Store the complete variant data for future reference
+          priceVariantData = {
+            billingPeriod: selectedPriceVariant.variant.billingPeriod,
+            price: selectedPriceVariant.variant.price,
+            customTermName: selectedPriceVariant.variant.customTermName,
+            termStartDate: selectedPriceVariant.variant.termStartDate,
+            termEndDate: selectedPriceVariant.variant.termEndDate,
+            durationUnit: selectedPriceVariant.variant.durationUnit,
+            durationAmount: selectedPriceVariant.variant.durationAmount,
+          };
+        }
+
         const firstPayment = {
             paymentFor: 'tier',
             itemId: id,
             itemName: tierDetails.name,
-            amount: tierDetails.price,
+            amount: amount,
+            billingPeriod: billingPeriod,
+            priceVariant: priceVariantData,
             dueDate: planStartDate,
             status: 'unpaid',
         };
@@ -1250,6 +1367,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
                         setShowCreatePlan(true);
                       } else {
                         setSelectedPlan(option);
+                        setSelectedPriceVariant(null); // Reset price variant when plan changes
                       }
                     }}
                     isClearable
@@ -1280,6 +1398,22 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
                     }}
                   />
                 </div>
+
+                {selectedPlan?.value.startsWith('tier-') && priceVariantOptions.length > 0 && (
+                  <div>
+                    <label htmlFor="priceVariant" className="block text-sm font-medium text-gray-700">Billing Type</label>
+                    <Select
+                      id="priceVariant"
+                      value={selectedPriceVariant}
+                      onChange={(option) => setSelectedPriceVariant(option)}
+                      isClearable
+                      isSearchable
+                      placeholder="Select a billing type..."
+                      className="mt-1"
+                      options={priceVariantOptions}
+                    />
+                  </div>
+                )}
 
                 {selectedPlan?.value.startsWith('tier-') && (
                   <>

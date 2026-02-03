@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
-import { Plus, Edit, Trash2, MoreVertical, Package, Tag, Zap, X } from 'lucide-react';
+import { Plus, Edit, Trash2, MoreVertical, Package, Tag, Zap, X, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingBar from './LoadingBar.jsx';
 import '../styles/sections.css';
@@ -434,6 +434,43 @@ export default function PlansOffersSection({ user, db }) {
     setShowTrialModal(true);
   };
 
+  const handleDuplicateTier = async (tier) => {
+    try {
+      const tierData = {
+        name: `${tier.name} (Copy)`,
+        description: tier.description,
+        differentPricesByLocation: tier.differentPricesByLocation,
+        classesPerWeek: tier.classesPerWeek,
+        classDuration: tier.classDuration,
+        classLimitPerCycle: tier.classLimitPerCycle,
+        autoRenew: tier.autoRenew,
+        requiresEnrollmentFee: tier.requiresEnrollmentFee,
+        status: tier.status,
+        academyId: academy.id,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        // Copy price variant structures
+        priceVariantsByLocation: tier.priceVariantsByLocation || {},
+        defaultPriceVariants: tier.defaultPriceVariants || [],
+        // Legacy fields for backward compatibility
+        pricingModel: tier.pricingModel,
+        price: tier.price || 0,
+        enabledLocations: tier.enabledLocations || {},
+        locationPrices: tier.locationPrices || {},
+        termStartDate: tier.termStartDate,
+        termEndDate: tier.termEndDate,
+      };
+
+      const tiersCollectionRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.TIERS}`);
+      await addDoc(tiersCollectionRef, removeUndefinedFields(tierData));
+      toast.success("Tier duplicated successfully.");
+      fetchTiers();
+    } catch (error) {
+      console.error("Error duplicating tier:", error);
+      toast.error("Error duplicating tier.");
+    }
+  };
+
   const handleDeleteTier = async (tierId) => {
     const deleteAction = async () => {
       try {
@@ -541,10 +578,16 @@ export default function PlansOffersSection({ user, db }) {
     return (
       <div className="fixed bg-section border border-gray-border rounded-md shadow-lg z-50" ref={menuRef} style={style}>
         <ul className="py-1">
-          <li className="text-base w-32">
+          <li className="text-base w-40">
             <button onClick={(e) => { e.stopPropagation(); navigate(`/plans/tiers/${tier.id}/edit`); onClose(); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center">
               <Edit className="mr-3 h-4 w-4" />
               <span>Edit</span>
+            </button>
+          </li>
+          <li className="text-base">
+            <button onClick={(e) => { e.stopPropagation(); handleDuplicateTier(tier); onClose(); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center">
+              <Copy className="mr-3 h-4 w-4" />
+              <span>Duplicate</span>
             </button>
           </li>
           <li className="text-base">
@@ -575,6 +618,62 @@ export default function PlansOffersSection({ user, db }) {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [activeProductMenu, activeTrialMenu]);
+
+  // Helper function to get price display for tier
+  const getTierPriceDisplay = (tier) => {
+    // Check if tier uses new price variants structure
+    if (tier.defaultPriceVariants && tier.defaultPriceVariants.length > 0) {
+      // Check if all variants have the same billing period and price
+      const validVariants = tier.defaultPriceVariants.filter(v => v.billingPeriod && v.price);
+
+      if (validVariants.length === 0) {
+        return { type: 'none', display: <span className="text-sm text-gray-500">No price set</span> };
+      }
+
+      if (validVariants.length === 1) {
+        const variant = validVariants[0];
+        const periodLabel = variant.billingPeriod === 'monthly' ? 'Monthly' :
+                          variant.billingPeriod === 'semi-annual' ? 'Semi-Annual' :
+                          variant.billingPeriod === 'annual' ? 'Annual' :
+                          variant.billingPeriod === 'custom-term' ? variant.customTermName || 'Custom Term' :
+                          variant.billingPeriod === 'custom-duration' ? `${variant.durationAmount} ${variant.durationUnit}` :
+                          'Custom';
+        return {
+          type: 'single',
+          display: <span>{periodLabel} {formatAcademyCurrency(variant.price, academy)}</span>
+        };
+      }
+
+      // Multiple variants
+      return { type: 'multiple', display: <span className="text-sm text-gray-600 italic">Price variants</span> };
+    }
+
+    // Check for location-based pricing (new structure with variants per location)
+    if (tier.differentPricesByLocation && tier.priceVariantsByLocation) {
+      return { type: 'multiple', display: <span className="text-sm text-gray-600 italic">Price variants</span> };
+    }
+
+    // Legacy structure - location prices
+    if (tier.locationPrices && Object.keys(tier.locationPrices).length > 0) {
+      const prices = Object.values(tier.locationPrices);
+      const uniquePrices = [...new Set(prices)];
+
+      if (uniquePrices.length === 1) {
+        const periodLabel = tier.pricingModel === 'monthly' ? 'Monthly' :
+                          tier.pricingModel === 'semi-annual' ? 'Semi-Annual' :
+                          tier.pricingModel === 'annual' ? 'Annual' :
+                          tier.pricingModel === 'term' ? 'Term' : '';
+        return {
+          type: 'single',
+          display: <span>{periodLabel} {formatAcademyCurrency(uniquePrices[0], academy)}</span>
+        };
+      } else {
+        return { type: 'multiple', display: <span className="text-sm text-gray-600 italic">Price variants</span> };
+      }
+    }
+
+    return { type: 'none', display: <span className="text-sm text-gray-500">No price set</span> };
+  };
 
   const handleOpenActionsMenu = (tier, event) => {
     event.stopPropagation(); // Prevent row click
@@ -661,7 +760,6 @@ export default function PlansOffersSection({ user, db }) {
                       <thead>
                         <tr>
                           <th className="py-2 px-4 border-b text-left table-header">Name</th>
-                          <th className="py-2 px-4 border-b text-left table-header">Description</th>
                           <th className="py-2 px-4 border-b text-left table-header">Price</th>
                           <th className="py-2 px-4 border-b text-left table-header">Classes</th>
                           <th className="py-2 px-4 border-b text-left table-header">Status</th>
@@ -670,28 +768,14 @@ export default function PlansOffersSection({ user, db }) {
                       </thead>
                       <tbody>
                         {tiers.map(tier => (
-                          <tr key={tier.id} className="hover:bg-gray-50 table-row-hover">
+                          <tr
+                            key={tier.id}
+                            className="hover:bg-gray-50 table-row-hover cursor-pointer"
+                            onClick={() => navigate(`/plans/tiers/${tier.id}/edit`)}
+                          >
                             <td className="py-3 px-4 border-b text-base font-medium table-cell">{tier.name}</td>
-                            <td className="py-3 px-4 border-b text-sm text-gray-600 max-w-xs truncate table-cell">{tier.description}</td>
                             <td className="py-3 px-4 border-b text-base table-cell">
-                              {tier.locationPrices && Object.keys(tier.locationPrices).length > 0 ? (
-                                (() => {
-                                  const prices = Object.values(tier.locationPrices);
-                                  const uniquePrices = [...new Set(prices)];
-                                  const suffix = tier.pricingModel === 'monthly' ? '/mo' :
-                                               tier.pricingModel === 'semi-annual' ? '/6mo' :
-                                               tier.pricingModel === 'annual' ? '/yr' :
-                                               tier.pricingModel === 'term' ? '/term' : '';
-
-                                  if (uniquePrices.length === 1) {
-                                    return <span>{formatAcademyCurrency(uniquePrices[0], academy)}{suffix}</span>;
-                                  } else {
-                                    return <span className="text-sm text-gray-600 italic">Varies by location</span>;
-                                  }
-                                })()
-                              ) : (
-                                <span className="text-sm text-gray-500">No price set</span>
-                              )}
+                              {getTierPriceDisplay(tier).display}
                             </td>
                             <td className="py-3 px-4 border-b text-sm text-gray-600 table-cell">{tier.classesPerWeek ? `${tier.classesPerWeek} per week` : 'N/A'}</td>
                             <td className="py-3 px-4 border-b table-cell">
@@ -711,7 +795,11 @@ export default function PlansOffersSection({ user, db }) {
                   </div>
                   <div className="grid gap-3 md:hidden">
                     {tiers.map(tier => (
-                      <div key={tier.id} className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm relative">
+                      <div
+                        key={tier.id}
+                        className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm relative cursor-pointer"
+                        onClick={() => navigate(`/plans/tiers/${tier.id}/edit`)}
+                      >
                         <button
                           onClick={(e) => handleOpenActionsMenu(tier, e)}
                           className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100"
@@ -720,29 +808,11 @@ export default function PlansOffersSection({ user, db }) {
                           <MoreVertical className="h-5 w-5 text-gray-600" />
                         </button>
                         <p className="font-semibold text-gray-900 text-lg">{tier.name}</p>
-                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">{tier.description}</p>
                         <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-700">
                           <div className="bg-gray-50 rounded-md p-2">
                             <p className="text-xs text-gray-500">Price</p>
                             <p className="font-medium">
-                              {tier.locationPrices && Object.keys(tier.locationPrices).length > 0 ? (
-                                (() => {
-                                  const prices = Object.values(tier.locationPrices);
-                                  const uniquePrices = [...new Set(prices)];
-                                  const suffix = tier.pricingModel === 'monthly' ? '/mo' :
-                                               tier.pricingModel === 'semi-annual' ? '/6mo' :
-                                               tier.pricingModel === 'annual' ? '/yr' :
-                                               tier.pricingModel === 'term' ? '/term' : '';
-
-                                  if (uniquePrices.length === 1) {
-                                    return <span>{formatAcademyCurrency(uniquePrices[0], academy)}{suffix}</span>;
-                                  } else {
-                                    return <span className="text-sm text-gray-600 italic">Varies by location</span>;
-                                  }
-                                })()
-                              ) : (
-                                <span className="text-sm text-gray-500">No price set</span>
-                              )}
+                              {getTierPriceDisplay(tier).display}
                             </p>
                           </div>
                           <div className="bg-gray-50 rounded-md p-2">

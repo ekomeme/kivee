@@ -41,7 +41,9 @@ export default function TierFormPage({ user, db }) {
   const [status, setStatus] = useState('active');
   const [differentPricesByLocation, setDifferentPricesByLocation] = useState(false);
   const [activeLocationTab, setActiveLocationTab] = useState('');
-  // Price variants structure: { locationId: [{ billingPeriod: 'monthly', price: '100' }] }
+  // Price variants structure: { locationId: [{ billingPeriod: 'monthly', price: '100', ... }] }
+  // For custom-term: customTermName, termStartDate, termEndDate
+  // For custom-duration: durationUnit, durationAmount
   const [priceVariants, setPriceVariants] = useState({});
   // Default price variants (when differentPricesByLocation is false)
   const [defaultPriceVariants, setDefaultPriceVariants] = useState([{ billingPeriod: '', price: '' }]);
@@ -173,6 +175,13 @@ export default function TierFormPage({ user, db }) {
     );
   };
 
+  // Helper function to check if a standard billing period is already used
+  const isStandardPeriodUsed = (variants, period, currentIndex) => {
+    const standardPeriods = ['monthly', 'semi-annual', 'annual'];
+    if (!standardPeriods.includes(period)) return false;
+    return variants.some((v, idx) => idx !== currentIndex && v.billingPeriod === period);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!user || !academy || loading || !membership) return;
@@ -258,58 +267,56 @@ export default function TierFormPage({ user, db }) {
           <h2 className="section-title">{isEditing ? 'Edit Tier' : 'Create New Tier'}</h2>
         </div>
 
-        <div className="content-card-responsive max-w-3xl">
+        <div className="max-w-3xl">
           <LoadingBar loading={loading} />
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Info */}
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="tierName" className="block text-sm font-medium text-gray-700">
-                  Tier Name *
-                </label>
-                <input
-                  type="text"
-                  id="tierName"
-                  value={newTierName}
-                  onChange={(e) => setNewTierName(e.target.value)}
-                  required
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                />
-              </div>
+            <div>
+              <label htmlFor="tierName" className="block text-sm font-medium text-gray-700">
+                Tier Name *
+              </label>
+              <input
+                type="text"
+                id="tierName"
+                value={newTierName}
+                onChange={(e) => setNewTierName(e.target.value)}
+                required
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              />
             </div>
 
             {/* Class Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                  <label htmlFor="classesPerWeek" className="block text-sm font-medium text-gray-700">
-                    Classes per Week *
-                  </label>
-                  <input
-                    type="number"
-                    id="classesPerWeek"
-                    value={classesPerWeek}
-                    onChange={(e) => setClassesPerWeek(e.target.value)}
-                    required
-                    min="0"
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="classDuration" className="block text-sm font-medium text-gray-700">
-                    Class Duration (minutes) *
-                  </label>
-                  <input
-                    type="number"
-                    id="classDuration"
-                    value={classDuration}
-                    onChange={(e) => setClassDuration(e.target.value)}
-                    required
-                    min="0"
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-                    placeholder="e.g., 30, 45, 60"
-                  />
-                </div>
+                <label htmlFor="classesPerWeek" className="block text-sm font-medium text-gray-700">
+                  Classes per Week *
+                </label>
+                <input
+                  type="number"
+                  id="classesPerWeek"
+                  value={classesPerWeek}
+                  onChange={(e) => setClassesPerWeek(e.target.value)}
+                  required
+                  min="0"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="classDuration" className="block text-sm font-medium text-gray-700">
+                  Class Duration (minutes) *
+                </label>
+                <input
+                  type="number"
+                  id="classDuration"
+                  value={classDuration}
+                  onChange={(e) => setClassDuration(e.target.value)}
+                  required
+                  min="0"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                  placeholder="e.g., 30, 45, 60"
+                />
+              </div>
             </div>
 
             {/* Description field hidden for now */}
@@ -412,69 +419,169 @@ export default function TierFormPage({ user, db }) {
               </div>
 
               {/* Tab Content */}
-              <div className="p-4 bg-gray-50 rounded-md border">
+              <div className="bg-gray-50 rounded-md pb-6">
                 {differentPricesByLocation ? (
                   <div className="space-y-4">
                     {/* Price variants for active location */}
-                    {(priceVariants[activeLocationTab] || []).map((variant, index) => (
-                      <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                        <div>
-                          {index === 0 && (
-                            <label htmlFor={`billing-${activeLocationTab}-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
-                              Billing Period
-                            </label>
-                          )}
-                          <select
-                            id={`billing-${activeLocationTab}-${index}`}
-                            value={variant.billingPeriod}
-                            onChange={(e) => updatePriceVariant(activeLocationTab, index, 'billingPeriod', e.target.value)}
-                            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white"
-                          >
-                            <option value="">Select</option>
-                            <option value="monthly">Monthly</option>
-                            <option value="semi-annual">Semi-Annual</option>
-                            <option value="annual">Annual</option>
-                            <option value="term">Term</option>
-                          </select>
-                        </div>
-                        <div className="flex gap-2 items-end">
-                          <div className="flex-1">
-                            {index === 0 && (
-                              <label htmlFor={`price-${activeLocationTab}-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
-                                Price
-                              </label>
-                            )}
-                            <div className="relative">
-                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
+                    {(priceVariants[activeLocationTab] || []).map((variant, index) => {
+                      const activeVariants = priceVariants[activeLocationTab] || [];
+                      return (
+                        <div key={index} className="space-y-3 bg-white rounded-md pb-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                            <div>
+                              {index === 0 && (
+                                <label htmlFor={`billing-${activeLocationTab}-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                  Billing Period
+                                </label>
+                              )}
+                              <select
+                                id={`billing-${activeLocationTab}-${index}`}
+                                value={variant.billingPeriod}
+                                onChange={(e) => updatePriceVariant(activeLocationTab, index, 'billingPeriod', e.target.value)}
+                                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white"
+                              >
+                                <option value="">Select</option>
+                                <option
+                                  value="monthly"
+                                  disabled={isStandardPeriodUsed(activeVariants, 'monthly', index)}
+                                >
+                                  Monthly
+                                </option>
+                                <option
+                                  value="semi-annual"
+                                  disabled={isStandardPeriodUsed(activeVariants, 'semi-annual', index)}
+                                >
+                                  Semi-Annual
+                                </option>
+                                <option
+                                  value="annual"
+                                  disabled={isStandardPeriodUsed(activeVariants, 'annual', index)}
+                                >
+                                  Annual
+                                </option>
+                                <option value="custom-term">Custom Term</option>
+                                <option value="custom-duration">Custom Duration</option>
+                              </select>
+                            </div>
+                            <div className="flex gap-2 items-end">
+                              <div className="flex-1">
+                                {index === 0 && (
+                                  <label htmlFor={`price-${activeLocationTab}-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                    Price
+                                  </label>
+                                )}
+                                <div className="relative">
+                                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
+                                  </div>
+                                  <input
+                                    type="number"
+                                    id={`price-${activeLocationTab}-${index}`}
+                                    value={variant.price}
+                                    onChange={(e) => updatePriceVariant(activeLocationTab, index, 'price', e.target.value)}
+                                    min="0"
+                                    step="0.01"
+                                    className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                                    placeholder="0.00"
+                                  />
+                                </div>
                               </div>
-                              <input
-                                type="number"
-                                id={`price-${activeLocationTab}-${index}`}
-                                value={variant.price}
-                                onChange={(e) => updatePriceVariant(activeLocationTab, index, 'price', e.target.value)}
-                                min="0"
-                                step="0.01"
-                                className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-                                placeholder="0.00"
-                              />
+                              {index > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removePriceVariant(activeLocationTab, index)}
+                                  className="mb-0 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full -mr-12"
+                                  title="Remove variant"
+                                >
+                                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                </button>
+                              )}
                             </div>
                           </div>
-                          {index > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => removePriceVariant(activeLocationTab, index)}
-                              className="mb-0 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full"
-                              title="Remove variant"
-                            >
-                              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            </button>
+
+                          {/* Conditional fields for Custom Term */}
+                          {variant.billingPeriod === 'custom-term' && (
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
+                              <div className="md:col-span-2">
+                                <label htmlFor={`term-name-${activeLocationTab}-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                  Term Name
+                                </label>
+                                <input
+                                  type="text"
+                                  id={`term-name-${activeLocationTab}-${index}`}
+                                  value={variant.customTermName || ''}
+                                  onChange={(e) => updatePriceVariant(activeLocationTab, index, 'customTermName', e.target.value)}
+                                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                                  placeholder="e.g., Summer"
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor={`term-start-${activeLocationTab}-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                  Start Date
+                                </label>
+                                <input
+                                  type="date"
+                                  id={`term-start-${activeLocationTab}-${index}`}
+                                  value={variant.termStartDate || ''}
+                                  onChange={(e) => updatePriceVariant(activeLocationTab, index, 'termStartDate', e.target.value)}
+                                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                                />
+                              </div>
+                              <div>
+                                <label htmlFor={`term-end-${activeLocationTab}-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                  End Date
+                                </label>
+                                <input
+                                  type="date"
+                                  id={`term-end-${activeLocationTab}-${index}`}
+                                  value={variant.termEndDate || ''}
+                                  onChange={(e) => updatePriceVariant(activeLocationTab, index, 'termEndDate', e.target.value)}
+                                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Conditional fields for Custom Duration */}
+                          {variant.billingPeriod === 'custom-duration' && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                              <div>
+                                <label htmlFor={`duration-unit-${activeLocationTab}-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                  Duration Unit
+                                </label>
+                                <select
+                                  id={`duration-unit-${activeLocationTab}-${index}`}
+                                  value={variant.durationUnit || ''}
+                                  onChange={(e) => updatePriceVariant(activeLocationTab, index, 'durationUnit', e.target.value)}
+                                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white"
+                                >
+                                  <option value="">Select Unit</option>
+                                  <option value="days">Days</option>
+                                  <option value="weeks">Weeks</option>
+                                  <option value="months">Months</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label htmlFor={`duration-amount-${activeLocationTab}-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                  Quantity
+                                </label>
+                                <input
+                                  type="number"
+                                  id={`duration-amount-${activeLocationTab}-${index}`}
+                                  value={variant.durationAmount || ''}
+                                  onChange={(e) => updatePriceVariant(activeLocationTab, index, 'durationAmount', e.target.value)}
+                                  min="1"
+                                  className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                                  placeholder="e.g., 5"
+                                />
+                              </div>
+                            </div>
                           )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
 
                     {/* Add variant button */}
                     <button
@@ -492,62 +599,159 @@ export default function TierFormPage({ user, db }) {
                   <div className="space-y-4">
                     {/* Multiple default pricing variants when switch is off */}
                     {defaultPriceVariants.map((variant, index) => (
-                      <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                        <div>
-                          {index === 0 && (
-                            <label htmlFor={`default-billing-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
-                              Billing Period
-                            </label>
-                          )}
-                          <select
-                            id={`default-billing-${index}`}
-                            value={variant.billingPeriod}
-                            onChange={(e) => updateDefaultPriceVariant(index, 'billingPeriod', e.target.value)}
-                            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white"
-                          >
-                            <option value="">Select</option>
-                            <option value="monthly">Monthly</option>
-                            <option value="semi-annual">Semi-Annual</option>
-                            <option value="annual">Annual</option>
-                            <option value="term">Term</option>
-                          </select>
-                        </div>
-                        <div className="flex gap-2 items-end">
-                          <div className="flex-1">
+                      <div key={index} className="space-y-3 bg-white rounded-md pb-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                          <div>
                             {index === 0 && (
-                              <label htmlFor={`default-price-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
-                                Price
+                              <label htmlFor={`default-billing-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                Billing Period
                               </label>
                             )}
-                            <div className="relative">
-                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
+                            <select
+                              id={`default-billing-${index}`}
+                              value={variant.billingPeriod}
+                              onChange={(e) => updateDefaultPriceVariant(index, 'billingPeriod', e.target.value)}
+                              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white"
+                            >
+                              <option value="">Select</option>
+                              <option
+                                value="monthly"
+                                disabled={isStandardPeriodUsed(defaultPriceVariants, 'monthly', index)}
+                              >
+                                Monthly
+                              </option>
+                              <option
+                                value="semi-annual"
+                                disabled={isStandardPeriodUsed(defaultPriceVariants, 'semi-annual', index)}
+                              >
+                                Semi-Annual
+                              </option>
+                              <option
+                                value="annual"
+                                disabled={isStandardPeriodUsed(defaultPriceVariants, 'annual', index)}
+                              >
+                                Annual
+                              </option>
+                              <option value="custom-term">Custom Term</option>
+                              <option value="custom-duration">Custom Duration</option>
+                            </select>
+                          </div>
+                          <div className="flex gap-2 items-end">
+                            <div className="flex-1">
+                              {index === 0 && (
+                                <label htmlFor={`default-price-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                  Price
+                                </label>
+                              )}
+                              <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                  <span className="text-gray-500 sm:text-sm">{academy.currency || '$'}</span>
+                                </div>
+                                <input
+                                  type="number"
+                                  id={`default-price-${index}`}
+                                  value={variant.price}
+                                  onChange={(e) => updateDefaultPriceVariant(index, 'price', e.target.value)}
+                                  min="0"
+                                  step="0.01"
+                                  className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                                  placeholder="0.00"
+                                />
                               </div>
+                            </div>
+                            {index > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => removeDefaultPriceVariant(index)}
+                                className="mb-0 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full -mr-12"
+                                title="Remove variant"
+                              >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Conditional fields for Custom Term */}
+                        {variant.billingPeriod === 'custom-term' && (
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
+                            <div className="md:col-span-2">
+                              <label htmlFor={`default-term-name-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                Term Name
+                              </label>
                               <input
-                                type="number"
-                                id={`default-price-${index}`}
-                                value={variant.price}
-                                onChange={(e) => updateDefaultPriceVariant(index, 'price', e.target.value)}
-                                min="0"
-                                step="0.01"
-                                className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-                                placeholder="0.00"
+                                type="text"
+                                id={`default-term-name-${index}`}
+                                value={variant.customTermName || ''}
+                                onChange={(e) => updateDefaultPriceVariant(index, 'customTermName', e.target.value)}
+                                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                                placeholder="e.g., Summer"
+                              />
+                            </div>
+                            <div>
+                              <label htmlFor={`default-term-start-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                Start Date
+                              </label>
+                              <input
+                                type="date"
+                                id={`default-term-start-${index}`}
+                                value={variant.termStartDate || ''}
+                                onChange={(e) => updateDefaultPriceVariant(index, 'termStartDate', e.target.value)}
+                                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                              />
+                            </div>
+                            <div>
+                              <label htmlFor={`default-term-end-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                End Date
+                              </label>
+                              <input
+                                type="date"
+                                id={`default-term-end-${index}`}
+                                value={variant.termEndDate || ''}
+                                onChange={(e) => updateDefaultPriceVariant(index, 'termEndDate', e.target.value)}
+                                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
                               />
                             </div>
                           </div>
-                          {index > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => removeDefaultPriceVariant(index)}
-                              className="mb-0 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full"
-                              title="Remove variant"
-                            >
-                              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
+                        )}
+
+                        {/* Conditional fields for Custom Duration */}
+                        {variant.billingPeriod === 'custom-duration' && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                            <div>
+                              <label htmlFor={`default-duration-unit-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                Duration Unit
+                              </label>
+                              <select
+                                id={`default-duration-unit-${index}`}
+                                value={variant.durationUnit || ''}
+                                onChange={(e) => updateDefaultPriceVariant(index, 'durationUnit', e.target.value)}
+                                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white"
+                              >
+                                <option value="">Select Unit</option>
+                                <option value="days">Days</option>
+                                <option value="weeks">Weeks</option>
+                                <option value="months">Months</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label htmlFor={`default-duration-amount-${index}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                Quantity
+                              </label>
+                              <input
+                                type="number"
+                                id={`default-duration-amount-${index}`}
+                                value={variant.durationAmount || ''}
+                                onChange={(e) => updateDefaultPriceVariant(index, 'durationAmount', e.target.value)}
+                                min="1"
+                                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                                placeholder="e.g., 5"
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
 
