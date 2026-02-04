@@ -265,6 +265,19 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
         const hasValidVariants = t.defaultPriceVariants.some(v => v.billingPeriod && v.price);
         return hasValidVariants;
       }
+      // Legacy structure - locationPrices
+      else if (t.locationPrices && Object.keys(t.locationPrices).length > 0) {
+        // Check if this location has a valid price in the legacy structure
+        const price = t.locationPrices[locationId];
+        if (price && Number(price) > 0) {
+          return true;
+        }
+      }
+      // Legacy structure - global price
+      else if (t.price && Number(t.price) > 0) {
+        // Legacy tier with global pricing
+        return true;
+      }
 
       return false;
     });
@@ -950,11 +963,12 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
         const tierDetails = tiers.find(t => t.id === id);
 
         // Get price from selected variant, or fallback to legacy price
-        let amount = tierDetails.price || 0;
+        let amount = 0;
         let billingPeriod = 'monthly'; // default
         let priceVariantData = null;
 
         if (selectedPriceVariant && selectedPriceVariant.variant) {
+          // New structure with price variants
           amount = selectedPriceVariant.variant.price;
           billingPeriod = selectedPriceVariant.variant.billingPeriod;
           // Store the complete variant data for future reference
@@ -967,6 +981,20 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
             durationUnit: selectedPriceVariant.variant.durationUnit,
             durationAmount: selectedPriceVariant.variant.durationAmount,
           };
+        } else {
+          // Legacy structure - fallback to tier's price
+          // Check if tier has location-specific pricing
+          if (tierDetails.locationPrices && locationId && tierDetails.locationPrices[locationId]) {
+            amount = tierDetails.locationPrices[locationId];
+          } else if (tierDetails.price) {
+            // Global price
+            amount = tierDetails.price;
+          }
+
+          // Use legacy pricingModel if available
+          if (tierDetails.pricingModel) {
+            billingPeriod = tierDetails.pricingModel;
+          }
         }
 
         const firstPayment = {

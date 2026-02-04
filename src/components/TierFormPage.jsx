@@ -106,10 +106,48 @@ export default function TierFormPage({ user, db }) {
           setRequiresEnrollmentFee(tierData.requiresEnrollmentFee || false);
           setStatus(tierData.status || 'active');
 
-          // Load price variants - load both sets to preserve data when switching modes
-          setDifferentPricesByLocation(tierData.differentPricesByLocation || false);
-          setPriceVariants(tierData.priceVariantsByLocation || {});
-          setDefaultPriceVariants(tierData.defaultPriceVariants || [{ billingPeriod: '', price: '' }]);
+          // Check if tier uses new structure or legacy structure
+          const hasNewStructure = tierData.priceVariantsByLocation || tierData.defaultPriceVariants;
+          const hasLegacyStructure = tierData.locationPrices || tierData.price;
+
+          if (hasNewStructure) {
+            // Load new structure data
+            setDifferentPricesByLocation(tierData.differentPricesByLocation || false);
+            setPriceVariants(tierData.priceVariantsByLocation || {});
+            setDefaultPriceVariants(tierData.defaultPriceVariants || [{ billingPeriod: '', price: '' }]);
+          } else if (hasLegacyStructure) {
+            // Convert legacy structure to new format for editing
+            if (tierData.locationPrices && Object.keys(tierData.locationPrices).length > 0) {
+              // Legacy tier with location-specific pricing
+              setDifferentPricesByLocation(true);
+
+              // Convert locationPrices to priceVariantsByLocation format
+              const convertedVariants = {};
+              Object.entries(tierData.locationPrices).forEach(([locationId, price]) => {
+                if (price && Number(price) > 0) {
+                  convertedVariants[locationId] = [{
+                    billingPeriod: tierData.pricingModel || 'monthly',
+                    price: String(price)
+                  }];
+                }
+              });
+              setPriceVariants(convertedVariants);
+              setDefaultPriceVariants([{ billingPeriod: '', price: '' }]);
+            } else if (tierData.price) {
+              // Legacy tier with global pricing
+              setDifferentPricesByLocation(false);
+              setDefaultPriceVariants([{
+                billingPeriod: tierData.pricingModel || 'monthly',
+                price: String(tierData.price)
+              }]);
+              setPriceVariants({});
+            }
+          } else {
+            // No pricing data - initialize with empty
+            setDifferentPricesByLocation(false);
+            setPriceVariants({});
+            setDefaultPriceVariants([{ billingPeriod: '', price: '' }]);
+          }
 
           // Legacy fields for backward compatibility
           setPricingModel(tierData.pricingModel || 'monthly');

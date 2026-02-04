@@ -177,8 +177,8 @@ export default function PlansOffersSection({ user, db }) {
 
     const activeLocations = [];
 
+    // New structure with location-based price variants
     if (tier.differentPricesByLocation && tier.priceVariantsByLocation) {
-      // Check which locations have valid price variants
       Object.keys(tier.priceVariantsByLocation).forEach(locationId => {
         const locationVariants = tier.priceVariantsByLocation[locationId];
         if (locationVariants && Array.isArray(locationVariants)) {
@@ -189,14 +189,25 @@ export default function PlansOffersSection({ user, db }) {
           }
         }
       });
-    } else if (tier.defaultPriceVariants && tier.defaultPriceVariants.length > 0) {
-      // Uses default prices - available for all active locations
+    }
+    // New structure with default price variants (same for all locations)
+    else if (tier.defaultPriceVariants && tier.defaultPriceVariants.length > 0) {
       const hasValidVariants = tier.defaultPriceVariants.some(v => v.billingPeriod && v.price);
       if (hasValidVariants) {
         locations.forEach(loc => {
           if (loc.status === 'active') activeLocations.push(loc.name);
         });
       }
+    }
+    // Legacy structure - locationPrices
+    else if (tier.locationPrices && Object.keys(tier.locationPrices).length > 0) {
+      Object.keys(tier.locationPrices).forEach(locationId => {
+        const price = tier.locationPrices[locationId];
+        if (price && Number(price) > 0) {
+          const location = locations.find(loc => loc.id === locationId);
+          if (location) activeLocations.push(location.name);
+        }
+      });
     }
 
     return activeLocations;
