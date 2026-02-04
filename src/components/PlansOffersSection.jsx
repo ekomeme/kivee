@@ -91,6 +91,9 @@ export default function PlansOffersSection({ user, db }) {
   // Sorting state for tiers
   const [tiersSortConfig, setTiersSortConfig] = useState({ key: null, direction: 'ascending' });
 
+  // Student count per tier
+  const [tierStudentCounts, setTierStudentCounts] = useState({});
+
   const fetchTiers = async () => {
     if (!user || !academy || !membership) return;
     if (!hasValidMembership(membership)) {
@@ -151,11 +154,36 @@ export default function PlansOffersSection({ user, db }) {
     setTrials(trialsData);
   };
 
+  const fetchTierStudentCounts = async () => {
+    if (!user || !academy || !membership) return;
+    if (!hasValidMembership(membership)) {
+      return;
+    }
+    try {
+      const playersRef = collection(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.PLAYERS}`);
+      const querySnapshot = await getDocs(playersRef);
+
+      const counts = {};
+      querySnapshot.docs.forEach(doc => {
+        const player = doc.data();
+        if (player.plan && player.plan.type === 'tier' && player.plan.id) {
+          const tierId = player.plan.id;
+          counts[tierId] = (counts[tierId] || 0) + 1;
+        }
+      });
+
+      setTierStudentCounts(counts);
+    } catch (err) {
+      console.error('Error fetching tier student counts:', err);
+    }
+  };
+
   useEffect(() => {
     fetchTiers();
     fetchProducts();
     fetchTrials();
     fetchLocationsData();
+    fetchTierStudentCounts();
   }, [user, academy, membership]);
 
   const fetchLocationsData = async () => {
@@ -917,6 +945,7 @@ export default function PlansOffersSection({ user, db }) {
                             </button>
                           </th>
                           <th className="py-2 px-4 border-b text-left table-header">Locations</th>
+                          <th className="py-2 px-4 border-b text-left table-header">Students</th>
                           <th className="py-2 px-4 border-b text-left table-header">Status</th>
                           <th className="py-2 px-4 border-b text-right table-header">Actions</th>
                         </tr>
@@ -932,6 +961,9 @@ export default function PlansOffersSection({ user, db }) {
                             <td className="py-3 px-4 border-b text-sm text-gray-600 table-cell">{tier.classesPerWeek ? `${tier.classesPerWeek} per week` : 'N/A'}</td>
                             <td className="py-3 px-4 border-b text-base table-cell">
                               {formatLocationsDisplay(tier)}
+                            </td>
+                            <td className="py-3 px-4 border-b text-sm text-gray-600 table-cell">
+                              {tierStudentCounts[tier.id] || 0}
                             </td>
                             <td className="py-3 px-4 border-b table-cell">
                               <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${tier.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
@@ -971,6 +1003,10 @@ export default function PlansOffersSection({ user, db }) {
                           <div className="bg-gray-50 rounded-md p-2">
                             <p className="text-xs text-gray-500">Locations</p>
                             <p className="font-medium">{formatLocationsDisplay(tier)}</p>
+                          </div>
+                          <div className="bg-gray-50 rounded-md p-2">
+                            <p className="text-xs text-gray-500">Students</p>
+                            <p className="font-medium">{tierStudentCounts[tier.id] || 0}</p>
                           </div>
                           <div className="bg-gray-50 rounded-md p-2">
                             <p className="text-xs text-gray-500">Status</p>
