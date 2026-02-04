@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { collection, addDoc, updateDoc, doc, getDoc, getDocs } from 'firebase/firestore';
 import toast from 'react-hot-toast';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAcademy } from '../contexts/AcademyContext';
 import { getLocations } from '../services/firestore';
 import { COLLECTIONS } from '../config/constants';
@@ -47,6 +47,7 @@ export default function TierFormPage({ user, db }) {
   const [priceVariants, setPriceVariants] = useState({});
   // Default price variants (when differentPricesByLocation is false)
   const [defaultPriceVariants, setDefaultPriceVariants] = useState([{ billingPeriod: '', price: '' }]);
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
 
   // Component states
   const [locations, setLocations] = useState([]);
@@ -174,6 +175,30 @@ export default function TierFormPage({ user, db }) {
       prev.map((variant, i) => i === index ? { ...variant, [field]: value } : variant)
     );
   };
+
+  // Use useMemo to check if there's at least one valid pricing configuration
+  const hasValidPricing = useMemo(() => {
+    if (differentPricesByLocation) {
+      // Check if at least one location has valid price variants
+      return Object.values(priceVariants).some(locationVariants =>
+        Array.isArray(locationVariants) &&
+        locationVariants.length > 0 &&
+        locationVariants.some(v => {
+          const hasBillingPeriod = v.billingPeriod && v.billingPeriod !== '';
+          const hasValidPrice = v.price && v.price !== '' && Number(v.price) > 0;
+          return hasBillingPeriod && hasValidPrice;
+        })
+      );
+    } else {
+      // Check if default price variants has at least one valid variant
+      return defaultPriceVariants.length > 0 &&
+        defaultPriceVariants.some(v => {
+          const hasBillingPeriod = v.billingPeriod && v.billingPeriod !== '';
+          const hasValidPrice = v.price && v.price !== '' && Number(v.price) > 0;
+          return hasBillingPeriod && hasValidPrice;
+        });
+    }
+  }, [differentPricesByLocation, priceVariants, defaultPriceVariants]);
 
   // Helper function to check if a standard billing period is already used
   const isStandardPeriodUsed = (variants, period, currentIndex) => {
@@ -433,39 +458,31 @@ export default function TierFormPage({ user, db }) {
                   </div>
                 </label>
               </div>
-
-                {/* Location Tabs */}
-                <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                  {locations
-                    .filter(loc => loc.status === 'active')
-                    .map(location => (
-                      <button
-                        key={location.id}
-                        type="button"
-                        onClick={() => differentPricesByLocation && setActiveLocationTab(location.id)}
-                        disabled={!differentPricesByLocation}
-                        className={`
-                          whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
-                          ${activeLocationTab === location.id && differentPricesByLocation
-                            ? 'border-primary text-primary'
-                            : 'border-transparent text-gray-500'
-                          }
-                          ${!differentPricesByLocation
-                            ? 'cursor-not-allowed opacity-50'
-                            : 'hover:text-gray-700 hover:border-gray-300'
-                          }
-                        `}
-                      >
-                        {location.name}
-                      </button>
-                    ))}
-                </nav>
-              </div>
+            </div>
 
               {/* Tab Content */}
               <div className="rounded-md pb-6">
                 {differentPricesByLocation ? (
                   <div className="space-y-4">
+                    {/* Empty state message when no variants */}
+                    {(!priceVariants[activeLocationTab] || priceVariants[activeLocationTab].length === 0) && (
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center bg-gray-50">
+                        <p className="text-gray-700 text-base mb-6">
+                          To make this tier available for this location, you must add at least one pricing variant.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => addPriceVariant(activeLocationTab)}
+                          className="inline-flex items-center gap-2 text-white bg-primary hover:bg-primary-dark font-medium text-base py-3 px-6 rounded-md transition-colors"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                          Add price variant
+                        </button>
+                      </div>
+                    )}
+
                     {/* Price variants for active location */}
                     {(priceVariants[activeLocationTab] || []).map((variant, index) => {
                       const activeVariants = priceVariants[activeLocationTab] || [];
@@ -625,17 +642,19 @@ export default function TierFormPage({ user, db }) {
                       );
                     })}
 
-                    {/* Add variant button */}
-                    <button
-                      type="button"
-                      onClick={() => addPriceVariant(activeLocationTab)}
-                      className="flex items-center gap-2 text-primary hover:text-primary-dark font-medium text-sm py-2 px-4 rounded-md bg-gray-100 hover:bg-gray-200 transition-colors"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
-                      Add price variant
-                    </button>
+                    {/* Add variant button - only show when there are existing variants */}
+                    {(priceVariants[activeLocationTab] && priceVariants[activeLocationTab].length > 0) && (
+                      <button
+                        type="button"
+                        onClick={() => addPriceVariant(activeLocationTab)}
+                        className="flex items-center gap-2 text-primary hover:text-primary-dark font-medium text-sm py-2 px-4 rounded-md bg-gray-100 hover:bg-gray-200 transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Add price variant
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -811,37 +830,62 @@ export default function TierFormPage({ user, db }) {
               </div>
             </div>
 
-            {/* Options */}
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                  <input
-                    id="autoRenew"
-                    type="checkbox"
-                    checked={autoRenew}
-                    onChange={(e) => setAutoRenew(e.target.checked)}
-                    className="h-4 w-4 text-primary border-gray-300 rounded"
-                  />
-                  <label htmlFor="autoRenew" className="text-sm font-medium text-gray-700">
-                    Auto-renew subscription
-                  </label>
-                </div>
-
-                {isEditing && (
-                  <div>
-                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
-                      Status
-                    </label>
-                    <select
-                      id="status"
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value)}
-                      className="block w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-                    >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
-                  </div>
+            {/* Advanced Settings Accordion */}
+            <div className="pt-4 border-t">
+              <button
+                type="button"
+                onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+                className="w-full flex items-center justify-between py-3 px-4 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                <h3 className="text-base font-semibold text-gray-900">Advanced settings</h3>
+                {showAdvancedSettings ? (
+                  <ChevronUp className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-gray-500" />
                 )}
+              </button>
+
+              {showAdvancedSettings && (
+                <div className="space-y-4 mt-4 px-4">
+                  <label htmlFor="autoRenew" className="flex items-center justify-between cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-sm font-medium text-gray-700">
+                      Auto-renew subscription
+                    </span>
+                    <div className="relative">
+                      <input
+                        id="autoRenew"
+                        type="checkbox"
+                        checked={autoRenew}
+                        onChange={(e) => {
+                          setAutoRenew(e.target.checked);
+                        }}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                    </div>
+                  </label>
+
+                  {isEditing && (
+                    <label htmlFor="status" className="flex items-center justify-between cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                      <span className="text-sm font-medium text-gray-700">
+                        Active status
+                      </span>
+                      <div className="relative">
+                        <input
+                          id="status"
+                          type="checkbox"
+                          checked={status === 'active'}
+                          onChange={(e) => {
+                            setStatus(e.target.checked ? 'active' : 'inactive');
+                          }}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                      </div>
+                    </label>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Error Message */}
@@ -858,8 +902,9 @@ export default function TierFormPage({ user, db }) {
               </button>
               <button
                 type="submit"
-                disabled={loading}
-                className="btn-primary px-6"
+                disabled={loading || !hasValidPricing}
+                className="btn-primary px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={!hasValidPricing ? 'Please add at least one pricing variant' : ''}
               >
                 {loading ? 'Saving...' : isEditing ? 'Update Tier' : 'Create Tier'}
               </button>
