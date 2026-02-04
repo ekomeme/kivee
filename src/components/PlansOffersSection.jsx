@@ -23,7 +23,7 @@ const removeUndefinedFields = (obj) => {
 };
 
 export default function PlansOffersSection({ user, db }) {
-  const { academy, membership } = useAcademy();
+  const { academy, membership, studentLabelPlural } = useAcademy();
   const navigate = useNavigate();
   const [tiers, setTiers] = useState([]);
   const [oneTimeProducts, setOneTimeProducts] = useState([]);
@@ -288,6 +288,9 @@ export default function PlansOffersSection({ user, db }) {
       } else if (tiersSortConfig.key === 'classes') {
         aVal = Number(a.classesPerWeek) || 0;
         bVal = Number(b.classesPerWeek) || 0;
+      } else if (tiersSortConfig.key === 'students') {
+        aVal = tierStudentCounts[a.id] || 0;
+        bVal = tierStudentCounts[b.id] || 0;
       }
 
       if (aVal < bVal) {
@@ -945,7 +948,14 @@ export default function PlansOffersSection({ user, db }) {
                             </button>
                           </th>
                           <th className="py-2 px-4 border-b text-left table-header">Locations</th>
-                          <th className="py-2 px-4 border-b text-left table-header">Students</th>
+                          <th className="py-2 px-4 border-b text-left table-header">
+                            <button onClick={() => handleTiersSort('students')} className="flex items-center hover:text-gray-900">
+                              {studentLabelPlural}
+                              {tiersSortConfig.key === 'students' && (
+                                tiersSortConfig.direction === 'ascending' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />
+                              )}
+                            </button>
+                          </th>
                           <th className="py-2 px-4 border-b text-left table-header">Status</th>
                           <th className="py-2 px-4 border-b text-right table-header">Actions</th>
                         </tr>
@@ -1005,7 +1015,7 @@ export default function PlansOffersSection({ user, db }) {
                             <p className="font-medium">{formatLocationsDisplay(tier)}</p>
                           </div>
                           <div className="bg-gray-50 rounded-md p-2">
-                            <p className="text-xs text-gray-500">Students</p>
+                            <p className="text-xs text-gray-500">{studentLabelPlural}</p>
                             <p className="font-medium">{tierStudentCounts[tier.id] || 0}</p>
                           </div>
                           <div className="bg-gray-50 rounded-md p-2">
