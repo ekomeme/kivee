@@ -60,7 +60,6 @@
 
 /* Tabs container */
 .tabs-container {
-  margin-bottom: 24px; /* mb-6 */
   position: relative;
   border-bottom: none;
 }
@@ -112,7 +111,7 @@
   color: #6B7280; /* text-gray-500 */
   /* background-color: var(--section-bg, #FFFFFF); Cover the container border */
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
   border-top: none;
   border-left: none;
   border-right: none;
@@ -128,7 +127,7 @@
   bottom: -3px; /* Align with bottom of button */
   height: 1px;
   background-color: #D1D5DB;
-  transition: opacity 0.2s ease, background-color 0.2s ease;
+  transition: opacity 0.25s ease, background-color 0.25s ease;
   z-index: -1; /* Behind the border */
 }
 
@@ -187,7 +186,7 @@
 
 /* Row hover effect */
 .table-row-hover {
-  transition: background-color 0.15s ease;
+  transition: background-color 0.25s ease;
 }
 
 /* Truncate only text content inside table cells */

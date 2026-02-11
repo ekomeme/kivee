@@ -137,25 +137,53 @@ svg.lucide {
 }
 
 /* Table row hover: hide separating borders on current and previous row */
-.table-row-hover:hover td {
+.table-row-hover {
+  background-color: #ffffff;
+  transition: background-color 0.25s ease;
+}
+
+.table-row-hover td {
+  transition: border-bottom-color 0.25s ease;
+}
+
+.table-row-hover:hover {
+  background-color: rgb(243, 244, 246);
+  transition: background-color 0.25s ease;
+}
+
+.table-row-active {
+  background-color: rgb(243, 244, 246) !important;
+  transition: none !important;
+}
+
+.table-row-active:hover {
+  background-color: rgb(243, 244, 246) !important;
+}
+
+.table-row-hover:hover td,
+.table-row-active td {
   border-bottom-color: transparent;
 }
 
-.table-row-hover:has(+ .table-row-hover:hover) td {
+.table-row-hover:has(+ .table-row-hover:hover) td,
+.table-row-hover:has(+ .table-row-active) td {
   border-bottom-color: transparent;
 }
 
-.table-row-hover:hover td:first-child {
+.table-row-hover:hover td:first-child,
+.table-row-active td:first-child {
   border-top-left-radius: 8px;
   border-bottom-left-radius: 8px;
 }
 
-.table-row-hover:hover td:last-child {
+.table-row-hover:hover td:last-child,
+.table-row-active td:last-child {
   border-top-right-radius: 8px;
   border-bottom-right-radius: 8px;
 }
 
-/* Hide header bottom border when first body row is hovered */
-table:has(tbody .table-row-hover:hover) thead tr th {
+/* Hide header bottom border when first body row is hovered or active */
+table:has(tbody tr:first-child.table-row-hover:hover) thead tr th,
+table:has(tbody tr:first-child.table-row-active) thead tr th {
   border-bottom-color: transparent !important;
 }

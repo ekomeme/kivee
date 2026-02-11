@@ -43,7 +43,7 @@
   border: none;
   cursor: pointer;
   text-align: left;
-  transition: all 0.2s;
+  transition: all 0.25s;
 }
 
 .sidebar__header-button:hover:not(:disabled) {
@@ -73,7 +73,7 @@
   font-weight: var(--font-weight-medium);
   color: var(--color-gray-dark, #4F5354);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s;
   gap: 0.625rem; /* 10px entre icono y texto */
 }
 
@@ -226,7 +226,7 @@
   font-weight: var(--font-weight-medium); /* medium */
   background: transparent;
   border: 1px solid transparent;
-  transition: all 0.4s ease-out;
+  transition: all 0.25s ease-out;
 }
 
 .sidebar__link:hover {
@@ -280,7 +280,7 @@
   border: 1px solid var(--color-gray-border, #e5e7eb);
   cursor: pointer;
   text-align: left;
-  transition: all 0.2s;
+  transition: all 0.25s;
 }
 
 .sidebar__user-button:hover {

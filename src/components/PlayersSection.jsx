@@ -583,6 +583,8 @@ export default function PlayersSection({ user, db }) {
   };
 
   const handleRowClick = async (player) => {
+    // Set selected player immediately to prevent visual glitch
+    setSelectedPlayer(player);
     setIsDetailDrawerOpen(true);
     setTimeout(() => setIsDetailDrawerAnimating(true), 10);
     setActiveTab('details');
@@ -1134,7 +1136,11 @@ export default function PlayersSection({ user, db }) {
               </thead>
               <tbody>
                 {filteredAndSortedPlayers.map(player => (
-                  <tr key={player.id} className="h-14 group hover:bg-gray-100 cursor-pointer table-row-hover transition-colors duration-150" onClick={() => handleRowClick(player)}>
+                  <tr
+                    key={player.id}
+                    className={`h-14 group cursor-pointer table-row-hover ${selectedPlayer?.id === player.id ? 'table-row-active' : ''}`}
+                    onClick={() => handleRowClick(player)}
+                  >
                     <td className="px-4 border-b table-cell w-12" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-center">
                         <input
@@ -1273,7 +1279,7 @@ export default function PlayersSection({ user, db }) {
           <div
             id="player-form-drawer"
             className={`fixed top-0 right-0 h-full w-full bg-app shadow-2xl z-50 overflow-y-auto transform transition-transform duration-300 ${isDrawerAnimating ? 'translate-x-0' : 'translate-x-full'}`}
-            style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)', maxWidth: '584px' }}
+            style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)', maxWidth: '584px', borderTopLeftRadius: '16px', borderBottomLeftRadius: '16px' }}
           >
             <div className="sticky top-0 bg-app border-b border-gray-border z-10 px-4 md:px-6 py-4 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-800">Add New {studentLabelSingular}</h2>
@@ -1308,7 +1314,7 @@ export default function PlayersSection({ user, db }) {
           <div
             id="player-form-drawer"
             className={`fixed top-0 right-0 h-full w-full bg-app shadow-2xl z-50 overflow-y-auto transform transition-transform duration-300 ${isDetailDrawerAnimating ? 'translate-x-0' : 'translate-x-full'}`}
-            style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)', maxWidth: '584px' }}
+            style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)', maxWidth: '584px', borderTopLeftRadius: '16px', borderBottomLeftRadius: '16px' }}
           >
             <div className="bg-app px-6 pt-6 pb-4">
               {drawerMode === 'edit' ? (
