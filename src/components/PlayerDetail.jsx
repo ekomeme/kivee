@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
+import { Plus, Trash2, X, Copy, Edit } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, academy, activeTab: controlledTab, onTabChange, paymentPage, onPaymentPageChange }) {
@@ -175,8 +175,20 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
 
   const formatDate = (date) => {
     if (!date) return 'N/A';
-    if (date.seconds) return new Date(date.seconds * 1000).toLocaleDateString();
-    return new Date(date).toLocaleDateString();
+    const dateObj = date.seconds ? new Date(date.seconds * 1000) : new Date(date);
+    return dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  };
+
+  const calculateAge = (birthday) => {
+    if (!birthday) return 'N/A';
+    const birthDate = birthday.seconds ? new Date(birthday.seconds * 1000) : new Date(birthday);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
   };
 
   const addCycleToDate = (date, pricingModel) => {
@@ -229,104 +241,177 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
   };
 
   return (
-    <div className="bg-section p-4 md:p-8 rounded-none shadow-none md:rounded-lg md:shadow-xl w-full max-w-7xl mx-auto">
-      <div className="tabs-container">
-        <div className="tabs-scroll-wrapper">
-          <nav className="tabs-nav" aria-label="Tabs">
-            <button
-              onClick={() => changeTab('details')}
-              className={`tab-button ${activeTab === 'details' ? 'active' : ''}`}
-            >
-              Details
-            </button>
-            <button
-              onClick={() => changeTab('finances')}
-              className={`tab-button ${activeTab === 'finances' ? 'active' : ''}`}
-            >
-              Finances
-            </button>
-          </nav>
+    <div className="bg-section w-full max-w-7xl mx-auto">
+      <div className="sticky top-0 bg-section z-10">
+        <div className="tabs-container px-6">
+          <div className="tabs-scroll-wrapper">
+            <nav className="tabs-nav" aria-label="Tabs">
+              <button
+                onClick={() => changeTab('details')}
+                className={`tab-button ${activeTab === 'details' ? 'active' : ''}`}
+              >
+                Basic Information
+              </button>
+              <button
+                onClick={() => changeTab('tutor')}
+                className={`tab-button ${activeTab === 'tutor' ? 'active' : ''}`}
+              >
+                Tutor
+              </button>
+              <button
+                onClick={() => changeTab('payments')}
+                className={`tab-button ${activeTab === 'payments' ? 'active' : ''}`}
+              >
+                Payments
+              </button>
+            </nav>
+          </div>
         </div>
       </div>
 
       {activeTab === 'details' && (
-        <div className="space-y-8">
-          <fieldset className="border-t-2 border-gray-200 pt-6">
-            <legend className="text-xl font-semibold text-gray-900 px-2">{studentLabelSingular} Information</legend>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-              <div className="flex items-center">
-                {player.photoURL ? (
-                  <img src={player.photoURL} alt={`${studentLabelSingular} photo`} className="w-24 h-24 rounded-full object-cover" />
-                ) : (
-                  <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">No photo</div>
-                )}
-              </div>
-              <div></div>
-              <div><strong>Name:</strong> <span className="text-gray-800">{formatValue(`${player.name} ${player.lastName}`)}</span></div>
-              <div><strong>ID:</strong> <span className="text-gray-800">{formatValue(player.studentId)}</span></div>
-              <div><strong>Nationality:</strong> <span className="text-gray-800">{formatValue(player.nationality)}</span></div>
-              <div><strong>Date of Birth:</strong> <span className="text-gray-800">{formatValue(player.birthday)}</span></div>
-              <div><strong>Gender:</strong> <span className="text-gray-800">{formatValue(player.gender)}</span></div>
-              <div><strong>Group:</strong> <span className="text-gray-800">{formatValue(player.groupName)}</span></div>
-              <div><strong>Email:</strong> <span className="text-gray-800">{formatValue(player.email)}</span></div>
-              <div><strong>Phone:</strong> <span className="text-gray-800">{formatValue(player.contactPhone)}</span></div>
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="bg-gray-50 rounded-lg p-4 md:col-span-2">
+              <p className="text-sm text-gray-500 mb-1">Nationality</p>
+              <p className="text-base font-medium text-gray-900">{formatValue(player.nationality)}</p>
             </div>
-          </fieldset>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-sm text-gray-500 mb-1">Age</p>
+              <p className="text-base font-medium text-gray-900">{calculateAge(player.birthday)}</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-sm text-gray-500 mb-1">Gender</p>
+              <p className="text-base font-medium text-gray-900">{formatValue(player.gender)}</p>
+            </div>
+          </div>
 
-          <fieldset className="border-t-2 border-gray-200 pt-6">
-            <legend className="text-xl font-semibold text-gray-900 px-2">Tutor / Guardian</legend>
-            {player.tutor ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                <div><strong>Tutor Name:</strong> <span className="text-gray-800">{formatValue(`${player.tutor.name} ${player.tutor.lastName}`)}</span></div>
-                <div><strong>Tutor Email:</strong> <span className="text-gray-800">{formatValue(player.tutor.email)}</span></div>
-                <div><strong>Tutor Phone:</strong> <span className="text-gray-800">{formatValue(player.tutor.contactPhone)}</span></div>
-              </div>
-            ) : (
-              <p className="mt-4 text-gray-600">No tutor/guardian assigned.</p>
-            )}
-          </fieldset>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-sm text-gray-500 mb-1">Birthday</p>
+              <p className="text-base font-medium text-gray-900">{formatValue(player.birthday)}</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-sm text-gray-500 mb-1">{player.documentType || 'ID'}</p>
+              <p className="text-base font-medium text-gray-900">{formatValue(player.documentNumber || player.studentId)}</p>
+            </div>
+          </div>
 
-          <fieldset className="border-t-2 border-gray-200 pt-6">
-            <legend className="text-xl font-semibold text-gray-900 px-2">Subscription</legend>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="bg-gray-50 rounded-lg p-4 relative">
+              <p className="text-sm text-gray-500 mb-1">Phone number</p>
+              <p className="text-base font-medium text-gray-900">{formatValue(player.contactPhone)}</p>
+              {player.contactPhone && (
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(player.contactPhone);
+                    toast.success('Phone copied to clipboard!');
+                  }}
+                  className="absolute bottom-4 right-4 p-1 text-gray-400 hover:text-gray-600"
+                >
+                  <Copy className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4 relative">
+              <p className="text-sm text-gray-500 mb-1">Email</p>
+              <p className="text-base font-medium text-gray-900">{formatValue(player.email)}</p>
+              {player.email && (
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(player.email);
+                    toast.success('Email copied to clipboard!');
+                  }}
+                  className="absolute bottom-4 right-4 p-1 text-gray-400 hover:text-gray-600"
+                >
+                  <Copy className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-base font-semibold text-gray-900">Assigned Plan</h3>
             {player.plan ? (
-              <div className="p-3 bg-gray-50 rounded-md border mt-4">
-                <p className="text-sm font-medium text-gray-700">Assigned Plan</p>
-                <p className="text-lg font-semibold text-gray-900">{player.planDetails?.name || 'Plan not found'}</p>
-                <p className="text-sm text-gray-700 mt-1">
-                  Start date:{' '}
-                  <span className="font-semibold">
-                    {earliestSubscription ? formatDate(earliestSubscription.dueDate) : 'N/A'}
-                  </span>
-                </p>
-              </div>
-            ) : (
-              <p className="mt-4 text-gray-600">No subscription assigned.</p>
-            )}
-          </fieldset>
-
-          <fieldset className="border-t-2 border-gray-200 pt-6">
-            <legend className="text-xl font-semibold text-gray-900 px-2">One-time Products</legend>
-            {productPayments.length > 0 ? (
-              <div className="space-y-3 mt-4">
-                {productPayments.map((p) => (
-                  <div key={`prod-detail-${p.originalIndex}`} className="flex justify-between items-center p-3 bg-gray-50 rounded-md border">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="bg-primary rounded-lg p-4 text-white">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium">{p.productName || p.productDetails?.name || 'Product not found'}</p>
-                      <p className="text-sm text-gray-600">{new Intl.NumberFormat(undefined, { style: 'currency', currency: academy.currency || 'USD' }).format(p.amount || p.productDetails?.price || 0)}</p>
+                      <p className="text-sm text-white text-opacity-80 mb-1">Plan</p>
+                      <p className="text-xl font-bold">{player.planDetails?.name || 'Plan not found'}</p>
                     </div>
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${p.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{p.status}</span>
+                    <span className="px-3 py-1 bg-white bg-opacity-20 rounded-full text-sm font-medium">Active</span>
                   </div>
-                ))}
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-500 mb-1">Since</p>
+                  <p className="text-base font-medium text-gray-900">{earliestSubscription ? formatDate(earliestSubscription.dueDate) : 'N/A'}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-500 mb-1">Paid amount</p>
+                  <p className="text-base font-medium text-gray-900">$ 20,000.00</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-500 mb-1">Next renewal</p>
+                  <p className="text-base font-medium text-gray-900">March 24, 2026</p>
+                </div>
               </div>
             ) : (
-              <p className="mt-4 text-gray-600">No one-time products assigned.</p>
+              <p className="text-gray-600">No subscription assigned.</p>
             )}
-          </fieldset>
+          </div>
+
         </div>
       )}
 
-      {activeTab === 'finances' && (
-        <div className="space-y-4">
+      {activeTab === 'tutor' && (
+        <div className="p-6">
+          <h3 className="text-base font-semibold text-gray-900 mb-4">Tutor / Guardian</h3>
+          {player.tutor ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-500 mb-1">Tutor Name</p>
+                <p className="text-base font-medium text-gray-900">{formatValue(`${player.tutor.name} ${player.tutor.lastName}`)}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4 relative">
+                <p className="text-sm text-gray-500 mb-1">Tutor Email</p>
+                <p className="text-base font-medium text-gray-900">{formatValue(player.tutor.email)}</p>
+                {player.tutor.email && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(player.tutor.email);
+                      toast.success('Email copied to clipboard!');
+                    }}
+                    className="absolute bottom-4 right-4 p-1 text-gray-400 hover:text-gray-600"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4 relative">
+                <p className="text-sm text-gray-500 mb-1">Tutor Phone</p>
+                <p className="text-base font-medium text-gray-900">{formatValue(player.tutor.contactPhone)}</p>
+                {player.tutor.contactPhone && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(player.tutor.contactPhone);
+                      toast.success('Phone copied to clipboard!');
+                    }}
+                    className="absolute bottom-4 right-4 p-1 text-gray-400 hover:text-gray-600"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-600">No tutor/guardian assigned.</p>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'payments' && (
+        <div className="p-6 space-y-4">
           {paginatedPayments.length > 0 ? (
             paginatedPayments.map((p, idx) => {
               const isSubscription = p.paymentFor === 'tier';

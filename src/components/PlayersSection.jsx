@@ -13,7 +13,7 @@ import PlayerForm from './PlayerForm.jsx';
 import PlayerDetail from './PlayerDetail.jsx';
 import '../styles/sections.css';
 
-import { Plus, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Filter, ChevronRight, Check, X, Download, Users as UsersIcon } from 'lucide-react';
+import { Plus, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Settings2, ChevronRight, Check, X, Download, Users as UsersIcon } from 'lucide-react';
 export default function PlayersSection({ user, db }) {
   const { academy, membership, studentLabelPlural, studentLabelSingular } = useAcademy();
   const [players, setPlayers] = useState([]);
@@ -30,6 +30,7 @@ export default function PlayersSection({ user, db }) {
   const [trialsCache, setTrialsCache] = useState(new Map());
   const [productsCache, setProductsCache] = useState(new Map());
   const [groupsCache, setGroupsCache] = useState(new Map());
+  const [locationsCache, setLocationsCache] = useState(new Map());
 
   // Fetches players and their tutors
   const fetchPlayers = async () => {
@@ -40,12 +41,13 @@ export default function PlayersSection({ user, db }) {
     try {
       // 2. Usar 'academy.id' en lugar de 'user.uid' para que funcione para todos los miembros.
       // Fetch all collections in parallel
-      const [tiersSnapshot, trialsSnapshot, productsSnapshot, groupsSnapshot, tutorsSnapshot, playersSnapshot] = await Promise.all([
+      const [tiersSnapshot, trialsSnapshot, productsSnapshot, groupsSnapshot, tutorsSnapshot, locationsSnapshot, playersSnapshot] = await Promise.all([
         getDocs(collection(db, `academies/${academy.id}/tiers`)),
         getDocs(collection(db, `academies/${academy.id}/trials`)),
         getDocs(collection(db, `academies/${academy.id}/products`)),
         getDocs(collection(db, `academies/${academy.id}/groups`)),
         getDocs(collection(db, `academies/${academy.id}/tutors`)),
+        getDocs(collection(db, `academies/${academy.id}/locations`)),
         getDocs(query(collection(db, `academies/${academy.id}/players`))),
       ]);
 
@@ -71,6 +73,11 @@ export default function PlayersSection({ user, db }) {
       const groupsMap = new Map(groupsData.map(group => [group.id, group.name]));
       setGroups(groupsData);
       setGroupsCache(new Map(groupsData.map(group => [group.id, group])));
+
+      // Process and cache Locations
+      const locationsData = locationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const locationsMap = new Map(locationsData.map(location => [location.id, location.name]));
+      setLocationsCache(new Map(locationsData.map(location => [location.id, location])));
 
       // Process and cache Tutors
       const tutorsMap = new Map(
@@ -99,6 +106,19 @@ export default function PlayersSection({ user, db }) {
         // Get group name
         if (player.groupId) {
           player.groupName = groupsMap.get(player.groupId) || 'N/A';
+        }
+
+        // Get location name
+        if (player.locationId) {
+          player.locationName = locationsMap.get(player.locationId) || 'N/A';
+        }
+
+        // Calculate payment status
+        if (player.oneTimeProducts && player.oneTimeProducts.length > 0) {
+          const hasUnpaid = player.oneTimeProducts.some(p => p.status === 'unpaid' && p.dueDate && new Date(p.dueDate.seconds ? p.dueDate.seconds * 1000 : p.dueDate) < new Date());
+          player.paymentStatus = hasUnpaid ? 'Overdue' : 'Paid';
+        } else {
+          player.paymentStatus = 'N/A';
         }
 
         return player;
@@ -207,21 +227,27 @@ export default function PlayersSection({ user, db }) {
 
   const handleAddPlayer = () => {
     setIsDrawerOpen(true);
+    setTimeout(() => setIsDrawerAnimating(true), 10);
   };
 
   const handleCloseDrawer = () => {
-    setIsDrawerOpen(false);
+    setIsDrawerAnimating(false);
+    setTimeout(() => setIsDrawerOpen(false), 300);
   };
 
   const handlePlayerAdded = () => {
-    setIsDrawerOpen(false);
+    setIsDrawerAnimating(false);
+    setTimeout(() => setIsDrawerOpen(false), 300);
     fetchPlayers();
   };
 
   const handleCloseDetailDrawer = () => {
-    setIsDetailDrawerOpen(false);
-    setSelectedPlayer(null);
-    setDrawerMode('detail');
+    setIsDetailDrawerAnimating(false);
+    setTimeout(() => {
+      setIsDetailDrawerOpen(false);
+      setSelectedPlayer(null);
+      setDrawerMode('detail');
+    }, 300);
   };
 
   const handlePlayerUpdated = async () => {
@@ -558,6 +584,7 @@ export default function PlayersSection({ user, db }) {
 
   const handleRowClick = async (player) => {
     setIsDetailDrawerOpen(true);
+    setTimeout(() => setIsDetailDrawerAnimating(true), 10);
     setActiveTab('details');
     setPaymentPage(1);
     setDrawerMode('detail');
@@ -719,7 +746,9 @@ export default function PlayersSection({ user, db }) {
   const [actionsMenuPosition, setActionsMenuPosition] = useState({ x: 0, y: 0 });
   const [selectedPlayerForActions, setSelectedPlayerForActions] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isDrawerAnimating, setIsDrawerAnimating] = useState(false);
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
+  const [isDetailDrawerAnimating, setIsDetailDrawerAnimating] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [activeTab, setActiveTab] = useState('details');
   const [paymentPage, setPaymentPage] = useState(1);
@@ -754,7 +783,9 @@ export default function PlayersSection({ user, db }) {
   // Component for contact icons with a hover-based popover
   const ContactIcon = ({ value, icon: Icon }) => {
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+    const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
     const timeoutRef = useRef(null);
+    const iconRef = useRef(null);
 
     const handleCopy = (e) => {
       e.stopPropagation(); // Prevent row click
@@ -763,29 +794,54 @@ export default function PlayersSection({ user, db }) {
       setIsPopoverOpen(false);
     };
 
+    const handleMouseEnter = () => {
+      clearTimeout(timeoutRef.current);
+      if (iconRef.current) {
+        const rect = iconRef.current.getBoundingClientRect();
+        setPopoverPosition({
+          top: rect.top - 8,
+          left: rect.left + rect.width / 2
+        });
+      }
+      setIsPopoverOpen(true);
+    };
+
+    const handleMouseLeave = () => {
+      timeoutRef.current = setTimeout(() => setIsPopoverOpen(false), 100);
+    };
+
     if (!value) return null;
 
     return (
-      <div
-        className="relative flex items-center"        onMouseEnter={() => {
-          clearTimeout(timeoutRef.current);
-          setIsPopoverOpen(true);
-        }}
-        onMouseLeave={() => {
-          timeoutRef.current = setTimeout(() => setIsPopoverOpen(false), 100);
-        }}
-      >
-        <Icon className="h-5 w-5 text-gray-500 cursor-pointer flex-shrink-0" style={{ width: '20px', height: '20px' }} />
+      <>
+        <div
+          ref={iconRef}
+          className="relative flex items-center"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <Icon className="h-5 w-5 text-gray-500 cursor-pointer flex-shrink-0" style={{ width: '20px', height: '20px' }} />
+        </div>
         {isPopoverOpen && (
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs bg-gray-dark text-white rounded-md py-1.5 px-3 z-20 shadow-lg">
-            <div className="flex items-center space-x-2">
-              <span className="truncate">{value}</span>
-              <button onClick={handleCopy} className="text-gray-300 hover:text-white"><Copy className="h-4 w-4" /></button>
+          <div
+            className="fixed bg-gray-dark text-white rounded-md py-1.5 px-3 shadow-lg whitespace-nowrap"
+            style={{
+              top: `${popoverPosition.top}px`,
+              left: `${popoverPosition.left}px`,
+              transform: 'translate(-50%, -100%)',
+              zIndex: 9999
+            }}
+            onMouseEnter={() => clearTimeout(timeoutRef.current)}
+            onMouseLeave={handleMouseLeave}
+          >
+            <div className="flex items-center gap-2">
+              <span className="max-w-[250px] truncate">{value}</span>
+              <button onClick={handleCopy} className="text-gray-300 hover:text-white flex-shrink-0"><Copy className="h-4 w-4" /></button>
             </div>
             <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-8 border-x-transparent border-t-8 border-t-gray-dark"></div>
           </div>
         )}
-      </div>
+      </>
     );
   };
 
@@ -803,14 +859,14 @@ export default function PlayersSection({ user, db }) {
       <div className="relative" ref={menuRef}>
         <button
           onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
-          className={`flex items-center px-4 py-2 border rounded-md ${
+          className={`flex items-center px-4 py-2 border rounded-md transition-colors duration-150 ${
             activeFilterCount > 0
               ? 'bg-blue-100 border-blue-300 text-blue-800'
               : 'bg-section border-gray-border hover:bg-gray-100'
           }`}
         >
-          <Filter className="h-4 w-4 mr-2" />
-          <span>Filter</span>
+          <Settings2 className="h-4 w-4 mr-2" />
+          <span>Filters</span>
           {activeFilterCount > 0 && (
             <span className="ml-2 bg-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
               {activeFilterCount}
@@ -830,7 +886,7 @@ export default function PlayersSection({ user, db }) {
                   className="relative"
                   onMouseEnter={() => setActiveSubMenu(option.key)}
                 >
-                  <div className="px-4 py-2 hover:bg-gray-100 flex justify-between items-center cursor-default">
+                  <div className="px-4 py-2 hover:bg-gray-100 flex justify-between items-center cursor-default transition-colors duration-150">
                     <span>{option.name}</span>
                     <ChevronRight className="h-4 w-4" />
                   </div>
@@ -842,7 +898,7 @@ export default function PlayersSection({ user, db }) {
                           <li key={item.value}>
                             <button
                               onClick={() => handleFilterToggle(option.key, item.value)}
-                              className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center"
+                              className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center transition-colors duration-150"
                             >
                               <div className="w-5 mr-2">
                                 {filters[option.key].includes(item.value) && (
@@ -868,13 +924,13 @@ export default function PlayersSection({ user, db }) {
 
   const Avatar = ({ player }) => {
     if (player.photoURL) {
-      return <img src={player.photoURL} alt={studentLabelSingular} className="w-10 h-10 rounded-full object-cover" />;
+      return <img src={player.photoURL} alt={studentLabelSingular} className="w-9 h-9 rounded-full object-cover" />;
     }
 
     const initial = player.name ? player.name.charAt(0).toUpperCase() : '?';
 
     return (
-      <div className="w-10 h-10 rounded-full bg-app flex items-center justify-center">
+      <div className="w-9 h-9 rounded-full bg-app flex items-center justify-center">
         <span className="text-lg font-bold text-gray-dark">{initial}</span>
       </div>
     );
@@ -909,7 +965,7 @@ export default function PlayersSection({ user, db }) {
                   setDrawerMode('edit');
                   await fetchPlayerDetail(player.id);
                   onClose();
-                }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center">
+                }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center transition-colors duration-150">
                   <Edit className="mr-3 h-4 w-4" />
                   <span>Edit</span>
                 </button>
@@ -929,14 +985,14 @@ export default function PlayersSection({ user, db }) {
                       toast.error('Failed to update status.');
                     }
                   }}
-                  className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center"
+                  className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center transition-colors duration-150"
                 >
                   <X className="mr-3 h-4 w-4" />
                   <span>{player.status === 'inactive' ? 'Activate' : 'Deactivate'}</span>
                 </button>
               </li>
               <li className="text-base">
-                <button onClick={(e) => { e.stopPropagation(); handleDeletePlayer(player.id); }} className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center">
+                <button onClick={(e) => { e.stopPropagation(); handleDeletePlayer(player.id); }} className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center transition-colors duration-150">
                   <Trash2 className="mr-3 h-4 w-4" />
                   <span>Delete</span>
                 </button>
@@ -951,98 +1007,43 @@ export default function PlayersSection({ user, db }) {
     useOutsideClick(menuRef, () => setShowBulkActionsMenu(false));
 
     return (
-      <div className="bg-primary text-white px-4 py-3 rounded-lg flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          <UsersIcon className="h-5 w-5" />
-          <span className="font-medium">{selectedPlayers.size} {studentLabelPlural.toLowerCase()} selected</span>
+      <div className="flex items-center mb-4 bg-primary rounded-lg h-[72px]">
+        <button
+          onClick={() => setSelectedPlayers(new Set())}
+          className="w-9 h-9 flex items-center justify-center text-white hover:bg-white hover:bg-opacity-20 rounded-full transition-colors ml-2"
+          aria-label="Clear selection"
+        >
+          <X className="h-5 w-5" />
+        </button>
+        <div className="flex items-center ml-2">
+          <span className="text-white font-medium">{selectedPlayers.size} {studentLabelPlural.toLowerCase()} selected</span>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="relative" ref={menuRef}>
-            <button
-              onClick={() => setShowBulkActionsMenu(!showBulkActionsMenu)}
-              className="bg-white text-primary px-4 py-2 rounded-md hover:bg-gray-100 font-medium"
-            >
-              Actions
-            </button>
-            {showBulkActionsMenu && (
-              <div className="absolute right-0 mt-2 w-64 bg-section border border-gray-border rounded-md shadow-lg z-50">
-                <ul className="py-1">
-                  <li>
-                    <div className="px-4 py-2 text-sm font-semibold text-gray-500">Assign Group</div>
-                    <ul className="max-h-40 overflow-y-auto">
-                      {groups.map(group => (
-                        <li key={group.id}>
-                          <button
-                            onClick={() => {
-                              handleBulkAssignGroup(group.id);
-                              setShowBulkActionsMenu(false);
-                            }}
-                            className="w-full text-left px-6 py-2 text-gray-800 hover:bg-gray-100"
-                          >
-                            {group.name}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </li>
-                  <li className="border-t border-gray-200">
-                    <button
-                      onClick={() => {
-                        handleBulkChangeStatus('active');
-                        setShowBulkActionsMenu(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center"
-                    >
-                      <Check className="mr-3 h-4 w-4" />
-                      <span>Activate</span>
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      onClick={() => {
-                        handleBulkChangeStatus('inactive');
-                        setShowBulkActionsMenu(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center"
-                    >
-                      <X className="mr-3 h-4 w-4" />
-                      <span>Deactivate</span>
-                    </button>
-                  </li>
-                  <li className="border-t border-gray-200">
-                    <button
-                      onClick={() => {
-                        handleBulkExport();
-                        setShowBulkActionsMenu(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center"
-                    >
-                      <Download className="mr-3 h-4 w-4" />
-                      <span>Export to CSV</span>
-                    </button>
-                  </li>
-                  <li className="border-t border-gray-200">
-                    <button
-                      onClick={() => {
-                        handleBulkDelete();
-                        setShowBulkActionsMenu(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center"
-                    >
-                      <Trash2 className="mr-3 h-4 w-4" />
-                      <span>Delete</span>
-                    </button>
-                  </li>
-                </ul>
-              </div>
-            )}
-          </div>
+        <div className="flex-grow"></div>
+        <div className="relative mr-2" ref={menuRef}>
           <button
-            onClick={() => setSelectedPlayers(new Set())}
-            className="bg-white bg-opacity-20 text-white px-4 py-2 rounded-md hover:bg-opacity-30"
+            onClick={() => setShowBulkActionsMenu(!showBulkActionsMenu)}
+            className="bg-white text-primary px-4 py-2 rounded-md hover:bg-gray-100 font-medium transition-colors duration-150"
           >
-            Clear
+            Actions
           </button>
+          {showBulkActionsMenu && (
+            <div className="absolute right-0 mt-2 w-64 bg-section border border-gray-border rounded-md shadow-lg z-50">
+              <ul className="py-1">
+                <li>
+                  <button
+                    onClick={() => {
+                      handleBulkExport();
+                      setShowBulkActionsMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center transition-colors duration-150"
+                  >
+                    <Download className="mr-3 h-4 w-4" />
+                    <span>Download CSV</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1052,49 +1053,51 @@ export default function PlayersSection({ user, db }) {
   return (
     <div className="section-container">
       <div className="section-content-wrapper space-y-6">
-        {/* Header with title and Add Player button */}
+        {/* Header with title */}
         <div className="flex justify-between items-center">
           <h2 className="section-title">{studentLabelPlural} of {academy.name}</h2>
-          <button
-            onClick={handleAddPlayer}
-            className="btn-primary"
-          >
-            <Plus className="mr-2 h-5 w-5" />
-            <span>Add New {studentLabelSingular}</span>
-          </button>
         </div>
 
       <div className="content-card-responsive">
       <LoadingBar loading={loading} />
 
-      {/* Bulk Actions Toolbar */}
-      {selectedPlayers.size > 0 && <BulkActionsToolbar />}
-
-      {/* Filters Section */}
-      <div className="flex items-center space-x-4 mb-4 p-4 bg-app rounded-lg">
-        <div className="flex items-center space-x-4">
-          <FilterMenu />
-          {(activeFilterCount > 0 || searchQuery) && (
-            <button onClick={handleClearFilters} className="flex items-center text-sm text-red-600 hover:underline">
-              <X className="h-4 w-4 mr-1" />
-              Clear
-            </button>
-          )}
-        </div>
-        <div className="relative flex-grow ml-auto">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
+      {/* Search, Filters, and Add Button OR Bulk Actions Toolbar */}
+      {selectedPlayers.size > 0 ? (
+        <BulkActionsToolbar />
+      ) : (
+        <div className="flex items-center mb-4 bg-app rounded-lg h-[72px]">
+          <div className="relative" style={{ width: '280px' }}>
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              id="searchFilter"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={`Search ${players.length} ${players.length === 1 ? studentLabelSingular : studentLabelPlural}...`}
+              className="block w-full pl-10 pr-3 py-2 border border-gray-border focus:outline-none focus:ring-primary focus:border-primary rounded-md"
+            />
           </div>
-          <input
-            type="text"
-            id="searchFilter"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={`Search ${studentLabelSingular}...`}
-            className="block w-full pl-10 pr-3 py-2 border-gray-border focus:outline-none focus:ring-primary focus:border-primary rounded-md"
-          />
+          <div className="flex items-center ml-2 space-x-4">
+            <FilterMenu />
+            {(activeFilterCount > 0 || searchQuery) && (
+              <button onClick={handleClearFilters} className="flex items-center text-sm text-red-600 hover:underline transition-colors duration-150">
+                <X className="h-4 w-4 mr-1" />
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="flex-grow"></div>
+          <button
+            onClick={handleAddPlayer}
+            className="btn-primary whitespace-nowrap transition-colors duration-150"
+          >
+            <Plus className="mr-2 h-5 w-5" />
+            <span>New {studentLabelSingular}</span>
+          </button>
         </div>
-      </div>
+      )}
       {loading ? (
         <p>Loading {studentLabelPlural.toLowerCase()}...</p>
       ) : error ? (
@@ -1107,75 +1110,81 @@ export default function PlayersSection({ user, db }) {
           <div className="overflow-x-auto hidden md:block">
             <table className="min-w-full bg-section">
               <thead>
-                <tr>
-                  <th className="py-2 px-4 border-b text-left table-header w-12">
-                    <input
-                      type="checkbox"
-                      checked={selectedPlayers.size === filteredAndSortedPlayers.length && filteredAndSortedPlayers.length > 0}
-                      onChange={handleSelectAll}
-                      className="h-4 w-4 text-primary border-gray-300 rounded"
-                    />
+                <tr className="h-14">
+                  <th className="px-4 border-b text-left table-header w-12">
+                    <div className="flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedPlayers.size === filteredAndSortedPlayers.length && filteredAndSortedPlayers.length > 0}
+                        onChange={handleSelectAll}
+                        className="h-4 w-4 text-primary border-gray-300 rounded"
+                      />
+                    </div>
                   </th>
-                  <th className="py-2 px-4 border-b text-left table-header">
+                  <th className="pr-4 border-b text-left table-header">
                     <button onClick={() => handleSort('name')} className="table-header flex items-center">
-                      Name {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />)}
+                      {studentLabelSingular} {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? <ArrowUp className="ml-2 h-4 w-4" /> : <ArrowDown className="ml-2 h-4 w-4" />)}
                     </button>
                   </th>
-                  <th className="py-2 px-4 border-b text-left table-header">ID</th>
-                  <th className="py-2 px-4 border-b text-left table-header">Group</th>
-                  <th className="py-2 px-4 border-b text-left table-header">Tier</th>
-                  <th className="py-2 px-4 border-b text-left table-header">Tutor</th>
-                  <th className="py-2 px-4 border-b text-right table-header"></th>
+                  <th className="px-4 border-b text-left table-header">Group</th>
+                  <th className="px-4 border-b text-left table-header">Location</th>
+                  <th className="px-4 border-b text-left table-header">Payment Status</th>
+                  <th className="px-4 border-b text-right table-header"></th>
                 </tr>
               </thead>
               <tbody>
                 {filteredAndSortedPlayers.map(player => (
-                  <tr key={player.id} className="group hover:bg-gray-100 cursor-pointer table-row-hover" onClick={() => handleRowClick(player)}>
-                    <td className="py-2 px-4 border-b table-cell w-12" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={selectedPlayers.has(player.id)}
-                        onChange={() => handleSelectPlayer(player.id)}
-                        className="h-4 w-4 text-primary border-gray-300 rounded"
-                      />
+                  <tr key={player.id} className="h-14 group hover:bg-gray-100 cursor-pointer table-row-hover transition-colors duration-150" onClick={() => handleRowClick(player)}>
+                    <td className="px-4 border-b table-cell w-12" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedPlayers.has(player.id)}
+                          onChange={() => handleSelectPlayer(player.id)}
+                          className="h-4 w-4 text-primary border-gray-300 rounded"
+                        />
+                      </div>
                     </td>
-                    <td className="py-2 px-4 border-b table-cell">
+                    <td className="pr-4 border-b table-cell">
                       <div className="flex items-center space-x-4">
                         <Avatar player={player} />
                         <span className="font-medium text-gray-800 table-cell-truncate">{player.name} {player.lastName}</span>
-                        <ContactIcon value={player.email} icon={Mail} />
-                        <ContactIcon value={player.contactPhone} icon={Phone} />
                       </div>
                     </td>
-                    <td className="py-2 px-4 border-b table-cell">
-                      <span className="table-cell-truncate">{player.studentId || 'N/A'}</span>
-                    </td>
-                    <td className="py-2 px-4 border-b table-cell">
+                    <td className="px-4 border-b table-cell">
                       <span className="table-cell-truncate">{player.groupName || 'N/A'}</span>
                     </td>
-                    <td className="py-2 px-4 border-b table-cell">
-                      <span className="table-cell-truncate">{player.tierName || 'N/A'}</span>
+                    <td className="px-4 border-b table-cell">
+                      <span className="table-cell-truncate">{player.locationName || 'N/A'}</span>
                     </td>
-                    <td className="py-2 px-4 border-b table-cell">
-                      {player.tutor ? (
-                        <div className="flex items-center space-x-4">
-                          <span className="table-cell-truncate">{player.tutor.name} {player.tutor.lastName}</span>
-                          <ContactIcon value={player.tutor.email} icon={Mail} />
-                          <ContactIcon value={player.tutor.contactPhone} icon={Phone} />
+                    <td className="px-4 border-b table-cell">
+                      <span className={`table-cell-truncate ${player.paymentStatus === 'Overdue' ? 'text-red-600 font-medium' : player.paymentStatus === 'Paid' ? 'text-green-600 font-medium' : ''}`}>
+                        {player.paymentStatus || 'N/A'}
+                      </span>
+                    </td>
+                    <td className="px-4 border-b text-right table-cell" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-2">
+                        {player.contactPhone && (
+                          <div className="w-9 h-9 flex items-center justify-center relative transition-colors duration-150">
+                            <ContactIcon value={player.contactPhone} icon={Phone} />
+                          </div>
+                        )}
+                        {player.email && (
+                          <div className="w-9 h-9 flex items-center justify-center relative transition-colors duration-150">
+                            <ContactIcon value={player.email} icon={Mail} />
+                          </div>
+                        )}
+                        <div className="w-9 h-9 flex items-center justify-center">
+                          <button
+                            onClick={(e) => handleOpenActionsMenu(player, e)}
+                            className="p-2 rounded-full hover:bg-gray-200 focus:outline-none transition-colors duration-150"
+                            aria-label={`Actions for ${player.name} ${player.lastName}`}
+                          >
+                            <MoreVertical className="h-5 w-5 text-gray-500" />
+                          </button>
                         </div>
-                      ) : <span className="table-cell-truncate">N/A</span>}
+                      </div>
                     </td>
-                    <td className="py-2 px-4 border-b text-right table-cell">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity relative">
-                      <button
-                        onClick={(e) => handleOpenActionsMenu(player, e)}
-                        className="p-1 rounded-full hover:bg-gray-200 focus:outline-none"
-                        aria-label={`Actions for ${player.name} ${player.lastName}`}
-                      >
-                        <MoreVertical className="h-5 w-5 text-gray-500" />
-                      </button>
-                    </div>
-                  </td>
                   </tr>
                 ))}
               </tbody>
@@ -1257,36 +1266,32 @@ export default function PlayersSection({ user, db }) {
       {isDrawerOpen && (
         <>
           <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"
+            className={`fixed inset-0 bg-black z-40 transition-opacity duration-300 ease-out ${isDrawerAnimating ? 'opacity-32' : 'opacity-0'}`}
             onClick={handleCloseDrawer}
+            style={{ opacity: isDrawerAnimating ? 0.32 : 0 }}
           />
           <div
             id="player-form-drawer"
-            className="fixed top-0 right-0 h-full w-full md:w-2/3 lg:w-1/2 bg-app shadow-2xl z-50 overflow-y-auto transform transition-transform"
-            style={{
-              transform: isDrawerOpen ? 'translateX(0)' : 'translateX(100%)',
-              transition: 'transform 0.3s ease-in-out'
-            }}
+            className={`fixed top-0 right-0 h-full w-full bg-app shadow-2xl z-50 overflow-y-auto transform transition-transform duration-300 ${isDrawerAnimating ? 'translate-x-0' : 'translate-x-full'}`}
+            style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)', maxWidth: '584px' }}
           >
             <div className="sticky top-0 bg-app border-b border-gray-border z-10 px-4 md:px-6 py-4 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-800">Add New {studentLabelSingular}</h2>
               <button
                 onClick={handleCloseDrawer}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-150"
                 aria-label="Close drawer"
               >
                 <X className="h-6 w-6 text-gray-600" />
               </button>
             </div>
-            <div className="p-4 md:p-6">
-              <PlayerForm
-                user={user}
-                academy={academy}
-                db={db}
-                membership={membership}
-                onComplete={handlePlayerAdded}
-              />
-            </div>
+            <PlayerForm
+              user={user}
+              academy={academy}
+              db={db}
+              membership={membership}
+              onComplete={handlePlayerAdded}
+            />
             <div id="player-form-modal-root"></div>
           </div>
         </>
@@ -1296,72 +1301,79 @@ export default function PlayersSection({ user, db }) {
       {isDetailDrawerOpen && (
         <>
           <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"
+            className={`fixed inset-0 bg-black z-40 transition-opacity duration-300 ease-out ${isDetailDrawerAnimating ? 'opacity-32' : 'opacity-0'}`}
             onClick={handleCloseDetailDrawer}
+            style={{ opacity: isDetailDrawerAnimating ? 0.32 : 0 }}
           />
           <div
             id="player-form-drawer"
-            className="fixed top-0 right-0 h-full w-full md:w-2/3 lg:w-1/2 bg-app shadow-2xl z-50 overflow-y-auto transform transition-transform"
-            style={{
-              transform: isDetailDrawerOpen ? 'translateX(0)' : 'translateX(100%)',
-              transition: 'transform 0.3s ease-in-out'
-            }}
+            className={`fixed top-0 right-0 h-full w-full bg-app shadow-2xl z-50 overflow-y-auto transform transition-transform duration-300 ${isDetailDrawerAnimating ? 'translate-x-0' : 'translate-x-full'}`}
+            style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)', maxWidth: '584px' }}
           >
-            <div className="sticky top-0 bg-app border-b border-gray-border z-10 px-4 md:px-6 py-4 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-800">
-                {drawerMode === 'edit'
-                  ? `Edit ${studentLabelSingular}`
-                  : selectedPlayer ? `${selectedPlayer.name} ${selectedPlayer.lastName}` : 'Loading...'}
-              </h2>
-              <div className="flex items-center space-x-2">
-                {selectedPlayer && drawerMode === 'detail' && (
-                  <button
-                    onClick={handleEditPlayer}
-                    className="flex items-center px-3 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-hover transition-colors"
-                  >
-                    <Edit className="mr-2 h-4 w-4" />
-                    <span>Edit</span>
-                  </button>
-                )}
-                <button
-                  onClick={handleCloseDetailDrawer}
-                  className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                  aria-label="Close drawer"
-                >
-                  <X className="h-6 w-6 text-gray-600" />
-                </button>
-              </div>
-            </div>
-            <div className="p-4 md:p-6">
-              {loadingDetail || !selectedPlayer ? (
-                <div className="flex items-center justify-center py-20">
-                  <div className="flex flex-col items-center space-y-3">
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-                    <p className="text-gray-600">Loading {studentLabelSingular.toLowerCase()} details...</p>
+            <div className="bg-app px-6 pt-6 pb-4">
+              {drawerMode === 'edit' ? (
+                <h2 className="text-2xl font-bold text-gray-800">Edit {studentLabelSingular}</h2>
+              ) : selectedPlayer && (
+                <div className="relative">
+                  <div className="flex items-center gap-4">
+                    {selectedPlayer.photoURL ? (
+                      <img src={selectedPlayer.photoURL} alt={studentLabelSingular} className="w-[72px] h-[72px] rounded-full object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-[72px] h-[72px] rounded-full bg-app flex items-center justify-center flex-shrink-0">
+                        <span className="text-3xl font-bold text-gray-dark">
+                          {selectedPlayer.name ? selectedPlayer.name.charAt(0).toUpperCase() : '?'}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h2 className="font-bold text-gray-800 truncate leading-8" style={{ fontSize: '24px', height: '32px' }}>
+                        {selectedPlayer.name} {selectedPlayer.lastName}
+                      </h2>
+                      <p className="text-gray-600 leading-6" style={{ fontSize: '16px', height: '24px' }}>
+                        {selectedPlayer.groupName || 'No group'}
+                      </p>
+                    </div>
                   </div>
+                  {drawerMode === 'detail' && (
+                    <button
+                      onClick={handleEditPlayer}
+                      className="absolute top-0 right-0 px-4 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-hover transition-colors duration-150"
+                      style={{ height: '36px' }}
+                    >
+                      Edit
+                    </button>
+                  )}
                 </div>
-              ) : drawerMode === 'edit' ? (
-                <PlayerForm
-                  user={user}
-                  academy={academy}
-                  db={db}
-                  membership={membership}
-                  playerToEdit={selectedPlayer}
-                  onComplete={handlePlayerUpdated}
-                />
-              ) : (
-                <PlayerDetail
-                  player={selectedPlayer}
-                  onMarkAsPaid={handleMarkProductAsPaid}
-                  onRemoveProduct={handleRemoveProduct}
-                  academy={academy}
-                  activeTab={activeTab}
-                  onTabChange={setActiveTab}
-                  paymentPage={paymentPage}
-                  onPaymentPageChange={setPaymentPage}
-                />
               )}
             </div>
+            {loadingDetail || !selectedPlayer ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="flex flex-col items-center space-y-3">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+                  <p className="text-gray-600">Loading {studentLabelSingular.toLowerCase()} details...</p>
+                </div>
+              </div>
+            ) : drawerMode === 'edit' ? (
+              <PlayerForm
+                user={user}
+                academy={academy}
+                db={db}
+                membership={membership}
+                playerToEdit={selectedPlayer}
+                onComplete={handlePlayerUpdated}
+              />
+            ) : (
+              <PlayerDetail
+                player={selectedPlayer}
+                onMarkAsPaid={handleMarkProductAsPaid}
+                onRemoveProduct={handleRemoveProduct}
+                academy={academy}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                paymentPage={paymentPage}
+                onPaymentPageChange={setPaymentPage}
+              />
+            )}
             <div id="player-form-modal-root"></div>
           </div>
         </>
