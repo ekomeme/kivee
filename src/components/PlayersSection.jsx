@@ -633,6 +633,9 @@ export default function PlayersSection({ user, db }) {
   };
 
   const ensureSubscriptionPaymentsAreCurrent = async (playerData, tiersMap, playerRef) => {
+    // Check if auto-renewal is enabled (default to true for backward compatibility)
+    const autoRenew = playerData.autoRenew !== undefined ? playerData.autoRenew : true;
+
     const payments = playerData.oneTimeProducts || [];
     const groupedByTier = new Map();
 
@@ -647,27 +650,95 @@ export default function PlayersSection({ user, db }) {
       });
 
     let updated = false;
-    const newPayments = [...payments];
+    let newPayments = [...payments];
     const now = new Date();
 
     groupedByTier.forEach((list, tierId) => {
       list.sort((a, b) => (toDateSafe(a.payment.dueDate) || new Date()) - (toDateSafe(b.payment.dueDate) || new Date()));
-      let lastDueDate = list[list.length - 1].payment.dueDate;
-      const tierDetails = list[list.length - 1].tier;
 
-      let nextCycleStart = addCycleToDate(lastDueDate, tierDetails.pricingModel);
-      while (nextCycleStart && nextCycleStart <= now) {
-        newPayments.push({
-          paymentFor: 'tier',
-          itemId: tierId,
-          itemName: tierDetails.name,
-          amount: tierDetails.price,
-          dueDate: nextCycleStart,
-          status: 'unpaid',
-        });
+      // Find the actual start date - it's the earliest UNPAID payment's dueDate
+      // This is important because when a user changes the start date, the earliest unpaid payment reflects the new start date
+      const unpaidPayments = list.filter(({ payment }) => payment.status === 'unpaid');
+      if (unpaidPayments.length === 0) return; // All paid, nothing to do
+
+      const earliestUnpaidDate = toDateSafe(unpaidPayments[0].payment.dueDate) || new Date();
+
+      // CLEANUP: Remove any UNPAID tier payments that have a dueDate BEFORE the earliest unpaid payment
+      // This handles the case where the user changed the start date from an earlier date to a later date
+      // Example: Changed from 2015 to 2025, so we remove all unpaid payments from 2015-2024
+      // IMPORTANT: Always keep PAID payments regardless of date
+      const paymentsToKeep = newPayments.filter(p => {
+        if (p.paymentFor !== 'tier' || p.itemId !== tierId) return true; // Keep non-tier payments
+        if (p.status === 'paid') return true; // ALWAYS keep paid payments
+        const paymentDate = toDateSafe(p.dueDate);
+        if (!paymentDate) return true; // Keep if no date
+        return paymentDate >= earliestUnpaidDate; // Only keep unpaid payments on or after the earliest unpaid date
+      });
+
+      if (paymentsToKeep.length !== newPayments.length) {
+        newPayments = paymentsToKeep;
         updated = true;
-        lastDueDate = nextCycleStart;
-        nextCycleStart = addCycleToDate(lastDueDate, tierDetails.pricingModel);
+      }
+
+      // Re-filter the list to only include payments that weren't removed
+      const currentTierPayments = newPayments
+        .filter(p => p.paymentFor === 'tier' && p.itemId === tierId)
+        .sort((a, b) => (toDateSafe(a.dueDate) || new Date()) - (toDateSafe(b.dueDate) || new Date()));
+
+      if (currentTierPayments.length === 0) return; // No payments left for this tier
+
+      let lastDueDate = currentTierPayments[currentTierPayments.length - 1].dueDate;
+      const tierDetails = tiersMap.get(tierId);
+      if (!tierDetails) return;
+
+      // Use the amount, priceVariant, and billingPeriod from the FIRST payment (oldest)
+      // The first payment has the correct amount from when the tier was assigned
+      const firstPayment = currentTierPayments[0];
+      const correctAmount = firstPayment.amount || tierDetails.price;
+      const correctPriceVariant = firstPayment.priceVariant || null;
+      const correctBillingPeriod = firstPayment.billingPeriod || tierDetails.pricingModel;
+
+      // FIX EXISTING PAYMENTS: Update any existing tier payments that have incorrect amount (0 or null)
+      currentTierPayments.forEach((payment) => {
+        const paymentIndex = newPayments.findIndex(p =>
+          p.paymentFor === 'tier' &&
+          p.itemId === tierId &&
+          p.dueDate === payment.dueDate
+        );
+
+        if (paymentIndex !== -1) {
+          const currentPayment = newPayments[paymentIndex];
+          // If the payment has amount 0 or null, fix it
+          if (!currentPayment.amount || currentPayment.amount === 0) {
+            newPayments[paymentIndex] = {
+              ...currentPayment,
+              amount: correctAmount,
+              billingPeriod: correctBillingPeriod,
+              priceVariant: correctPriceVariant,
+            };
+            updated = true;
+          }
+        }
+      });
+
+      // GENERATE NEW PAYMENTS: Create missing payments for past cycles (only if auto-renewal is enabled)
+      if (autoRenew) {
+        let nextCycleStart = addCycleToDate(lastDueDate, tierDetails.pricingModel);
+        while (nextCycleStart && nextCycleStart <= now) {
+          newPayments.push({
+            paymentFor: 'tier',
+            itemId: tierId,
+            itemName: tierDetails.name,
+            amount: correctAmount,
+            billingPeriod: correctBillingPeriod,
+            priceVariant: correctPriceVariant,
+            dueDate: nextCycleStart,
+            status: 'unpaid',
+          });
+          updated = true;
+          lastDueDate = nextCycleStart;
+          nextCycleStart = addCycleToDate(lastDueDate, tierDetails.pricingModel);
+        }
       }
     });
 

@@ -36,7 +36,6 @@ export default function TierFormPage({ user, db }) {
   const [classesPerWeek, setClassesPerWeek] = useState('');
   const [classDuration, setClassDuration] = useState('');
   const [classLimitPerCycle, setClassLimitPerCycle] = useState('');
-  const [autoRenew, setAutoRenew] = useState(true);
   const [requiresEnrollmentFee, setRequiresEnrollmentFee] = useState(false);
   const [status, setStatus] = useState('active');
   const [differentPricesByLocation, setDifferentPricesByLocation] = useState(false);
@@ -102,7 +101,6 @@ export default function TierFormPage({ user, db }) {
           setClassesPerWeek(tierData.classesPerWeek || '');
           setClassDuration(tierData.classDuration || '');
           setClassLimitPerCycle(tierData.classLimitPerCycle || '');
-          setAutoRenew(tierData.autoRenew !== undefined ? tierData.autoRenew : true);
           setRequiresEnrollmentFee(tierData.requiresEnrollmentFee || false);
           setStatus(tierData.status || 'active');
 
@@ -265,7 +263,6 @@ export default function TierFormPage({ user, db }) {
       classesPerWeek: Number(classesPerWeek) || 0,
       classDuration: Number(classDuration) || 0,
       classLimitPerCycle: classLimitPerCycle ? Number(classLimitPerCycle) : null,
-      autoRenew,
       requiresEnrollmentFee,
       status,
       academyId: academy.id,
@@ -868,63 +865,6 @@ export default function TierFormPage({ user, db }) {
               </div>
             </div>
 
-            {/* Advanced Settings Accordion */}
-            <div className="pt-4 border-t">
-              <button
-                type="button"
-                onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
-                className="w-full flex items-center justify-between py-3 px-4 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors"
-              >
-                <h3 className="text-base font-semibold text-gray-900">Advanced settings</h3>
-                {showAdvancedSettings ? (
-                  <ChevronUp className="h-5 w-5 text-gray-500" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-gray-500" />
-                )}
-              </button>
-
-              {showAdvancedSettings && (
-                <div className="space-y-4 mt-4 px-4">
-                  <label htmlFor="autoRenew" className="flex items-center justify-between cursor-pointer" onClick={(e) => e.stopPropagation()}>
-                    <span className="text-sm font-medium text-gray-700">
-                      Auto-renew subscription
-                    </span>
-                    <div className="relative">
-                      <input
-                        id="autoRenew"
-                        type="checkbox"
-                        checked={autoRenew}
-                        onChange={(e) => {
-                          setAutoRenew(e.target.checked);
-                        }}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                    </div>
-                  </label>
-
-                  {isEditing && (
-                    <label htmlFor="status" className="flex items-center justify-between cursor-pointer" onClick={(e) => e.stopPropagation()}>
-                      <span className="text-sm font-medium text-gray-700">
-                        Active status
-                      </span>
-                      <div className="relative">
-                        <input
-                          id="status"
-                          type="checkbox"
-                          checked={status === 'active'}
-                          onChange={(e) => {
-                            setStatus(e.target.checked ? 'active' : 'inactive');
-                          }}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                      </div>
-                    </label>
-                  )}
-                </div>
-              )}
-            </div>
 
             {/* Error Message */}
             {tierError && <p className="text-red-500 text-sm">{tierError}</p>}

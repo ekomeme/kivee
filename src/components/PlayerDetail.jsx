@@ -29,6 +29,62 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
     ? [...subscriptionPayments].sort((a, b) => toDateSafe(a.dueDate) - toDateSafe(b.dueDate))[0]
     : null;
 
+  // Helper to calculate expiry date (same logic as getExpiryInfo)
+  const calculateExpiryDate = (payment) => {
+    if (!payment?.dueDate) return null;
+    const pricingModel = payment.tierDetails?.pricingModel || payment.billingPeriod;
+    if (!pricingModel) return toDateSafe(payment.dueDate);
+
+    const base = toDateSafe(payment.dueDate);
+    if (!base) return null;
+    const result = new Date(base);
+    switch (pricingModel) {
+      case 'monthly':
+        result.setMonth(result.getMonth() + 1);
+        break;
+      case 'semi-annual':
+        result.setMonth(result.getMonth() + 6);
+        break;
+      case 'annual':
+        result.setFullYear(result.getFullYear() + 1);
+        break;
+      default:
+        break;
+    }
+    return result;
+  };
+
+  // Calculate renewal/completion date based on auto-renewal setting
+  // If auto-renewal is enabled: show next renewal date
+  // If auto-renewal is disabled: show plan completion date (expiry of last payment)
+  const autoRenewEnabled = player.autoRenew !== undefined ? player.autoRenew : true; // Default to true for backward compatibility
+
+  const renewalInfo = (() => {
+    if (!subscriptionPayments.length) return { date: null, label: 'Next renewal' };
+
+    if (autoRenewEnabled) {
+      // AUTO-RENEWAL ENABLED: Show next renewal date
+      // If there are unpaid payments: show expiry date of most recent unpaid
+      // If all are paid: show expiry date of most recent paid (when next payment will be generated)
+      const mostRecentUnpaid = subscriptionPayments.find(p => p.status === 'unpaid');
+      if (mostRecentUnpaid) {
+        return { date: calculateExpiryDate(mostRecentUnpaid), label: 'Next renewal' };
+      }
+
+      const mostRecentPaid = subscriptionPayments.find(p => p.status === 'paid');
+      if (mostRecentPaid) {
+        return { date: calculateExpiryDate(mostRecentPaid), label: 'Next renewal' };
+      }
+
+      return { date: null, label: 'Next renewal' };
+    } else {
+      // AUTO-RENEWAL DISABLED: Show plan completion date (expiry of last payment)
+      // Find the payment with the latest due date (most recent chronologically)
+      const lastPayment = subscriptionPayments[0]; // Already sorted by most recent first
+      return { date: calculateExpiryDate(lastPayment), label: 'Plan ends' };
+    }
+  })();
+
   const combinedPayments = [...subscriptionPayments, ...productPayments].sort((a, b) => {
     const da = a.dueDate || a.paidAt || (a.productDetails ? new Date() : null);
     const db = b.dueDate || b.paidAt || (b.productDetails ? new Date() : null);
@@ -347,12 +403,14 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
                   <p className="text-base font-medium text-gray-900">{earliestSubscription ? formatDate(earliestSubscription.dueDate) : 'N/A'}</p>
                 </div>
                 <div className="card-info h-[72px]">
-                  <p className="text-sm text-gray-500 mb-1">Paid amount</p>
-                  <p className="text-base font-medium text-gray-900">$ 20,000.00</p>
+                  <p className="text-sm text-gray-500 mb-1">Outstanding Payments</p>
+                  <p className="text-base font-medium text-gray-900">
+                    {player.oneTimeProducts?.filter(p => p.status === 'unpaid').length || 0}
+                  </p>
                 </div>
                 <div className="card-info h-[72px]">
-                  <p className="text-sm text-gray-500 mb-1">Next renewal</p>
-                  <p className="text-base font-medium text-gray-900">March 24, 2026</p>
+                  <p className="text-sm text-gray-500 mb-1">{renewalInfo.label}</p>
+                  <p className="text-base font-medium text-gray-900">{renewalInfo.date ? formatDate(renewalInfo.date) : 'N/A'}</p>
                 </div>
               </div>
             ) : (

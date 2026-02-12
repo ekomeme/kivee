@@ -73,6 +73,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
   const [selectedPlan, setSelectedPlan] = useState(null); // This will hold the selected plan object from react-select
   const [selectedPriceVariant, setSelectedPriceVariant] = useState(null); // Selected price variant for the tier
   const [planStartDate, setPlanStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [autoRenew, setAutoRenew] = useState(true); // Auto-renewal enabled by default
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [productCart, setProductCart] = useState([]); // Cart: [{ productId, quantity }]
   const [notes, setNotes] = useState('');
@@ -402,6 +403,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
       setGroupId(playerToEdit.groupId || '');
       setPlayerStatus(playerToEdit.status || 'active');
       setLocationId(playerToEdit.locationId || '');
+      setAutoRenew(playerToEdit.autoRenew !== undefined ? playerToEdit.autoRenew : true); // Default to true for backward compatibility
 
       // Tutor Info
       if (playerToEdit.tutorId && playerToEdit.tutor) {
@@ -1048,8 +1050,12 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
           existingTierPayment.amount !== selectedPriceVariant.variant.price
         );
 
-        // Plan changed if: plan ID changed OR price variant changed
-        const planChanged = planIdChanged || priceVariantChanged;
+        // Check if start date changed
+        const existingStartDate = existingPlanStartDate;
+        const startDateChanged = existingStartDate && planStartDate !== existingStartDate;
+
+        // Plan changed if: plan ID changed OR price variant changed OR start date changed
+        const planChanged = planIdChanged || priceVariantChanged || startDateChanged;
 
         // If plan changed, remove all unpaid tier payments from old plan
         if (planChanged) {
@@ -1108,17 +1114,6 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
               status: 'unpaid',
           };
           finalProductsData.push(firstPayment);
-        } else {
-          // If plan didn't change, just update the start date of unpaid tier payments
-          finalProductsData = finalProductsData.map(item => {
-              if (item.paymentFor === 'tier' && item.status === 'unpaid' && item.itemId === id) {
-                  return {
-                      ...item,
-                      dueDate: planStartDate
-                  };
-              }
-              return item;
-          });
         }
     } else if (playerToEdit?.plan && !selectedPlan) {
         // Plan was removed, delete all unpaid tier payments
@@ -1150,6 +1145,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
       locationId: locationId || null,
       groupId: groupId || null,
       plan: planData,
+      autoRenew: autoRenew, // Auto-renewal setting
       oneTimeProducts: finalProductsData,
       notes: sanitizedNotes,
       academyId: academyId,
@@ -1481,12 +1477,12 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
             {playerToEdit?.plan ? (
               <>
                 {(() => {
-                  // Check if plan is unpaid by looking at payment records
+                  // Check if any payment has been paid
                   const tierPayments = (playerToEdit.oneTimeProducts || []).filter(p => p.paymentFor === 'tier');
-                  const hasUnpaidPayment = tierPayments.some(p => p.status === 'unpaid');
+                  const hasPaidPayment = tierPayments.some(p => p.status === 'paid');
 
-                  if (hasUnpaidPayment) {
-                    // Allow editing plan, billing type, and start date if plan is unpaid
+                  if (!hasPaidPayment) {
+                    // Allow editing plan, billing type, and start date only if NO payments have been paid
                     return (
                       <>
                         <div className="md:col-span-2 space-y-2">
@@ -1559,6 +1555,20 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
                           />
                           <p className="text-xs text-gray-500 mt-1">Editable while plan is unpaid</p>
+                        </div>
+
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="checkbox"
+                            id="autoRenew"
+                            checked={autoRenew}
+                            onChange={(e) => setAutoRenew(e.target.checked)}
+                            className="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                          />
+                          <label htmlFor="autoRenew" className="text-sm font-medium text-gray-700">
+                            Auto-renewal
+                          </label>
+                          <span className="text-xs text-gray-500">(Generate payments automatically)</span>
                         </div>
                       </>
                     );
@@ -1641,6 +1651,19 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
                 {selectedPlan?.value.startsWith('tier-') && (
                   <>
                     <div><label htmlFor="planStartDate" className="block text-sm font-medium text-gray-700">Start Date</label><input type="date" id="planStartDate" value={planStartDate} onChange={(e) => setPlanStartDate(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" /></div>
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        id="autoRenewNew"
+                        checked={autoRenew}
+                        onChange={(e) => setAutoRenew(e.target.checked)}
+                        className="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                      />
+                      <label htmlFor="autoRenewNew" className="text-sm font-medium text-gray-700">
+                        Auto-renewal
+                      </label>
+                      <span className="text-xs text-gray-500">(Generate payments automatically)</span>
+                    </div>
                   </>
                 )}
 

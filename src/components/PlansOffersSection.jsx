@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { doc, updateDoc, collection, query, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
-import { Plus, Edit, Trash2, MoreVertical, Package, Tag, Zap, X, Copy, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Edit, Trash2, MoreVertical, Package, Tag, Zap, X, Copy, ArrowUp, ArrowDown, CheckCircle, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingBar from './LoadingBar.jsx';
 import '../styles/sections.css';
@@ -46,7 +46,6 @@ export default function PlansOffersSection({ user, db }) {
   const [classesPerWeek, setClassesPerWeek] = useState('');
   const [classDuration, setClassDuration] = useState(''); // Duration in minutes
   const [classLimitPerCycle, setClassLimitPerCycle] = useState('');
-  const [autoRenew, setAutoRenew] = useState(true);
   const [requiresEnrollmentFee, setRequiresEnrollmentFee] = useState(false);
   const [status, setStatus] = useState('active');
   const [loadingTiers, setLoadingTiers] = useState(false);
@@ -339,7 +338,6 @@ export default function PlansOffersSection({ user, db }) {
       classesPerWeek: Number(classesPerWeek) || 0,
       classDuration: Number(classDuration) || 0, // Duration in minutes
       classLimitPerCycle: classLimitPerCycle ? Number(classLimitPerCycle) : null,
-      autoRenew,
       requiresEnrollmentFee,
       status,
       academyId: academy.id,
@@ -367,7 +365,6 @@ export default function PlansOffersSection({ user, db }) {
       setTermEndDate('');
       setClassesPerWeek('');
       setClassLimitPerCycle('');
-      setAutoRenew(true);
       setRequiresEnrollmentFee(false);
       setStatus('active');
       setEditingTier(null);
@@ -395,7 +392,6 @@ export default function PlansOffersSection({ user, db }) {
     setClassesPerWeek(tier.classesPerWeek || '');
     setClassDuration(tier.classDuration || '');
     setClassLimitPerCycle(tier.classLimitPerCycle || '');
-    setAutoRenew(tier.autoRenew === false ? false : true);
     setRequiresEnrollmentFee(tier.requiresEnrollmentFee || false);
     setStatus(tier.status || 'active');
   };
@@ -422,7 +418,6 @@ export default function PlansOffersSection({ user, db }) {
       setClassesPerWeek('');
       setClassDuration('');
       setClassLimitPerCycle('');
-      setAutoRenew(true);
       setRequiresEnrollmentFee(false);
       setStatus('active');
       setTierError(null);
@@ -605,7 +600,6 @@ export default function PlansOffersSection({ user, db }) {
         classesPerWeek: tier.classesPerWeek,
         classDuration: tier.classDuration,
         classLimitPerCycle: tier.classLimitPerCycle,
-        autoRenew: tier.autoRenew,
         requiresEnrollmentFee: tier.requiresEnrollmentFee,
         status: tier.status,
         academyId: academy.id,
@@ -630,6 +624,19 @@ export default function PlansOffersSection({ user, db }) {
     } catch (error) {
       console.error("Error duplicating tier:", error);
       toast.error("Error duplicating tier.");
+    }
+  };
+
+  const handleToggleTierStatus = async (tier) => {
+    const newStatus = tier.status === 'active' ? 'inactive' : 'active';
+    try {
+      const tierDocRef = doc(db, `${COLLECTIONS.ACADEMIES}/${academy.id}/${COLLECTIONS.TIERS}`, tier.id);
+      await updateDoc(tierDocRef, { status: newStatus });
+      fetchTiers();
+      toast.success(`Tier ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully.`);
+    } catch (error) {
+      console.error("Error updating tier status:", error);
+      toast.error("Error updating tier status.");
     }
   };
 
@@ -750,6 +757,21 @@ export default function PlansOffersSection({ user, db }) {
             <button onClick={(e) => { e.stopPropagation(); handleDuplicateTier(tier); onClose(); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center">
               <Copy className="mr-3 h-4 w-4" />
               <span>Duplicate</span>
+            </button>
+          </li>
+          <li className="text-base">
+            <button onClick={(e) => { e.stopPropagation(); handleToggleTierStatus(tier); onClose(); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center">
+              {tier.status === 'active' ? (
+                <>
+                  <XCircle className="mr-3 h-4 w-4" />
+                  <span>Deactivate</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="mr-3 h-4 w-4" />
+                  <span>Activate</span>
+                </>
+              )}
             </button>
           </li>
           <li className="text-base">
@@ -1388,11 +1410,6 @@ export default function PlansOffersSection({ user, db }) {
                     <label htmlFor="classDuration" className="block text-sm font-medium text-gray-700">Class duration (minutes)</label>
                     <input type="number" id="classDuration" value={classDuration} onChange={(e) => setClassDuration(e.target.value)} required min="0" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" placeholder="e.g., 30, 45, 60" />
                   </div>
-                </div>
-
-                <div className="flex items-center space-x-3">
-                  <input id="autoRenew" type="checkbox" checked={autoRenew} onChange={(e) => setAutoRenew(e.target.checked)} className="h-4 w-4 text-primary border-gray-300 rounded" />
-                  <label htmlFor="autoRenew" className="text-sm font-medium text-gray-700">Auto-renew</label>
                 </div>
 
                 {editingTier && (

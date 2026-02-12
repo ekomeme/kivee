@@ -688,7 +688,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-app font-sans relative overflow-x-hidden">
+    <div className="flex h-screen bg-app font-sans relative overflow-hidden">
       <AcademyProvider user={user} db={db}>
         {/* Desktop Sidebar */}
         <div className="text-gray-800 w-64 border-r border-gray-border hidden md:flex md:flex-col md:h-full">
