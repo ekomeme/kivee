@@ -1027,27 +1027,6 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
     if (selectedPlan && selectedPlan.value.startsWith('tier-')) {
         const [type, id] = selectedPlan.value.split('-');
         const tierDetails = tiers.find(t => t.id === id);
-
-        // Debug: Check what data we have
-        const tierPaymentsInFinal = finalProductsData.filter(p => p.paymentFor === 'tier');
-        console.log('🔍 DEBUG - Data sources:', {
-          hasPlayerToEdit: !!playerToEdit,
-          playerToEditProducts: playerToEdit?.products,
-          finalProductsDataTiers: tierPaymentsInFinal,
-          searchCriteria: {
-            paymentFor: 'tier',
-            status: 'unpaid',
-            itemId: id
-          },
-          tierPaymentDetails: tierPaymentsInFinal[0] ? {
-            paymentFor: tierPaymentsInFinal[0].paymentFor,
-            status: tierPaymentsInFinal[0].status,
-            itemId: tierPaymentsInFinal[0].itemId,
-            billingPeriod: tierPaymentsInFinal[0].billingPeriod,
-            amount: tierPaymentsInFinal[0].amount
-          } : 'No tier payment found'
-        });
-
         // Find ANY existing unpaid tier payment (regardless of itemId)
         // We'll replace it when the user changes plan or billing type
         const existingTierPayment = playerToEdit?.products?.find(p =>
@@ -1071,28 +1050,8 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
         // Plan changed if: plan ID changed OR price variant changed
         const planChanged = planIdChanged || priceVariantChanged;
 
-        console.log('🔍 Plan change detection:', {
-          isEditing: !!playerToEdit,
-          oldPlan: playerToEdit?.plan,
-          newPlanId: id,
-          existingPayment: existingTierPayment ? {
-            itemId: existingTierPayment.itemId,
-            billingPeriod: existingTierPayment.billingPeriod,
-            amount: existingTierPayment.amount
-          } : null,
-          newPriceVariant: selectedPriceVariant?.variant ? {
-            billingPeriod: selectedPriceVariant.variant.billingPeriod,
-            price: selectedPriceVariant.variant.price
-          } : null,
-          planIdChanged,
-          priceVariantChanged,
-          planChanged,
-          hasSelectedPriceVariant: !!selectedPriceVariant
-        });
-
         // If plan changed, remove all unpaid tier payments from old plan
         if (planChanged) {
-          console.log('❌ Removing old plan unpaid payments');
           finalProductsData = finalProductsData.filter(item =>
             !(item.paymentFor === 'tier' && item.status === 'unpaid')
           );
@@ -1100,7 +1059,6 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
 
         // Create first payment if it's a new plan or if plan changed
         const shouldCreatePayment = !playerToEdit?.plan || planChanged;
-        console.log('💰 Should create payment?', shouldCreatePayment);
 
         if (shouldCreatePayment) {
           // Get price from selected variant, or fallback to legacy price
@@ -1148,7 +1106,6 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
               dueDate: planStartDate,
               status: 'unpaid',
           };
-          console.log('✅ Creating new payment:', firstPayment);
           finalProductsData.push(firstPayment);
         } else {
           // If plan didn't change, just update the start date of unpaid tier payments
@@ -1164,17 +1121,10 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
         }
     } else if (playerToEdit?.plan && !selectedPlan) {
         // Plan was removed, delete all unpaid tier payments
-        console.log('🗑️ Plan removed, deleting unpaid tier payments');
         finalProductsData = finalProductsData.filter(item =>
           !(item.paymentFor === 'tier' && item.status === 'unpaid')
         );
     }
-
-    console.log('📊 Final state before save:', {
-      plan: planData,
-      tierPayments: finalProductsData.filter(p => p.paymentFor === 'tier'),
-      allPayments: finalProductsData.length
-    });
 
     const playerData = {
       name: sanitizedName,

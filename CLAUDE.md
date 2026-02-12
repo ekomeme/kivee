@@ -101,6 +101,57 @@ const pageSize = 10;
 const pageSize = PAGINATION.PAYMENT_ITEMS_PER_PAGE;
 ```
 
+#### Colores y Tema Visual
+**IMPORTANTE**: Usar constantes de tema en lugar de colores hardcodeados
+
+```javascript
+import { THEME, PRIMARY, STATUS, TEXT, BUTTON, BADGE } from '../config/theme';
+
+// ❌ NO hardcodear colores:
+<div style={{ color: '#03090A' }}>
+<button className="bg-red-500 hover:bg-red-600">Delete</button>
+<span style={{ backgroundColor: '#10b981', color: '#065f46' }}>Active</span>
+
+// ✅ SÍ usar constantes de tema:
+<div style={{ color: PRIMARY.MAIN }}>
+<button style={{ backgroundColor: BUTTON.DANGER_BG }}>Delete</button>
+<span style={{ backgroundColor: BADGE.SUCCESS_BG, color: BADGE.SUCCESS_TEXT }}>Active</span>
+
+// ✅ O mejor aún, usar clases Tailwind existentes:
+<button className="btn-primary">Save</button>
+<span className="badge-success">Active</span>
+```
+
+**Categorías de colores disponibles:**
+- `PRIMARY` - Colores de marca (#03090A negro principal)
+- `STATUS` - Colores semánticos (success, error, warning, info)
+- `GRAY` - Escala de grises (50-900)
+- `BACKGROUND` - Fondos de app, secciones, hover
+- `TEXT` - Jerarquía de texto (primary, secondary, muted)
+- `BORDER` - Bordes por estado (default, focus, error)
+- `BUTTON` - Variantes de botones (primary, secondary, danger, action)
+- `BADGE` - Badges de estado (success, error, warning, info)
+- `TABLE` - Colores específicos de tablas
+- `INPUT` - Estados de inputs (normal, focus, error, disabled)
+
+**Para inline styles con hex values:**
+```javascript
+import { STATUS, BUTTON } from '../config/theme';
+
+<button style={{
+  backgroundColor: BUTTON.PRIMARY_BG,    // '#03090A'
+  color: BUTTON.PRIMARY_TEXT            // '#FFFFFF'
+}}>
+```
+
+**Para Tailwind classes (preferido):**
+```javascript
+// Usar las clases personalizadas ya definidas en CSS:
+<button className="btn-primary">Primary Action</button>
+<div className="bg-section">Section content</div>
+<span className="text-primary">Important text</span>
+```
+
 ### Context de Academy
 - Usar `useAcademy()` para acceder a:
   - `academy` - Datos de la academia actual
