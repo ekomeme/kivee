@@ -187,6 +187,14 @@ svg.lucide {
   font-weight: 500;
 }
 
+/* Card components - Reusable card styles */
+
+.card-info {
+  background-color: #f3f4f6; /* gray-100 */
+  border-radius: 0.5rem; /* rounded-lg */
+  padding: 1rem; /* p-4 */
+}
+
 /* Table typography */
 .table-header {
   font-size: var(--font-size-table-header);

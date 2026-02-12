@@ -244,6 +244,26 @@ const strings = getUIStringsWithAcademy(academy);
 - `status-overdue` / `status-error` - Rojo con peso medio
 - `status-warning` - Ámbar con peso medio
 
+#### Cards de Información
+**IMPORTANTE**: Usar clase utility para cards de información repetitivos
+
+```javascript
+// ❌ NO repetir combinaciones:
+<div className="bg-gray-50 rounded-lg p-4">
+  <p className="text-sm text-gray-500">Label</p>
+  <p className="text-base font-medium">{value}</p>
+</div>
+
+// ✅ SÍ usar clase utility:
+<div className="card-info">
+  <p className="text-sm text-gray-500">Label</p>
+  <p className="text-base font-medium">{value}</p>
+</div>
+```
+
+**Clase disponible:**
+- `card-info` - Card de información con fondo gris claro, bordes redondeados y padding
+
 ### Imágenes
 - Almacenar en Firebase Storage en: `academies/${academy.id}/players/${playerId}/`
 - Generar 3 versiones:

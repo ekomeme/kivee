@@ -274,33 +274,33 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
       {activeTab === 'details' && (
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div className="bg-gray-50 rounded-lg p-4 md:col-span-2 h-[72px]">
+            <div className="card-info md:col-span-2 h-[72px]">
               <p className="text-sm text-gray-500 mb-1">Nationality</p>
               <p className="text-base font-medium text-gray-900">{formatValue(player.nationality)}</p>
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 h-[72px]">
+            <div className="card-info h-[72px]">
               <p className="text-sm text-gray-500 mb-1">Age</p>
               <p className="text-base font-medium text-gray-900">{calculateAge(player.birthday)}</p>
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 h-[72px]">
+            <div className="card-info h-[72px]">
               <p className="text-sm text-gray-500 mb-1">Gender</p>
               <p className="text-base font-medium text-gray-900">{formatValue(player.gender)}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-            <div className="bg-gray-50 rounded-lg p-4 h-[72px]">
+            <div className="card-info h-[72px]">
               <p className="text-sm text-gray-500 mb-1">Birthday</p>
               <p className="text-base font-medium text-gray-900">{formatDate(player.birthday)}</p>
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 h-[72px]">
+            <div className="card-info h-[72px]">
               <p className="text-sm text-gray-500 mb-1">{player.documentType || 'ID'}</p>
               <p className="text-base font-medium text-gray-900">{formatValue(player.documentNumber || player.studentId)}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-            <div className="bg-gray-50 rounded-lg p-4 relative h-[72px]">
+            <div className="card-info relative h-[72px]">
               <p className="text-sm text-gray-500 mb-1">Phone number</p>
               <p className="text-base font-medium text-gray-900">{formatValue(player.contactPhone)}</p>
               {player.contactPhone && (
@@ -315,7 +315,7 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
                 </button>
               )}
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 relative h-[72px]">
+            <div className="card-info relative h-[72px]">
               <p className="text-sm text-gray-500 mb-1">Email</p>
               <p className="text-base font-medium text-gray-900">{formatValue(player.email)}</p>
               {player.email && (
@@ -342,15 +342,15 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
                     <span className="px-3 py-1 bg-white bg-opacity-20 rounded-full text-sm font-medium">Active</span>
                   </div>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4 h-[72px]">
+                <div className="card-info h-[72px]">
                   <p className="text-sm text-gray-500 mb-1">Since</p>
                   <p className="text-base font-medium text-gray-900">{earliestSubscription ? formatDate(earliestSubscription.dueDate) : 'N/A'}</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4 h-[72px]">
+                <div className="card-info h-[72px]">
                   <p className="text-sm text-gray-500 mb-1">Paid amount</p>
                   <p className="text-base font-medium text-gray-900">$ 20,000.00</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4 h-[72px]">
+                <div className="card-info h-[72px]">
                   <p className="text-sm text-gray-500 mb-1">Next renewal</p>
                   <p className="text-base font-medium text-gray-900">March 24, 2026</p>
                 </div>
@@ -368,11 +368,11 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
           <h3 className="text-base font-semibold text-gray-900 mb-4">Tutor / Guardian</h3>
           {player.tutor ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="bg-gray-50 rounded-lg p-4 h-[72px]">
+              <div className="card-info h-[72px]">
                 <p className="text-sm text-gray-500 mb-1">Tutor Name</p>
                 <p className="text-base font-medium text-gray-900">{formatValue(`${player.tutor.name} ${player.tutor.lastName}`)}</p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-4 relative h-[72px]">
+              <div className="card-info relative h-[72px]">
                 <p className="text-sm text-gray-500 mb-1">Tutor Email</p>
                 <p className="text-base font-medium text-gray-900">{formatValue(player.tutor.email)}</p>
                 {player.tutor.email && (
@@ -387,7 +387,7 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
                   </button>
                 )}
               </div>
-              <div className="bg-gray-50 rounded-lg p-4 relative h-[72px]">
+              <div className="card-info relative h-[72px]">
                 <p className="text-sm text-gray-500 mb-1">Tutor Phone</p>
                 <p className="text-base font-medium text-gray-900">{formatValue(player.tutor.contactPhone)}</p>
                 {player.tutor.contactPhone && (
