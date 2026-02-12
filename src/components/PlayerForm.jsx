@@ -13,6 +13,7 @@ import en from 'i18n-nationality/langs/en.json';
 import { getLocations } from '../services/firestore';
 import { formatAcademyCurrency, toDateSafe } from '../utils/formatters';
 import { IMAGE_COMPRESSION, STORAGE_PATHS, FILE_UPLOAD } from '../config/constants';
+import { STATUS } from '../config/theme';
 
 // Register English locale for nationality adjectives
 registerLocale(en);
@@ -1454,7 +1455,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
                   option: (base, state) => ({
                     ...base,
                     fontWeight: state.data.value === '__create_new__' ? 600 : 400,
-                    color: state.data.value === '__create_new__' ? '#2563eb' : base.color,
+                    color: state.data.value === '__create_new__' ? STATUS.INFO_HOVER : base.color,
                   })
                 }}
               />
@@ -1524,7 +1525,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
                               option: (base, state) => ({
                                 ...base,
                                 fontWeight: state.data.value === '__create_new__' ? 600 : 400,
-                                color: state.data.value === '__create_new__' ? '#2563eb' : base.color,
+                                color: state.data.value === '__create_new__' ? STATUS.INFO_HOVER : base.color,
                               })
                             }}
                           />
@@ -1615,7 +1616,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
                       option: (base, state) => ({
                         ...base,
                         fontWeight: state.data.value === '__create_new__' ? 600 : 400,
-                        color: state.data.value === '__create_new__' ? '#2563eb' : base.color,
+                        color: state.data.value === '__create_new__' ? STATUS.INFO_HOVER : base.color,
                       })
                     }}
                   />

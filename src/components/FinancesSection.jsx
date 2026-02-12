@@ -179,7 +179,7 @@ export default function FinancesSection({ user, db }) {
                                 <td className="py-3 px-4 border-b table-cell">{payment.itemName}</td>
                                 <td className="py-3 px-4 border-b flex items-center gap-2 table-cell">
                                     <span>{formatAcademyCurrency(payment.amount, academy)}</span>
-                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isPaidTab ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>{isPaidTab ? 'Paid' : 'Unpaid'}</span>
+                                    <span className={`badge ${isPaidTab ? 'badge-success' : 'badge-warning'}`}>{isPaidTab ? 'Paid' : 'Unpaid'}</span>
                                 </td>
                                 <td className="py-3 px-4 border-b table-cell">{formatDate(isPaidTab ? payment.paidAt : payment.dueDate)}</td>
 
@@ -247,7 +247,7 @@ export default function FinancesSection({ user, db }) {
                                 <p className="text-xs text-gray-500">Amount</p>
                                 <div className="flex items-center gap-2">
                                     <p className="font-medium">{formatAcademyCurrency(payment.amount, academy)}</p>
-                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isPaidTab ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>{isPaidTab ? 'Paid' : 'Unpaid'}</span>
+                                    <span className={`badge text-[10px] ${isPaidTab ? 'badge-success' : 'badge-warning'}`}>{isPaidTab ? 'Paid' : 'Unpaid'}</span>
                                 </div>
                             </div>
                             <div className="bg-gray-50 rounded-md p-2">

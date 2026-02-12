@@ -208,6 +208,42 @@ const strings = getUIStringsWithAcademy(academy);
   - `section-title` para títulos de sección
 - Responsive: mobile-first, usar prefijos `md:` y `lg:` para breakpoints
 
+#### Badges de Estado (Status Badges)
+**IMPORTANTE**: Usar clases utility reutilizables en lugar de combinar Tailwind classes
+
+```javascript
+// ❌ NO repetir combinaciones de Tailwind:
+<span className="bg-green-100 text-green-800 px-2 py-0.5 text-xs font-semibold rounded-full">
+  Active
+</span>
+
+// ✅ SÍ usar clases utility reutilizables:
+<span className="badge badge-success">Active</span>
+<span className="badge badge-error">Inactive</span>
+<span className="badge badge-warning">Pending</span>
+<span className="badge badge-info">Info</span>
+<span className="badge badge-neutral">Neutral</span>
+
+// ✅ Para status text inline (sin badge):
+<span className="status-paid">Paid</span>
+<span className="status-overdue">Overdue</span>
+<span className="status-success">Success</span>
+<span className="status-error">Error</span>
+```
+
+**Clases de badge disponibles:**
+- `badge` - Clase base (siempre combinar con una variante)
+- `badge-success` - Verde (active, paid, success)
+- `badge-error` - Rojo (inactive, error, deleted)
+- `badge-warning` - Amarillo (pending, warning)
+- `badge-info` - Azul (info, processing)
+- `badge-neutral` - Gris (neutral, default)
+
+**Clases de texto de estado:**
+- `status-paid` / `status-success` - Verde con peso medio
+- `status-overdue` / `status-error` - Rojo con peso medio
+- `status-warning` - Ámbar con peso medio
+
 ### Imágenes
 - Almacenar en Firebase Storage en: `academies/${academy.id}/players/${playerId}/`
 - Generar 3 versiones:

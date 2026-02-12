@@ -986,7 +986,7 @@ export default function PlansOffersSection({ user, db }) {
                               {tierStudentCounts[tier.id] || 0}
                             </td>
                             <td className="py-3 px-4 border-b table-cell">
-                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${tier.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                              <span className={`badge ${tier.status === 'active' ? 'badge-success' : 'badge-error'}`}>
                                 {tier.status}
                               </span>
                             </td>

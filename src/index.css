@@ -19,6 +19,17 @@ html, body {
   --color-gray-dark: #4F5354;
   --color-white: #FFFFFF;
   --color-black: #03090A;
+
+  /* Status colors - mapped from theme.js */
+  --color-error: #ef4444;
+  --color-error-hover: #dc2626;
+  --color-error-light: #fef2f2;
+  --color-error-dark: #991b1b;
+  --color-success: #10b981;
+  --color-success-light: #d1fae5;
+  --color-success-dark: #065f46;
+  --color-info: #3b82f6;
+  --color-info-hover: #2563eb;
   --font-base: 'Figtree', system-ui, -apple-system, sans-serif; /* Base family for body, headings, UI */
   --font-weight-regular: 400; /* Default text */
   --font-weight-medium: 500; /* Buttons, labels */
@@ -119,6 +130,61 @@ svg.lucide {
   font-weight: var(--font-weight-bold);
   gap: 0.375rem;
   border-radius: 0.375rem;
+}
+
+/* Status Badge Styles - Reusable badge components mapped to theme colors */
+/* Use these classes instead of repeating Tailwind combinations */
+
+.badge {
+  display: inline-flex;
+  padding: 0.125rem 0.5rem; /* px-2 py-0.5 */
+  font-size: 0.75rem; /* text-xs */
+  line-height: 1.25rem; /* leading-5 */
+  font-weight: 600; /* font-semibold */
+  border-radius: 9999px; /* rounded-full */
+}
+
+.badge-success {
+  background-color: var(--color-success-light, #d1fae5); /* bg-green-100 */
+  color: var(--color-success-dark, #065f46); /* text-green-800 */
+}
+
+.badge-error {
+  background-color: var(--color-error-light, #fee2e2); /* bg-red-100 */
+  color: var(--color-error-dark, #991b1b); /* text-red-800 */
+}
+
+.badge-warning {
+  background-color: #fef3c7; /* bg-yellow-100 */
+  color: #92400e; /* text-yellow-800 */
+}
+
+.badge-info {
+  background-color: #dbeafe; /* bg-blue-100 */
+  color: #1e40af; /* text-blue-800 */
+}
+
+.badge-neutral {
+  background-color: #f3f4f6; /* bg-gray-100 */
+  color: #374151; /* text-gray-700 */
+}
+
+/* Text status colors for inline status indicators */
+.status-paid,
+.status-success {
+  color: var(--color-success, #10b981); /* text-green-600 */
+  font-weight: 500;
+}
+
+.status-overdue,
+.status-error {
+  color: var(--color-error-hover, #dc2626); /* text-red-600 */
+  font-weight: 500;
+}
+
+.status-warning {
+  color: #d97706; /* text-amber-600 */
+  font-weight: 500;
 }
 
 /* Table typography */

@@ -1179,7 +1179,7 @@ export default function PlayersSection({ user, db }) {
                       <span className="table-cell-truncate">{player.locationName || 'N/A'}</span>
                     </td>
                     <td className="px-4 border-b table-cell">
-                      <span className={`table-cell-truncate ${player.paymentStatus === 'Overdue' ? 'text-red-600 font-medium' : player.paymentStatus === 'Paid' ? 'text-green-600 font-medium' : ''}`}>
+                      <span className={`table-cell-truncate ${player.paymentStatus === 'Overdue' ? 'status-overdue' : player.paymentStatus === 'Paid' ? 'status-paid' : ''}`}>
                         {player.paymentStatus || 'N/A'}
                       </span>
                     </td>

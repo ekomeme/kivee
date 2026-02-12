@@ -198,8 +198,8 @@ export default function GroupDetailPage({ user, db }) {
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600 mb-1">Status</p>
-                  <span className={`px-3 py-1 inline-flex text-sm font-semibold rounded-full ${
-                    group.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  <span className={`badge text-sm px-3 py-1 ${
+                    group.status === 'active' ? 'badge-success' : 'badge-error'
                   }`}>
                     {group.status}
                   </span>
