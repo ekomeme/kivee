@@ -1120,7 +1120,10 @@ export default function PlayersSection({ user, db }) {
       ) : error ? (
         <p className="text-red-500">{error}</p>
       ) : filteredAndSortedPlayers.length === 0 ? (
-        <p className="text-gray-600">No {studentLabelPlural.toLowerCase()} registered yet.</p>
+        <div className="text-center p-10 text-gray-500 border-2 border-dashed rounded-lg mt-4">
+          <p>No {studentLabelPlural.toLowerCase()} registered yet.</p>
+          <p className="text-sm">Click "New {studentLabelSingular}" to get started.</p>
+        </div>
       ) : (
         <>
           {/* Desktop table */}

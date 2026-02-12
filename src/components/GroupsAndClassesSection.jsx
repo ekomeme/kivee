@@ -650,8 +650,9 @@ export default function GroupsAndClassesSection({ user, db }) {
                         );
                       })
                     ) : (
-                      <div className="border-2 border-dashed border-gray-300 rounded-md p-4 text-center text-gray-500">
-                        Empty
+                      <div className="text-center p-10 text-gray-500 border-2 border-dashed rounded-lg">
+                        <p>No sessions scheduled yet.</p>
+                        <p className="text-sm">Click "Add Session" to get started.</p>
                       </div>
                     )}
                   </div>
@@ -659,7 +660,12 @@ export default function GroupsAndClassesSection({ user, db }) {
               </div>
             );
           })}
-          {groups.length === 0 && <p className="text-gray-500">No groups available.</p>}
+          {groups.length === 0 && (
+            <div className="text-center p-10 text-gray-500 border-2 border-dashed rounded-lg mt-4">
+              <p>No groups created yet.</p>
+              <p className="text-sm">Create a group first to manage class schedules.</p>
+            </div>
+          )}
         </div>
       )}
       {activeGroupTab === 'transfers' && <div className="text-center p-10 text-gray-500 border-2 border-dashed rounded-lg mt-4"><p>Module for moving students between groups coming soon.</p></div>}

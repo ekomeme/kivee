@@ -478,14 +478,20 @@ export default function FinancesSection({ user, db }) {
                                 )}
                             </>
                         ) : (
-                            <p>No unpaid payments.</p>
+                            <div className="text-center p-10 text-gray-500 border-2 border-dashed rounded-lg mt-4">
+                                <p>No unpaid payments.</p>
+                                <p className="text-sm">All payments are up to date.</p>
+                            </div>
                         )
                     )}
                     {activeTab === 'paid' && (
                         paidPayments.length > 0 ? (
                             renderTable(paidPayments, true)
                         ) : (
-                            <p>No paid payments yet.</p>
+                            <div className="text-center p-10 text-gray-500 border-2 border-dashed rounded-lg mt-4">
+                                <p>No paid payments yet.</p>
+                                <p className="text-sm">Payments will appear here once registered.</p>
+                            </div>
                         )
                     )}
                 </div>
