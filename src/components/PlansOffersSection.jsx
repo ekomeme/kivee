@@ -880,7 +880,21 @@ export default function PlansOffersSection({ user, db }) {
       <div className="section-content-wrapper space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="section-title">Plans & Offers</h2>
-          <div />
+          {activeTab === 'tiers' && (
+            <button onClick={() => navigate('/plans/tiers/new')} className="btn-primary">
+              <Plus className="mr-2 h-5 w-5" /> Add New Tier
+            </button>
+          )}
+          {activeTab === 'products' && (
+            <button onClick={() => handleOpenProductModal()} className="btn-primary">
+              <Plus className="mr-2 h-5 w-5" /> Add New Product
+            </button>
+          )}
+          {activeTab === 'trials' && (
+            <button onClick={() => handleOpenTrialModal()} className="btn-primary">
+              <Plus className="mr-2 h-5 w-5" /> Add New Trial
+            </button>
+          )}
         </div>
 
         <div className="content-card-responsive">
@@ -915,11 +929,6 @@ export default function PlansOffersSection({ user, db }) {
           {/* Content based on active tab */}
           {activeTab === 'tiers' && (
             <>
-              <div className="flex justify-end mb-4">
-                <button onClick={() => navigate('/plans/tiers/new')} className="btn-primary">
-                  <Plus className="mr-2 h-5 w-5" /> Add New Tier
-                </button>
-              </div>
               {tiers.length === 0 ? (
                 <div className="text-center p-10 text-gray-500 border-2 border-dashed rounded-lg mt-4">
                   <p>No membership tiers registered yet.</p>
@@ -927,7 +936,7 @@ export default function PlansOffersSection({ user, db }) {
                 </div>
               ) : (
                 <>
-                  <div className="overflow-x-auto hidden md:block">
+                  <div className="overflow-x-auto hidden md:block mt-6">
                     <table className="min-w-full bg-section">
                       <thead>
                         <tr>
@@ -990,7 +999,7 @@ export default function PlansOffersSection({ user, db }) {
                       </tbody>
                     </table>
                   </div>
-                  <div className="grid gap-3 md:hidden">
+                  <div className="grid gap-3 md:hidden mt-6">
                     {getSortedTiers().map(tier => (
                       <div
                         key={tier.id}
@@ -1039,11 +1048,6 @@ export default function PlansOffersSection({ user, db }) {
           )}
           {activeTab === 'products' && (
             <>
-          <div className="flex justify-end mb-4">
-            <button onClick={() => handleOpenProductModal()} className="btn-primary">
-              <Plus className="mr-2 h-5 w-5" /> Add New Product
-            </button>
-          </div>
           {oneTimeProducts.length === 0 ? (
             <div className="text-center p-10 text-gray-500 border-2 border-dashed rounded-lg mt-4">
               <p>No one-time products created yet.</p>
@@ -1051,7 +1055,7 @@ export default function PlansOffersSection({ user, db }) {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto hidden md:block">
+              <div className="overflow-x-auto hidden md:block mt-6">
                 <table className="min-w-full bg-section">
                   <thead>
                     <tr>
@@ -1091,7 +1095,7 @@ export default function PlansOffersSection({ user, db }) {
                   </tbody>
                 </table>
               </div>
-              <div className="grid gap-3 md:hidden">
+              <div className="grid gap-3 md:hidden mt-6">
                 {oneTimeProducts.map(product => (
                   <div key={product.id} className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm relative">
                     <button
@@ -1131,11 +1135,6 @@ export default function PlansOffersSection({ user, db }) {
       {/* Trials section temporarily disabled */}
       {/* {activeTab === 'trials' && (
         <>
-          <div className="flex justify-end mb-4">
-            <button onClick={() => handleOpenTrialModal()} className="btn-primary">
-              <Plus className="mr-2 h-5 w-5" /> Add New Trial
-            </button>
-          </div>
           {trials.length === 0 ? (
             <div className="text-center p-10 text-gray-500 border-2 border-dashed rounded-lg mt-4">
               <p>No trial packages created yet.</p>
@@ -1143,7 +1142,7 @@ export default function PlansOffersSection({ user, db }) {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto hidden md:block">
+              <div className="overflow-x-auto hidden md:block mt-6">
                 <table className="min-w-full bg-section">
                   <thead>
                     <tr>
@@ -1185,7 +1184,7 @@ export default function PlansOffersSection({ user, db }) {
                   </tbody>
                 </table>
               </div>
-              <div className="grid gap-3 md:hidden">
+              <div className="grid gap-3 md:hidden mt-6">
                 {trials.map(trial => (
                   <div key={trial.id} className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm relative">
                     <button

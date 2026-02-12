@@ -5,6 +5,7 @@ import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } f
 import toast from 'react-hot-toast';
 import Select from 'react-select'; // Import Select for country codes
 import { Upload } from 'lucide-react'; // Import Upload icon
+import imageCompression from 'browser-image-compression';
 import { sanitizeText, sanitizeEmail, sanitizePhone, sanitizeNotes, sanitizeFilename, validateFileType } from '../utils/validators';
 import { parsePhoneNumberWithError, isValidPhoneNumber, getCountries, getCountryCallingCode } from 'libphonenumber-js';
 import { getName, registerLocale } from 'i18n-nationality';
@@ -659,7 +660,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
     if (!file) return;
 
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-    const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB for original file
     const MIN_DIMENSION = 100;
     const MAX_DIMENSION = 3000;
 
@@ -670,7 +671,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
     }
 
     if (file.size > MAX_SIZE) {
-      toast.error("Photo must be smaller than 2MB.");
+      toast.error("Photo must be smaller than 5MB.");
       e.target.value = "";
       return;
     }
@@ -796,8 +797,14 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
     setError(null);
 
     let finalPhotoURL = playerToEdit?.photoURL || photoURL;
+    let finalPhotoThumbnailURL = playerToEdit?.photoThumbnailURL || null;
+    let finalPhotoMediumURL = playerToEdit?.photoMediumURL || null;
     let finalPhotoPath = playerToEdit?.photoPath || null;
+    let finalPhotoThumbnailPath = playerToEdit?.photoThumbnailPath || null;
+    let finalPhotoMediumPath = playerToEdit?.photoMediumPath || null;
     const previousPhotoPath = playerToEdit?.photoPath || null;
+    const previousPhotoThumbnailPath = playerToEdit?.photoThumbnailPath || null;
+    const previousPhotoMediumPath = playerToEdit?.photoMediumPath || null;
     const academyId = academy.id;
 
     if (playerPhotoFile) {
@@ -826,11 +833,47 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
 
       const storage = getStorage();
       const sanitizedFilenameStr = sanitizeFilename(playerPhotoFile.name);
-      const storagePath = `academies/${user.uid}/player_photos/${Date.now()}_${sanitizedFilenameStr}`;
-      const storageRef = ref(storage, storagePath);
-      const uploadTask = uploadBytesResumable(storageRef, playerPhotoFile);
+      const baseFilename = sanitizedFilenameStr.replace(/\.[^/.]+$/, ''); // Remove extension
+      const timestamp = Date.now();
 
       try {
+        // Compress and upload thumbnail (72x72)
+        const thumbnailFile = await imageCompression(playerPhotoFile, {
+          maxWidthOrHeight: 72,
+          useWebWorker: true,
+          fileType: 'image/jpeg',
+          initialQuality: 0.8
+        });
+        const thumbnailPath = `academies/${user.uid}/player_photos/${timestamp}_${baseFilename}_thumb.jpg`;
+        const thumbnailRef = ref(storage, thumbnailPath);
+        await uploadBytesResumable(thumbnailRef, thumbnailFile);
+        finalPhotoThumbnailURL = await getDownloadURL(thumbnailRef);
+        finalPhotoThumbnailPath = thumbnailPath;
+
+        // Compress and upload medium (200x200)
+        const mediumFile = await imageCompression(playerPhotoFile, {
+          maxWidthOrHeight: 200,
+          useWebWorker: true,
+          fileType: 'image/jpeg',
+          initialQuality: 0.85
+        });
+        const mediumPath = `academies/${user.uid}/player_photos/${timestamp}_${baseFilename}_medium.jpg`;
+        const mediumRef = ref(storage, mediumPath);
+        await uploadBytesResumable(mediumRef, mediumFile);
+        finalPhotoMediumURL = await getDownloadURL(mediumRef);
+        finalPhotoMediumPath = mediumPath;
+
+        // Compress and upload original (max 800x800)
+        const originalFile = await imageCompression(playerPhotoFile, {
+          maxWidthOrHeight: 800,
+          useWebWorker: true,
+          fileType: 'image/jpeg',
+          initialQuality: 0.9
+        });
+        const storagePath = `academies/${user.uid}/player_photos/${timestamp}_${baseFilename}.jpg`;
+        const storageRef = ref(storage, storagePath);
+        const uploadTask = uploadBytesResumable(storageRef, originalFile);
+
         await new Promise((resolve, reject) => {
           uploadTask.on('state_changed',
             (snapshot) => {
@@ -846,7 +889,8 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
             async () => {
               finalPhotoURL = await getDownloadURL(uploadTask.snapshot.ref);
               finalPhotoPath = storagePath;
-              // Delete previous photo only after new upload succeeds
+
+              // Delete previous photos only after new uploads succeed
               if (previousPhotoPath && previousPhotoPath !== storagePath) {
                 try {
                   await deleteObject(ref(storage, previousPhotoPath));
@@ -854,11 +898,29 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
                   console.warn("Failed to delete previous player photo", deleteErr);
                 }
               }
+              if (previousPhotoThumbnailPath && previousPhotoThumbnailPath !== thumbnailPath) {
+                try {
+                  await deleteObject(ref(storage, previousPhotoThumbnailPath));
+                } catch (deleteErr) {
+                  console.warn("Failed to delete previous thumbnail", deleteErr);
+                }
+              }
+              if (previousPhotoMediumPath && previousPhotoMediumPath !== mediumPath) {
+                try {
+                  await deleteObject(ref(storage, previousPhotoMediumPath));
+                } catch (deleteErr) {
+                  console.warn("Failed to delete previous medium photo", deleteErr);
+                }
+              }
+
               resolve();
             }
           );
         });
       } catch (err) {
+        console.error("Error compressing/uploading photos:", err);
+        toast.error("Error processing photo.");
+        setLoading(false);
         return; // Stop submission if photo upload fails
       }
     }
@@ -1032,8 +1094,12 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
       gender,
       birthday,
       photoURL: finalPhotoURL,
+      photoThumbnailURL: finalPhotoThumbnailURL || null,
+      photoMediumURL: finalPhotoMediumURL || null,
       email: sanitizedPlayerEmail || null,
       photoPath: finalPhotoPath || null,
+      photoThumbnailPath: finalPhotoThumbnailPath || null,
+      photoMediumPath: finalPhotoMediumPath || null,
       contactPhone: playerPhoneE164 || null,
       phoneCountry: playerPhoneData?.country || null,
       phoneInternational: playerPhoneData?.international || null,
@@ -1105,8 +1171,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
     <>
     <form onSubmit={handleSubmit} className="space-y-8">
         {/* Student Information Section (includes photo) */}
-        <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">{studentLabelSingular} Information</legend>
+        <fieldset className="pt-6">
           <div className="flex flex-col items-center justify-center mt-4">
             <input type="file" ref={fileInputRef} onChange={handlePhotoFileChange} accept="image/*" className="hidden" />
             <div
@@ -1186,7 +1251,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
 
         {/* Contact Information Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">{studentLabelSingular} Contact Information</legend>
+          <legend className="text-xl font-semibold text-gray-900 pr-2">{studentLabelSingular} Contact Information</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
             <div><label htmlFor="playerEmail" className="block text-sm font-medium text-gray-700">Email</label><input type="email" id="playerEmail" value={playerEmail} onChange={(e) => setPlayerEmail(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500" /></div>
             <div className="md:col-span-2">
@@ -1227,7 +1292,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
 
         {/* Tutor Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">Tutor / Guardian</legend>
+          <legend className="text-xl font-semibold text-gray-900 pr-2">Tutor / Guardian</legend>
           <div className="mt-4">
             <label htmlFor="hasTutor" className="block text-sm font-medium text-gray-700">Has tutor/guardian?</label>
             <Select
@@ -1288,7 +1353,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
 
         {/* Payment Info Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">Plan Information</legend>
+          <legend className="text-xl font-semibold text-gray-900 pr-2">Plan Information</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 items-start">
             <div>
               <label htmlFor="location" className="block text-sm font-medium text-gray-700">Location</label>
@@ -1575,7 +1640,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
 
         {/* Additional Products Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">Additional Products</legend>
+          <legend className="text-xl font-semibold text-gray-900 pr-2">Additional Products</legend>
           <div className="mt-4">
             <h4 className="text-sm font-medium text-gray-700 mb-2">Available Products</h4>
             <div className="space-y-2 max-h-80 overflow-y-auto border p-3 rounded-md">
@@ -1658,7 +1723,7 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
 
         {/* Notes Section */}
         <fieldset className="border-t-2 border-gray-200 pt-6">
-          <legend className="text-xl font-semibold text-gray-900 px-2">Notes</legend>
+          <legend className="text-xl font-semibold text-gray-900 pr-2">Notes</legend>
           <div className="mt-4">
             <label htmlFor="notes" className="sr-only">Notes</label> {/* Hidden label for accessibility */}
             <textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows="3" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></textarea>

@@ -474,7 +474,11 @@ export default function GroupsAndClassesSection({ user, db }) {
       <div className="section-content-wrapper space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="section-title">Groups & Classes</h2>
-          <div />
+          {activeGroupTab === 'groups' && (
+            <button onClick={() => handleOpenGroupModal()} className="btn-primary">
+              <Plus className="mr-2 h-5 w-5" /> Add New Group
+            </button>
+          )}
         </div>
       <div className="content-card-responsive">
       <LoadingBar loading={loadingGroups} />
@@ -501,11 +505,6 @@ export default function GroupsAndClassesSection({ user, db }) {
 
       {activeGroupTab === 'groups' && (
         <>
-          <div className="flex justify-end mb-4">
-            <button onClick={() => handleOpenGroupModal()} className="btn-primary">
-              <Plus className="mr-2 h-5 w-5" /> Add New Group
-            </button>
-          </div>
           {groups.length === 0 ? (
             <div className="text-center p-10 text-gray-500 border-2 border-dashed rounded-lg mt-4">
               <p>No groups created yet.</p>
@@ -513,7 +512,7 @@ export default function GroupsAndClassesSection({ user, db }) {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto hidden md:block">
+              <div className="overflow-x-auto hidden md:block mt-6">
                 <table className="min-w-full bg-section">
                   <thead>
                     <tr>
@@ -550,7 +549,7 @@ export default function GroupsAndClassesSection({ user, db }) {
                   </tbody>
                 </table>
               </div>
-              <div className="grid gap-3 md:hidden">
+              <div className="grid gap-3 md:hidden mt-6">
                 {groups.map(group => {
                   const groupLocation = locations.find(loc => loc.id === group.locationId);
                   return (

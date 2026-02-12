@@ -7,6 +7,7 @@ import GoogleSignIn from "./components/GoogleSignIn.jsx";
 import LandingPage from "./components/LandingPage.jsx";
 import PlayerDetailPage from "./components/PlayerDetailPage.jsx";
 import EditPlayerPage from "./components/EditPlayerPage.jsx";
+import NewPlayerPage from "./components/NewPlayerPage.jsx";
 import PlayersSection from "./components/PlayersSection.jsx";
 import PlansOffersSection from "./components/PlansOffersSection.jsx";
 import TierFormPage from "./components/TierFormPage.jsx";
@@ -777,6 +778,7 @@ export default function App() {
           <Routes>
             <Route path="/sign-in" element={<Navigate to="/" replace />} />
             <Route path="/students" element={<PlayersSection user={user} db={db} />} />
+            <Route path="/students/new" element={<NewPlayerPage user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/students/:playerId" element={<PlayerDetailPage user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/students/:playerId/edit" element={<EditPlayerPage user={user} academy={academy} db={db} membership={membership} />} />
             <Route path="/plans" element={<PlansOffersSection user={user} db={db} />} />

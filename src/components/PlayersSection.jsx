@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { collection, query, getDocs, doc, deleteDoc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { deleteObject, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase';
@@ -16,6 +16,7 @@ import '../styles/sections.css';
 import { Plus, ArrowUp, ArrowDown, Edit, Trash2, Search, Mail, Phone, Copy, MoreVertical, Settings2, ChevronRight, Check, X, Download, Users as UsersIcon } from 'lucide-react';
 export default function PlayersSection({ user, db }) {
   const { academy, membership, studentLabelPlural, studentLabelSingular } = useAcademy();
+  const location = useLocation();
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -200,6 +201,13 @@ export default function PlayersSection({ user, db }) {
     fetchPlayers();
   }, [academy?.id, db, membership?.role]); // Optimized: only reload when academy ID or membership role changes
 
+  // Refresh players when returning to /students from edit/new pages
+  useEffect(() => {
+    if (location.pathname === '/students' && academy?.id && db && membership && hasValidMembership(membership)) {
+      fetchPlayers();
+    }
+  }, [location.pathname]);
+
   const handleSort = (key) => {
     let direction = 'ascending';
     if (sortConfig.key === key && sortConfig.direction === 'ascending') {
@@ -226,19 +234,7 @@ export default function PlayersSection({ user, db }) {
   const navigate = useNavigate();
 
   const handleAddPlayer = () => {
-    setIsDrawerOpen(true);
-    setTimeout(() => setIsDrawerAnimating(true), 10);
-  };
-
-  const handleCloseDrawer = () => {
-    setIsDrawerAnimating(false);
-    setTimeout(() => setIsDrawerOpen(false), 300);
-  };
-
-  const handlePlayerAdded = () => {
-    setIsDrawerAnimating(false);
-    setTimeout(() => setIsDrawerOpen(false), 300);
-    fetchPlayers();
+    navigate('/students/new');
   };
 
   const handleCloseDetailDrawer = () => {
@@ -246,7 +242,6 @@ export default function PlayersSection({ user, db }) {
     setTimeout(() => {
       setIsDetailDrawerOpen(false);
       setSelectedPlayer(null);
-      setDrawerMode('detail');
     }, 300);
   };
 
@@ -261,7 +256,7 @@ export default function PlayersSection({ user, db }) {
 
   const handleEditPlayer = () => {
     if (selectedPlayer) {
-      setDrawerMode('edit');
+      navigate(`/students/${selectedPlayer.id}/edit`);
     }
   };
 
@@ -747,14 +742,12 @@ export default function PlayersSection({ user, db }) {
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [actionsMenuPosition, setActionsMenuPosition] = useState({ x: 0, y: 0 });
   const [selectedPlayerForActions, setSelectedPlayerForActions] = useState(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isDrawerAnimating, setIsDrawerAnimating] = useState(false);
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
   const [isDetailDrawerAnimating, setIsDetailDrawerAnimating] = useState(false);
+  const [drawerMode, setDrawerMode] = useState('detail');
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [activeTab, setActiveTab] = useState('details');
   const [paymentPage, setPaymentPage] = useState(1);
-  const [drawerMode, setDrawerMode] = useState('detail'); // 'detail' or 'edit'
 
   const handleOpenActionsMenu = (player, event) => {
     event.stopPropagation(); // Prevent row click
@@ -926,7 +919,9 @@ export default function PlayersSection({ user, db }) {
 
   const Avatar = ({ player }) => {
     if (player.photoURL) {
-      return <img src={player.photoURL} alt={studentLabelSingular} className="w-9 h-9 rounded-full object-cover" />;
+      // Use thumbnail (72x72) for table rows, fallback to original
+      const photoSrc = player.photoThumbnailURL || player.photoURL;
+      return <img src={photoSrc} alt={studentLabelSingular} className="w-9 h-9 rounded-full object-cover" />;
     }
 
     const initial = player.name ? player.name.charAt(0).toUpperCase() : '?';
@@ -961,11 +956,9 @@ export default function PlayersSection({ user, db }) {
         </button>
             <ul className="py-1">
               <li className="text-base">
-                <button onClick={async (e) => {
+                <button onClick={(e) => {
                   e.stopPropagation();
-                  setIsDetailDrawerOpen(true);
-                  setDrawerMode('edit');
-                  await fetchPlayerDetail(player.id);
+                  navigate(`/students/${player.id}/edit`);
                   onClose();
                 }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center transition-colors duration-150">
                   <Edit className="mr-3 h-4 w-4" />
@@ -1268,41 +1261,6 @@ export default function PlayersSection({ user, db }) {
       </div>
       </div>
 
-      {/* Drawer Overlay - Add New Student */}
-      {isDrawerOpen && (
-        <>
-          <div
-            className={`fixed inset-0 bg-black z-40 transition-opacity duration-300 ease-out ${isDrawerAnimating ? 'opacity-32' : 'opacity-0'}`}
-            onClick={handleCloseDrawer}
-            style={{ opacity: isDrawerAnimating ? 0.32 : 0 }}
-          />
-          <div
-            id="player-form-drawer"
-            className={`fixed top-0 right-0 h-full w-full bg-app shadow-2xl z-50 overflow-y-auto transform transition-transform duration-300 ${isDrawerAnimating ? 'translate-x-0' : 'translate-x-full'}`}
-            style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)', maxWidth: '584px', borderTopLeftRadius: '16px', borderBottomLeftRadius: '16px' }}
-          >
-            <div className="sticky top-0 bg-app border-b border-gray-border z-10 px-4 md:px-6 py-4 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-800">Add New {studentLabelSingular}</h2>
-              <button
-                onClick={handleCloseDrawer}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-150"
-                aria-label="Close drawer"
-              >
-                <X className="h-6 w-6 text-gray-600" />
-              </button>
-            </div>
-            <PlayerForm
-              user={user}
-              academy={academy}
-              db={db}
-              membership={membership}
-              onComplete={handlePlayerAdded}
-            />
-            <div id="player-form-modal-root"></div>
-          </div>
-        </>
-      )}
-
       {/* Drawer Overlay - Student Detail */}
       {isDetailDrawerOpen && (
         <>
@@ -1317,13 +1275,11 @@ export default function PlayersSection({ user, db }) {
             style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)', maxWidth: '584px', borderTopLeftRadius: '16px', borderBottomLeftRadius: '16px' }}
           >
             <div className="bg-app px-6 pt-6 pb-4">
-              {drawerMode === 'edit' ? (
-                <h2 className="text-2xl font-bold text-gray-800">Edit {studentLabelSingular}</h2>
-              ) : selectedPlayer && (
+              {selectedPlayer && (
                 <div className="relative">
                   <div className="flex items-center gap-4">
                     {selectedPlayer.photoURL ? (
-                      <img src={selectedPlayer.photoURL} alt={studentLabelSingular} className="w-[72px] h-[72px] rounded-full object-cover flex-shrink-0" />
+                      <img src={selectedPlayer.photoMediumURL || selectedPlayer.photoURL} alt={studentLabelSingular} className="w-[72px] h-[72px] rounded-full object-cover flex-shrink-0" />
                     ) : (
                       <div className="w-[72px] h-[72px] rounded-full bg-app flex items-center justify-center flex-shrink-0">
                         <span className="text-3xl font-bold text-gray-dark">
@@ -1340,15 +1296,13 @@ export default function PlayersSection({ user, db }) {
                       </p>
                     </div>
                   </div>
-                  {drawerMode === 'detail' && (
-                    <button
-                      onClick={handleEditPlayer}
-                      className="absolute top-0 right-0 px-4 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-hover transition-colors duration-150"
-                      style={{ height: '36px' }}
-                    >
-                      Edit
-                    </button>
-                  )}
+                  <button
+                    onClick={handleEditPlayer}
+                    className="absolute top-0 right-0 px-4 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-hover transition-colors duration-150"
+                    style={{ height: '36px' }}
+                  >
+                    Edit
+                  </button>
                 </div>
               )}
             </div>
@@ -1359,15 +1313,6 @@ export default function PlayersSection({ user, db }) {
                   <p className="text-gray-600">Loading {studentLabelSingular.toLowerCase()} details...</p>
                 </div>
               </div>
-            ) : drawerMode === 'edit' ? (
-              <PlayerForm
-                user={user}
-                academy={academy}
-                db={db}
-                membership={membership}
-                playerToEdit={selectedPlayer}
-                onComplete={handlePlayerUpdated}
-              />
             ) : (
               <PlayerDetail
                 player={selectedPlayer}

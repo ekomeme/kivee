@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
+import { ArrowLeft } from 'lucide-react';
 import PlayerForm from '../components/PlayerForm.jsx';
+import LoadingBar from './LoadingBar.jsx';
 
 export default function EditPlayerPage({ user, academy, db, membership }) {
   const navigate = useNavigate();
@@ -51,29 +53,64 @@ export default function EditPlayerPage({ user, academy, db, membership }) {
     };
 
     fetchPlayer();
-  }, [user, db, playerId, academy, membership]);
+  }, [user, db, playerId, academy, membership, studentLabelSingular]);
 
   const handleComplete = () => {
-    // Vuelve a la lista de estudiantes o a la ficha del estudiante
-    navigate(`/students/${playerId}`); // Go back to the detail page after editing
+    navigate('/students'); // Go back to the students list after editing
   };
 
-  if (loading) return <div className="text-center p-10">Loading student for editing...</div>;
-  if (error) return <div className="text-center p-10 text-red-500">{error}</div>;
+  if (loading) {
+    return (
+      <div className="section-container">
+        <div className="section-content-wrapper">
+          <LoadingBar loading={true} />
+          <div className="flex justify-center items-center py-12">
+            <p className="text-gray-600">Loading student data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="section-container">
+        <div className="section-content-wrapper">
+          <div className="flex justify-center items-center py-12">
+            <p className="text-red-500">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4 md:p-6">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6">Edit {studentLabelSingular}</h2>
-      {playerToEdit && (
-        <PlayerForm
-          user={user}
-          academy={academy}
-          db={db}
-          membership={membership}
-          onComplete={handleComplete}
-          playerToEdit={playerToEdit}
-        />
-      )}
+    <div className="section-container">
+      <div className="section-content-wrapper">
+        <div className="mb-6">
+          <button
+            onClick={() => navigate('/students')}
+            className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+          >
+            <ArrowLeft className="h-5 w-5 mr-2" />
+            Back to Students
+          </button>
+          <h2 className="section-title">Edit {studentLabelSingular}</h2>
+        </div>
+
+        <div className="max-w-3xl">
+          {playerToEdit && (
+            <PlayerForm
+              user={user}
+              academy={academy}
+              db={db}
+              membership={membership}
+              onComplete={handleComplete}
+              playerToEdit={playerToEdit}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
