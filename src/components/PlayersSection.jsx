@@ -816,8 +816,48 @@ export default function PlayersSection({ user, db }) {
 
         const updated = await ensureSubscriptionPaymentsAreCurrent(playerData, tiersCache, playerRef);
         if (updated) {
-          setLoadingDetail(false);
-          await fetchPlayerDetail(playerId);
+          // Reload the player data after updating payments (without recursion)
+          const updatedPlayerSnap = await getDoc(playerRef);
+          if (updatedPlayerSnap.exists()) {
+            const updatedPlayerData = { id: updatedPlayerSnap.id, ...updatedPlayerSnap.data() };
+
+            // Re-populate relationships
+            if (updatedPlayerData.tutorId) {
+              const tutorRef = doc(db, `academies/${academy.id}/tutors`, updatedPlayerData.tutorId);
+              const tutorSnap = await getDoc(tutorRef);
+              updatedPlayerData.tutor = tutorSnap.exists() ? { id: tutorSnap.id, ...tutorSnap.data() } : null;
+            }
+
+            if (updatedPlayerData.groupId) {
+              updatedPlayerData.groupName = groupsCache.get(updatedPlayerData.groupId)?.name || 'N/A';
+            }
+
+            if (updatedPlayerData.plan) {
+              if (updatedPlayerData.plan.type === 'tier') {
+                updatedPlayerData.planDetails = tiersCache.get(updatedPlayerData.plan.id);
+              } else if (updatedPlayerData.plan.type === 'trial') {
+                updatedPlayerData.planDetails = trialsCache.get(updatedPlayerData.plan.id);
+              }
+            }
+
+            if (updatedPlayerData.oneTimeProducts) {
+              updatedPlayerData.oneTimeProducts = updatedPlayerData.oneTimeProducts.map(p => {
+                const baseProduct = productsCache.get(p.productId);
+                let productDetails = baseProduct;
+
+                if (baseProduct && updatedPlayerData.locationId && baseProduct.locationPrices) {
+                  const locationPrice = baseProduct.locationPrices[updatedPlayerData.locationId];
+                  if (locationPrice !== undefined) {
+                    productDetails = { ...baseProduct, price: locationPrice };
+                  }
+                }
+
+                return { ...p, productDetails, tierDetails: p.paymentFor === 'tier' ? tiersCache.get(p.itemId) : null };
+              });
+            }
+
+            setSelectedPlayer(updatedPlayerData);
+          }
           return;
         }
 
