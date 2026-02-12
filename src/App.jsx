@@ -476,9 +476,8 @@ export default function App() {
         }),
       ]);
 
-      // Reload all academies to include the new one
+      // Reload all academies to include the new one in the switcher
       await loadAllAcademies(user.uid);
-      await loadAcademyById(invite.academyId);
       setPendingInvites(prev => prev.filter(i => i.id !== inviteId));
     } catch (err) {
       console.error("Error accepting invite:", err);
@@ -774,7 +773,7 @@ export default function App() {
             {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
-        <div className="flex-grow p-0 md:p-8 overflow-auto min-w-0"> {/* Added overflow-auto for scrollable content */}
+        <div className="flex-grow p-0 md:p-8 overflow-y-auto overflow-x-hidden min-w-0"> {/* Scrollable content area */}
           <Routes>
             <Route path="/sign-in" element={<Navigate to="/" replace />} />
             <Route path="/students" element={<PlayersSection user={user} db={db} />} />
