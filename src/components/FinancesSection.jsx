@@ -8,8 +8,8 @@ import LoadingBar from './LoadingBar.jsx';
 import '../styles/sections.css';
 import { useAcademy } from '../contexts/AcademyContext';
 import { hasValidMembership } from '../utils/permissions';
-import { formatAcademyCurrency } from '../utils/formatters';
-import { COLLECTIONS } from '../config/constants';
+import { formatAcademyCurrency, toDateSafe } from '../utils/formatters';
+import { COLLECTIONS, STORAGE_PATHS, FILE_UPLOAD } from '../config/constants';
 import { sanitizeFilename } from '../utils/validators';
 
 export default function FinancesSection({ user, db }) {
@@ -112,27 +112,25 @@ export default function FinancesSection({ user, db }) {
         });
 
         // Sort paid by paidAt date, descending
-        paid.sort((a, b) => new Date(b.paidAt?.seconds * 1000) - new Date(a.paidAt?.seconds * 1000));
+        paid.sort((a, b) => (toDateSafe(b.paidAt) || new Date()) - (toDateSafe(a.paidAt) || new Date()));
 
         return { unpaidPayments: unpaid, paidPayments: paid };
     }, [allPayments]);
 
     const formatDate = (date) => {
         if (!date) return 'N/A';
-        if (date.seconds) { // It's a Firestore Timestamp
-            return new Date(date.seconds * 1000).toLocaleDateString();
-        }
-        return new Date(date).toLocaleDateString(); // It's a string date like 'YYYY-MM-DD'
+        const parsed = toDateSafe(date);
+        if (!parsed) return 'N/A';
+        return parsed.toLocaleDateString();
     };
 
     const uploadReceiptFile = async (file, studentId) => {
         const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-        const maxSize = 5 * 1024 * 1024;
 
         if (!allowedTypes.includes(file.type)) {
             throw new Error('Receipt must be an image or PDF.');
         }
-        if (file.size > maxSize) {
+        if (file.size > FILE_UPLOAD.MAX_DOCUMENT_SIZE) {
             throw new Error('Receipt must be smaller than 5MB.');
         }
         if (!academyId) {
@@ -141,7 +139,8 @@ export default function FinancesSection({ user, db }) {
 
         const storage = getStorage();
         const sanitizedFilename = sanitizeFilename(file.name);
-        const storagePath = `academies/${academyId}/payment_receipts/${studentId}/${Date.now()}_${sanitizedFilename}`;
+        const timestamp = Date.now();
+        const storagePath = STORAGE_PATHS.paymentReceipt(academyId, studentId, timestamp, sanitizedFilename);
         const uploadRef = ref(storage, storagePath);
         await uploadBytes(uploadRef, file);
         const receiptUrl = await getDownloadURL(uploadRef);
@@ -294,7 +293,6 @@ export default function FinancesSection({ user, db }) {
             }
 
             const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-            const maxSize = 5 * 1024 * 1024;
 
             if (!allowedTypes.includes(file.type)) {
                 setReceiptError('Receipt must be an image or PDF.');
@@ -302,7 +300,7 @@ export default function FinancesSection({ user, db }) {
                 return;
             }
 
-            if (file.size > maxSize) {
+            if (file.size > FILE_UPLOAD.MAX_DOCUMENT_SIZE) {
                 setReceiptError('Receipt must be smaller than 5MB.');
                 e.target.value = '';
                 return;

@@ -7,7 +7,7 @@ import { Upload, Settings, Users, Plus, MapPin } from 'lucide-react';
 import { useAcademy } from '../contexts/AcademyContext';
 import { sanitizeEmail, sanitizeText, sanitizeFilename, validateFileType } from '../utils/validators';
 import { ownsAcademy } from '../utils/permissions';
-import { ACADEMY_CATEGORIES, EXTERNAL_APIS, COLLECTIONS } from '../config/constants';
+import { ACADEMY_CATEGORIES, EXTERNAL_APIS, COLLECTIONS, STORAGE_PATHS, FILE_UPLOAD } from '../config/constants';
 import LocationsSettings from './LocationsSettings.jsx';
 import '../styles/sections.css';
 export default function AdminSection({ user, db, onAcademyUpdate, pendingInvites = [], onAcceptInvite, onDeclineInvite, isAcceptingInvite, onOpenInviteModal, onRegisterRefreshTeamData }) {
@@ -298,8 +298,8 @@ export default function AdminSection({ user, db, onAcademyUpdate, pendingInvites
           return;
         }
 
-        // Validate file size (max 5MB)
-        if (logoFile.size > 5 * 1024 * 1024) {
+        // Validate file size
+        if (logoFile.size > FILE_UPLOAD.MAX_DOCUMENT_SIZE) {
           toast.error("El archivo debe ser menor a 5MB.");
           setIsUpdatingSettings(false);
           return;
@@ -307,7 +307,8 @@ export default function AdminSection({ user, db, onAcademyUpdate, pendingInvites
 
         const storage = getStorage();
         const sanitizedFilename = sanitizeFilename(logoFile.name);
-        const newLogoPath = `academies/${academyId}/branding/logo_${Date.now()}_${sanitizedFilename}`;
+        const timestamp = Date.now();
+        const newLogoPath = STORAGE_PATHS.brandingLogo(academyId, timestamp, sanitizedFilename);
         const logoRef = ref(storage, newLogoPath);
         const snap = await uploadBytes(logoRef, logoFile);
         logoUrl = await getDownloadURL(snap.ref);
@@ -355,9 +356,9 @@ export default function AdminSection({ user, db, onAcademyUpdate, pendingInvites
     if (!file) return;
 
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-    const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+    const MAX_SIZE = FILE_UPLOAD.MAX_IMAGE_SIZE;
     const MIN_DIMENSION = 100;
-    const MAX_DIMENSION = 3000;
+    const MAX_DIMENSION = FILE_UPLOAD.MAX_IMAGE_WIDTH;
 
     if (!allowedTypes.includes(file.type)) {
       toast.error("Only JPG, PNG or WEBP are allowed.");

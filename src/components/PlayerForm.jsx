@@ -11,7 +11,8 @@ import { parsePhoneNumberWithError, isValidPhoneNumber, getCountries, getCountry
 import { getName, registerLocale } from 'i18n-nationality';
 import en from 'i18n-nationality/langs/en.json';
 import { getLocations } from '../services/firestore';
-import { formatAcademyCurrency } from '../utils/formatters';
+import { formatAcademyCurrency, toDateSafe } from '../utils/formatters';
+import { IMAGE_COMPRESSION, STORAGE_PATHS, FILE_UPLOAD } from '../config/constants';
 
 // Register English locale for nationality adjectives
 registerLocale(en);
@@ -97,7 +98,8 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
 
   const formatDate = (date) => {
     if (!date) return 'N/A';
-    const parsed = date?.seconds ? new Date(date.seconds * 1000) : new Date(date);
+    const parsed = toDateSafe(date);
+    if (!parsed) return 'N/A';
     return parsed.toLocaleDateString();
   };
   useEffect(() => {
@@ -232,8 +234,8 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
       const tierPayments = (playerToEdit.oneTimeProducts || []).filter(p => p.paymentFor === 'tier' && p.dueDate);
       if (tierPayments.length > 0) {
         const sorted = [...tierPayments].sort((a, b) => {
-          const da = a.dueDate?.seconds ? new Date(a.dueDate.seconds * 1000) : new Date(a.dueDate);
-          const db = b.dueDate?.seconds ? new Date(b.dueDate.seconds * 1000) : new Date(b.dueDate);
+          const da = toDateSafe(a.dueDate) || new Date();
+          const db = toDateSafe(b.dueDate) || new Date();
           return da - db;
         });
         return sorted[0].dueDate;
@@ -285,8 +287,8 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
 
     // Sort by creation date (newest first)
     return filtered.sort((a, b) => {
-      const dateA = a.createdAt?.seconds ? new Date(a.createdAt.seconds * 1000) : new Date(0);
-      const dateB = b.createdAt?.seconds ? new Date(b.createdAt.seconds * 1000) : new Date(0);
+      const dateA = toDateSafe(a.createdAt) || new Date(0);
+      const dateB = toDateSafe(b.createdAt) || new Date(0);
       return dateB - dateA; // Descending order (newest first)
     });
   }, [tiers, locationId]);
@@ -450,7 +452,16 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
             }
           }
         }
-        setPlanStartDate(playerToEdit.plan.startDate || new Date().toISOString().split('T')[0]);
+
+        // Set plan start date from existing payment or plan data
+        if (existingPlanStartDate) {
+          const dateObj = toDateSafe(existingPlanStartDate);
+          if (dateObj) {
+            setPlanStartDate(dateObj.toISOString().split('T')[0]);
+          }
+        } else if (playerToEdit.plan.startDate) {
+          setPlanStartDate(playerToEdit.plan.startDate);
+        }
       } else { // For backward compatibility with old data structure
         if (playerToEdit.tierId && tiers.length > 0) {
             const tierToSet = tiers.find(t => t.id === playerToEdit.tierId);
@@ -824,8 +835,8 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
         return;
       }
 
-      // Validate file size (max 5MB)
-      if (playerPhotoFile.size > 5 * 1024 * 1024) {
+      // Validate file size
+      if (playerPhotoFile.size > FILE_UPLOAD.MAX_DOCUMENT_SIZE) {
         toast.error("La foto debe ser menor a 5MB.");
         setLoading(false);
         return;
@@ -839,12 +850,10 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
       try {
         // Compress and upload thumbnail (72x72)
         const thumbnailFile = await imageCompression(playerPhotoFile, {
-          maxWidthOrHeight: 72,
-          useWebWorker: true,
-          fileType: 'image/jpeg',
-          initialQuality: 0.8
+          ...IMAGE_COMPRESSION.THUMBNAIL,
+          initialQuality: IMAGE_COMPRESSION.THUMBNAIL.quality
         });
-        const thumbnailPath = `academies/${user.uid}/player_photos/${timestamp}_${baseFilename}_thumb.jpg`;
+        const thumbnailPath = STORAGE_PATHS.playerPhoto(academyId, timestamp, baseFilename, 'thumbnail');
         const thumbnailRef = ref(storage, thumbnailPath);
         await uploadBytesResumable(thumbnailRef, thumbnailFile);
         finalPhotoThumbnailURL = await getDownloadURL(thumbnailRef);
@@ -852,12 +861,10 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
 
         // Compress and upload medium (200x200)
         const mediumFile = await imageCompression(playerPhotoFile, {
-          maxWidthOrHeight: 200,
-          useWebWorker: true,
-          fileType: 'image/jpeg',
-          initialQuality: 0.85
+          ...IMAGE_COMPRESSION.MEDIUM,
+          initialQuality: IMAGE_COMPRESSION.MEDIUM.quality
         });
-        const mediumPath = `academies/${user.uid}/player_photos/${timestamp}_${baseFilename}_medium.jpg`;
+        const mediumPath = STORAGE_PATHS.playerPhoto(academyId, timestamp, baseFilename, 'medium');
         const mediumRef = ref(storage, mediumPath);
         await uploadBytesResumable(mediumRef, mediumFile);
         finalPhotoMediumURL = await getDownloadURL(mediumRef);
@@ -865,12 +872,10 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
 
         // Compress and upload original (max 800x800)
         const originalFile = await imageCompression(playerPhotoFile, {
-          maxWidthOrHeight: 800,
-          useWebWorker: true,
-          fileType: 'image/jpeg',
-          initialQuality: 0.9
+          ...IMAGE_COMPRESSION.ORIGINAL,
+          initialQuality: IMAGE_COMPRESSION.ORIGINAL.quality
         });
-        const storagePath = `academies/${user.uid}/player_photos/${timestamp}_${baseFilename}.jpg`;
+        const storagePath = STORAGE_PATHS.playerPhoto(academyId, timestamp, baseFilename, 'original');
         const storageRef = ref(storage, storagePath);
         const uploadTask = uploadBytesResumable(storageRef, originalFile);
 
@@ -1018,72 +1023,158 @@ export default function PlayerForm({ user, academy, db, membership, onComplete, 
       };
     });
 
-    // If a new tier is being assigned, create its first payment record.
-    // This logic assumes we are not editing an existing plan, just assigning a new one.
-    if (selectedPlan && selectedPlan.value.startsWith('tier-') && !playerToEdit?.plan) {
+    // Handle tier plan assignment and changes
+    if (selectedPlan && selectedPlan.value.startsWith('tier-')) {
         const [type, id] = selectedPlan.value.split('-');
         const tierDetails = tiers.find(t => t.id === id);
 
-        // Get price from selected variant, or fallback to legacy price
-        let amount = 0;
-        let billingPeriod = 'monthly'; // default
-        let priceVariantData = null;
+        // Debug: Check what data we have
+        const tierPaymentsInFinal = finalProductsData.filter(p => p.paymentFor === 'tier');
+        console.log('🔍 DEBUG - Data sources:', {
+          hasPlayerToEdit: !!playerToEdit,
+          playerToEditProducts: playerToEdit?.products,
+          finalProductsDataTiers: tierPaymentsInFinal,
+          searchCriteria: {
+            paymentFor: 'tier',
+            status: 'unpaid',
+            itemId: id
+          },
+          tierPaymentDetails: tierPaymentsInFinal[0] ? {
+            paymentFor: tierPaymentsInFinal[0].paymentFor,
+            status: tierPaymentsInFinal[0].status,
+            itemId: tierPaymentsInFinal[0].itemId,
+            billingPeriod: tierPaymentsInFinal[0].billingPeriod,
+            amount: tierPaymentsInFinal[0].amount
+          } : 'No tier payment found'
+        });
 
-        if (selectedPriceVariant && selectedPriceVariant.variant) {
-          // New structure with price variants
-          amount = selectedPriceVariant.variant.price;
-          billingPeriod = selectedPriceVariant.variant.billingPeriod;
-          // Store the complete variant data for future reference
-          priceVariantData = {
+        // Find ANY existing unpaid tier payment (regardless of itemId)
+        // We'll replace it when the user changes plan or billing type
+        const existingTierPayment = playerToEdit?.products?.find(p =>
+          p.paymentFor === 'tier' && p.status === 'unpaid'
+        ) || finalProductsData.find(p =>
+          p.paymentFor === 'tier' && p.status === 'unpaid'
+        );
+
+        // Check if plan ID changed
+        const planIdChanged = playerToEdit?.plan && (
+          playerToEdit.plan.type !== 'tier' ||
+          playerToEdit.plan.id !== id
+        );
+
+        // Check if price variant (billing type) changed on the same plan
+        const priceVariantChanged = !planIdChanged && existingTierPayment && selectedPriceVariant && selectedPriceVariant.variant && (
+          existingTierPayment.billingPeriod !== selectedPriceVariant.variant.billingPeriod ||
+          existingTierPayment.amount !== selectedPriceVariant.variant.price
+        );
+
+        // Plan changed if: plan ID changed OR price variant changed
+        const planChanged = planIdChanged || priceVariantChanged;
+
+        console.log('🔍 Plan change detection:', {
+          isEditing: !!playerToEdit,
+          oldPlan: playerToEdit?.plan,
+          newPlanId: id,
+          existingPayment: existingTierPayment ? {
+            itemId: existingTierPayment.itemId,
+            billingPeriod: existingTierPayment.billingPeriod,
+            amount: existingTierPayment.amount
+          } : null,
+          newPriceVariant: selectedPriceVariant?.variant ? {
             billingPeriod: selectedPriceVariant.variant.billingPeriod,
-            price: selectedPriceVariant.variant.price,
-            customTermName: selectedPriceVariant.variant.customTermName,
-            termStartDate: selectedPriceVariant.variant.termStartDate,
-            termEndDate: selectedPriceVariant.variant.termEndDate,
-            durationUnit: selectedPriceVariant.variant.durationUnit,
-            durationAmount: selectedPriceVariant.variant.durationAmount,
-          };
-        } else {
-          // Legacy structure - fallback to tier's price
-          // Check if tier has location-specific pricing
-          if (tierDetails.locationPrices && locationId && tierDetails.locationPrices[locationId]) {
-            amount = tierDetails.locationPrices[locationId];
-          } else if (tierDetails.price) {
-            // Global price
-            amount = tierDetails.price;
-          }
+            price: selectedPriceVariant.variant.price
+          } : null,
+          planIdChanged,
+          priceVariantChanged,
+          planChanged,
+          hasSelectedPriceVariant: !!selectedPriceVariant
+        });
 
-          // Use legacy pricingModel if available
-          if (tierDetails.pricingModel) {
-            billingPeriod = tierDetails.pricingModel;
-          }
+        // If plan changed, remove all unpaid tier payments from old plan
+        if (planChanged) {
+          console.log('❌ Removing old plan unpaid payments');
+          finalProductsData = finalProductsData.filter(item =>
+            !(item.paymentFor === 'tier' && item.status === 'unpaid')
+          );
         }
 
-        const firstPayment = {
-            paymentFor: 'tier',
-            itemId: id,
-            itemName: tierDetails.name,
-            amount: amount,
-            billingPeriod: billingPeriod,
-            priceVariant: priceVariantData,
-            dueDate: planStartDate,
-            status: 'unpaid',
-        };
-        finalProductsData.push(firstPayment); // We'll rename oneTimeProducts to payments later
+        // Create first payment if it's a new plan or if plan changed
+        const shouldCreatePayment = !playerToEdit?.plan || planChanged;
+        console.log('💰 Should create payment?', shouldCreatePayment);
+
+        if (shouldCreatePayment) {
+          // Get price from selected variant, or fallback to legacy price
+          let amount = 0;
+          let billingPeriod = 'monthly'; // default
+          let priceVariantData = null;
+
+          if (selectedPriceVariant && selectedPriceVariant.variant) {
+            // New structure with price variants
+            amount = selectedPriceVariant.variant.price;
+            billingPeriod = selectedPriceVariant.variant.billingPeriod;
+            // Store the complete variant data for future reference
+            priceVariantData = {
+              billingPeriod: selectedPriceVariant.variant.billingPeriod,
+              price: selectedPriceVariant.variant.price,
+              customTermName: selectedPriceVariant.variant.customTermName,
+              termStartDate: selectedPriceVariant.variant.termStartDate,
+              termEndDate: selectedPriceVariant.variant.termEndDate,
+              durationUnit: selectedPriceVariant.variant.durationUnit,
+              durationAmount: selectedPriceVariant.variant.durationAmount,
+            };
+          } else {
+            // Legacy structure - fallback to tier's price
+            // Check if tier has location-specific pricing
+            if (tierDetails.locationPrices && locationId && tierDetails.locationPrices[locationId]) {
+              amount = tierDetails.locationPrices[locationId];
+            } else if (tierDetails.price) {
+              // Global price
+              amount = tierDetails.price;
+            }
+
+            // Use legacy pricingModel if available
+            if (tierDetails.pricingModel) {
+              billingPeriod = tierDetails.pricingModel;
+            }
+          }
+
+          const firstPayment = {
+              paymentFor: 'tier',
+              itemId: id,
+              itemName: tierDetails.name,
+              amount: amount,
+              billingPeriod: billingPeriod,
+              priceVariant: priceVariantData,
+              dueDate: planStartDate,
+              status: 'unpaid',
+          };
+          console.log('✅ Creating new payment:', firstPayment);
+          finalProductsData.push(firstPayment);
+        } else {
+          // If plan didn't change, just update the start date of unpaid tier payments
+          finalProductsData = finalProductsData.map(item => {
+              if (item.paymentFor === 'tier' && item.status === 'unpaid' && item.itemId === id) {
+                  return {
+                      ...item,
+                      dueDate: planStartDate
+                  };
+              }
+              return item;
+          });
+        }
+    } else if (playerToEdit?.plan && !selectedPlan) {
+        // Plan was removed, delete all unpaid tier payments
+        console.log('🗑️ Plan removed, deleting unpaid tier payments');
+        finalProductsData = finalProductsData.filter(item =>
+          !(item.paymentFor === 'tier' && item.status === 'unpaid')
+        );
     }
 
-    // If editing an existing player with a tier plan, update the start date of unpaid tier payments
-    if (playerToEdit?.plan && playerToEdit.plan.type === 'tier') {
-        finalProductsData = finalProductsData.map(item => {
-            if (item.paymentFor === 'tier' && item.status === 'unpaid') {
-                return {
-                    ...item,
-                    dueDate: planStartDate
-                };
-            }
-            return item;
-        });
-    }
+    console.log('📊 Final state before save:', {
+      plan: planData,
+      tierPayments: finalProductsData.filter(p => p.paymentFor === 'tier'),
+      allPayments: finalProductsData.length
+    });
 
     const playerData = {
       name: sanitizedName,

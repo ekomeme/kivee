@@ -7,9 +7,10 @@ import LoadingBar from './LoadingBar.jsx';
 import '../styles/sections.css';
 import { useAcademy } from '../contexts/AcademyContext';
 import { hasValidMembership } from '../utils/permissions';
-import { formatAcademyCurrency } from '../utils/formatters';
+import { formatAcademyCurrency, toDateSafe } from '../utils/formatters';
 import { COLLECTIONS } from '../config/constants';
 import { getLocations } from '../services/firestore';
+import { ROUTES } from '../config/routes';
 
 // Helper function to remove undefined fields from object
 const removeUndefinedFields = (obj) => {
@@ -106,8 +107,8 @@ export default function PlansOffersSection({ user, db }) {
 
     // Sort by creation date (newest first)
     tiersData.sort((a, b) => {
-      const dateA = a.createdAt?.seconds ? new Date(a.createdAt.seconds * 1000) : new Date(0);
-      const dateB = b.createdAt?.seconds ? new Date(b.createdAt.seconds * 1000) : new Date(0);
+      const dateA = toDateSafe(a.createdAt) || new Date(0);
+      const dateB = toDateSafe(b.createdAt) || new Date(0);
       return dateB - dateA; // Descending order (newest first)
     });
 
@@ -126,8 +127,8 @@ export default function PlansOffersSection({ user, db }) {
 
     // Sort by creation date (newest first)
     productsData.sort((a, b) => {
-      const dateA = a.createdAt?.seconds ? new Date(a.createdAt.seconds * 1000) : new Date(0);
-      const dateB = b.createdAt?.seconds ? new Date(b.createdAt.seconds * 1000) : new Date(0);
+      const dateA = toDateSafe(a.createdAt) || new Date(0);
+      const dateB = toDateSafe(b.createdAt) || new Date(0);
       return dateB - dateA; // Descending order (newest first)
     });
 
@@ -146,8 +147,8 @@ export default function PlansOffersSection({ user, db }) {
 
     // Sort by creation date (newest first)
     trialsData.sort((a, b) => {
-      const dateA = a.createdAt?.seconds ? new Date(a.createdAt.seconds * 1000) : new Date(0);
-      const dateB = b.createdAt?.seconds ? new Date(b.createdAt.seconds * 1000) : new Date(0);
+      const dateA = toDateSafe(a.createdAt) || new Date(0);
+      const dateB = toDateSafe(b.createdAt) || new Date(0);
       return dateB - dateA; // Descending order (newest first)
     });
 
@@ -740,7 +741,7 @@ export default function PlansOffersSection({ user, db }) {
       <div className="fixed bg-section border border-gray-border rounded-md shadow-lg z-50" ref={menuRef} style={style}>
         <ul className="py-1">
           <li className="text-base w-40">
-            <button onClick={(e) => { e.stopPropagation(); navigate(`/plans/tiers/${tier.id}/edit`); onClose(); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center">
+            <button onClick={(e) => { e.stopPropagation(); navigate(ROUTES.PLAN_TIER_EDIT(tier.id)); onClose(); }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center">
               <Edit className="mr-3 h-4 w-4" />
               <span>Edit</span>
             </button>
@@ -881,7 +882,7 @@ export default function PlansOffersSection({ user, db }) {
         <div className="flex items-center justify-between">
           <h2 className="section-title">Plans & Offers</h2>
           {activeTab === 'tiers' && (
-            <button onClick={() => navigate('/plans/tiers/new')} className="btn-primary">
+            <button onClick={() => navigate(ROUTES.PLAN_TIER_NEW)} className="btn-primary">
               <Plus className="mr-2 h-5 w-5" /> Add New Tier
             </button>
           )}
@@ -974,7 +975,7 @@ export default function PlansOffersSection({ user, db }) {
                           <tr
                             key={tier.id}
                             className="hover:bg-gray-50 table-row-hover cursor-pointer"
-                            onClick={() => navigate(`/plans/tiers/${tier.id}/edit`)}
+                            onClick={() => navigate(ROUTES.PLAN_TIER_EDIT(tier.id))}
                           >
                             <td className="py-3 px-4 border-b text-base font-medium table-cell">{tier.name}</td>
                             <td className="py-3 px-4 border-b text-sm text-gray-600 table-cell">{tier.classesPerWeek ? `${tier.classesPerWeek} per week` : 'N/A'}</td>
@@ -1004,7 +1005,7 @@ export default function PlansOffersSection({ user, db }) {
                       <div
                         key={tier.id}
                         className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm relative cursor-pointer"
-                        onClick={() => navigate(`/plans/tiers/${tier.id}/edit`)}
+                        onClick={() => navigate(ROUTES.PLAN_TIER_EDIT(tier.id))}
                       >
                         <button
                           onClick={(e) => handleOpenActionsMenu(tier, e)}

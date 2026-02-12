@@ -2,11 +2,12 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import PlayerForm from './PlayerForm.jsx';
+import { ROUTES } from '../config/routes';
 
 export default function NewPlayerPage({ user, academy, db, membership }) {
   const navigate = useNavigate();
   const handlePlayerAdded = () => {
-    navigate('/students'); // Navigate back to the students list after adding
+    navigate(ROUTES.STUDENTS); // Navigate back to the students list after adding
   };
   const studentLabelSingular = academy?.studentLabelSingular || 'Student';
 
@@ -15,7 +16,7 @@ export default function NewPlayerPage({ user, academy, db, membership }) {
       <div className="section-content-wrapper">
         <div className="mb-6">
           <button
-            onClick={() => navigate('/students')}
+            onClick={() => navigate(ROUTES.STUDENTS)}
             className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />

@@ -221,3 +221,122 @@ export const ERROR_MESSAGES = {
   INVALID_FILE_TYPE: 'Invalid file type.',
   GENERIC_ERROR: 'An error occurred. Please try again.'
 };
+
+// ==================== IMAGE COMPRESSION ====================
+
+/**
+ * Image compression settings for different sizes
+ * Used when uploading player photos and other images
+ */
+export const IMAGE_COMPRESSION = {
+  THUMBNAIL: {
+    maxWidthOrHeight: 72,
+    quality: 0.8, // Lower quality for small thumbnails
+    fileType: 'image/jpeg',
+    useWebWorker: true
+  },
+  MEDIUM: {
+    maxWidthOrHeight: 200,
+    quality: 0.85, // Medium quality for previews
+    fileType: 'image/jpeg',
+    useWebWorker: true
+  },
+  ORIGINAL: {
+    maxWidthOrHeight: 800,
+    quality: 0.9, // High quality for main images
+    fileType: 'image/jpeg',
+    useWebWorker: true
+  }
+};
+
+// Image size suffixes for filenames
+export const IMAGE_SIZE_SUFFIXES = {
+  THUMBNAIL: '_thumb',
+  MEDIUM: '_medium',
+  ORIGINAL: ''
+};
+
+// ==================== FIREBASE STORAGE PATHS ====================
+
+/**
+ * Helper functions to generate consistent Firebase Storage paths
+ * Ensures all file uploads follow the same naming convention
+ */
+export const STORAGE_PATHS = {
+  /**
+   * Generate path for player photos
+   * @param {string} academyId - Academy ID
+   * @param {string} timestamp - Timestamp for uniqueness
+   * @param {string} filename - Base filename (sanitized)
+   * @param {string} size - 'thumbnail', 'medium', or 'original'
+   * @returns {string} Storage path
+   */
+  playerPhoto: (academyId, timestamp, filename, size = 'original') => {
+    const suffix = IMAGE_SIZE_SUFFIXES[size.toUpperCase()] || '';
+    return `academies/${academyId}/player_photos/${timestamp}_${filename}${suffix}.jpg`;
+  },
+
+  /**
+   * Generate path for academy branding logo
+   * @param {string} academyId - Academy ID
+   * @param {string} timestamp - Timestamp for uniqueness
+   * @param {string} filename - Original filename (sanitized)
+   * @returns {string} Storage path
+   */
+  brandingLogo: (academyId, timestamp, filename) => {
+    return `academies/${academyId}/branding/logo_${timestamp}_${filename}`;
+  },
+
+  /**
+   * Generate path for payment receipts
+   * @param {string} academyId - Academy ID
+   * @param {string} studentId - Student/Player ID
+   * @param {string} timestamp - Timestamp for uniqueness
+   * @param {string} filename - Original filename (sanitized)
+   * @returns {string} Storage path
+   */
+  paymentReceipt: (academyId, studentId, timestamp, filename) => {
+    return `academies/${academyId}/payment_receipts/${studentId}/${timestamp}_${filename}`;
+  }
+};
+
+// ==================== PAGINATION ====================
+
+/**
+ * Pagination settings for different data types
+ */
+export const PAGINATION = {
+  PAYMENT_ITEMS_PER_PAGE: 10,
+  PLAYERS_PER_PAGE: 20,
+  GROUPS_PER_PAGE: 15,
+  TIERS_PER_PAGE: 20,
+  DEFAULT_PAGE_SIZE: 20
+};
+
+// ==================== CACHE DURATIONS ====================
+
+/**
+ * Cache duration settings for different data types
+ * All values in milliseconds
+ */
+export const CACHE = {
+  CURRENCY_CACHE_DURATION: 7 * 24 * 60 * 60 * 1000, // 1 week
+  ACADEMY_CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
+  USER_CACHE_DURATION: 10 * 60 * 1000, // 10 minutes
+  REFERENCE_DATA_DURATION: 15 * 60 * 1000 // 15 minutes (for tiers, groups, etc.)
+};
+
+// ==================== LOCALIZATION ====================
+
+/**
+ * Default locale and helper to get browser locale
+ */
+export const DEFAULT_LOCALE = 'en-US';
+
+/**
+ * Get the appropriate locale, preferring browser locale
+ * @returns {string} Locale string (e.g., 'en-US', 'es-ES')
+ */
+export const getDefaultLocale = () => {
+  return navigator?.language || DEFAULT_LOCALE;
+};

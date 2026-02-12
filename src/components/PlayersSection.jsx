@@ -5,9 +5,10 @@ import { deleteObject, ref as storageRef, uploadBytes, getDownloadURL } from 'fi
 import { storage } from '../firebase';
 import toast from 'react-hot-toast';
 import { useAcademy } from '../contexts/AcademyContext';
-import { calculateAge } from '../utils/formatters';
+import { calculateAge, toDateSafe } from '../utils/formatters';
 import { hasValidMembership } from '../utils/permissions';
 import { sanitizeFilename } from '../utils/validators';
+import { ROUTES } from '../config/routes';
 import LoadingBar from './LoadingBar.jsx';
 import PlayerForm from './PlayerForm.jsx';
 import PlayerDetail from './PlayerDetail.jsx';
@@ -116,7 +117,7 @@ export default function PlayersSection({ user, db }) {
 
         // Calculate payment status
         if (player.oneTimeProducts && player.oneTimeProducts.length > 0) {
-          const hasUnpaid = player.oneTimeProducts.some(p => p.status === 'unpaid' && p.dueDate && new Date(p.dueDate.seconds ? p.dueDate.seconds * 1000 : p.dueDate) < new Date());
+          const hasUnpaid = player.oneTimeProducts.some(p => p.status === 'unpaid' && p.dueDate && (toDateSafe(p.dueDate) || new Date()) < new Date());
           player.paymentStatus = hasUnpaid ? 'Overdue' : 'Paid';
         } else {
           player.paymentStatus = 'N/A';
@@ -234,7 +235,7 @@ export default function PlayersSection({ user, db }) {
   const navigate = useNavigate();
 
   const handleAddPlayer = () => {
-    navigate('/students/new');
+    navigate(ROUTES.STUDENT_NEW);
   };
 
   const handleCloseDetailDrawer = () => {
@@ -256,7 +257,7 @@ export default function PlayersSection({ user, db }) {
 
   const handleEditPlayer = () => {
     if (selectedPlayer) {
-      navigate(`/students/${selectedPlayer.id}/edit`);
+      navigate(ROUTES.STUDENT_EDIT(selectedPlayer.id));
     }
   };
 
@@ -324,8 +325,19 @@ export default function PlayersSection({ user, db }) {
     const playerRef = doc(db, `academies/${academy.id}/players`, selectedPlayer.id);
     try {
       await updateDoc(playerRef, { oneTimeProducts: finalProductsForDB });
-      setActiveTab('finances');
-      await fetchPlayerDetail(selectedPlayer.id);
+
+      // Update both the player list and drawer details
+      await Promise.all([
+        fetchPlayers(),
+        fetchPlayerDetail(selectedPlayer.id)
+      ]);
+
+      // Wait a tick for React to process the state update
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Always set to payments tab to show the updated payment
+      setActiveTab('payments');
+
       toast.success('Payment registered successfully!');
     } catch (error) {
       console.error("Error updating payment status:", error);
@@ -349,8 +361,19 @@ export default function PlayersSection({ user, db }) {
 
     try {
       await updateDoc(playerRef, { oneTimeProducts: finalProductsForDB });
-      setActiveTab('finances');
-      await fetchPlayerDetail(selectedPlayer.id);
+
+      // Update both the player list and drawer details
+      await Promise.all([
+        fetchPlayers(),
+        fetchPlayerDetail(selectedPlayer.id)
+      ]);
+
+      // Wait a tick for React to process the state update
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Always set to payments tab to show the updated payment
+      setActiveTab('payments');
+
       toast.success('Item removed successfully!');
     } catch (error) {
       console.error("Error removing product:", error);
@@ -590,10 +613,8 @@ export default function PlayersSection({ user, db }) {
     await fetchPlayerDetail(player.id);
   };
 
-  const dateFromAny = (d) => (d?.seconds ? new Date(d.seconds * 1000) : new Date(d));
-
   const addCycleToDate = (date, pricingModel) => {
-    const base = dateFromAny(date);
+    const base = toDateSafe(date) || new Date();
     const result = new Date(base);
     switch (pricingModel) {
       case 'monthly':
@@ -630,7 +651,7 @@ export default function PlayersSection({ user, db }) {
     const now = new Date();
 
     groupedByTier.forEach((list, tierId) => {
-      list.sort((a, b) => dateFromAny(a.payment.dueDate) - dateFromAny(b.payment.dueDate));
+      list.sort((a, b) => (toDateSafe(a.payment.dueDate) || new Date()) - (toDateSafe(b.payment.dueDate) || new Date()));
       let lastDueDate = list[list.length - 1].payment.dueDate;
       const tierDetails = list[list.length - 1].tier;
 
@@ -746,6 +767,7 @@ export default function PlayersSection({ user, db }) {
   const [isDetailDrawerAnimating, setIsDetailDrawerAnimating] = useState(false);
   const [drawerMode, setDrawerMode] = useState('detail');
   const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [detailRefreshKey, setDetailRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState('details');
   const [paymentPage, setPaymentPage] = useState(1);
 
@@ -958,7 +980,7 @@ export default function PlayersSection({ user, db }) {
               <li className="text-base">
                 <button onClick={(e) => {
                   e.stopPropagation();
-                  navigate(`/students/${player.id}/edit`);
+                  navigate(ROUTES.STUDENT_EDIT(player.id));
                   onClose();
                 }} className="w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-100 flex items-center transition-colors duration-150">
                   <Edit className="mr-3 h-4 w-4" />

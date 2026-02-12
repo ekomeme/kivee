@@ -6,6 +6,7 @@ import PlayerDetail from '../components/PlayerDetail.jsx';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Edit } from 'lucide-react';
 import { sanitizeFilename } from '../utils/validators';
+import { toDateSafe } from '../utils/formatters';
 
 export default function PlayerDetailPage({ user, academy, db, membership }) {
   const { playerId } = useParams();
@@ -16,10 +17,8 @@ export default function PlayerDetailPage({ user, academy, db, membership }) {
   const [activeTab, setActiveTab] = useState('details');
   const [paymentPage, setPaymentPage] = useState(1);
 
-  const dateFromAny = (d) => (d?.seconds ? new Date(d.seconds * 1000) : new Date(d));
-
   const addCycleToDate = (date, pricingModel) => {
-    const base = dateFromAny(date);
+    const base = toDateSafe(date) || new Date();
     const result = new Date(base);
     switch (pricingModel) {
       case 'monthly':
@@ -57,7 +56,7 @@ export default function PlayerDetailPage({ user, academy, db, membership }) {
 
     groupedByTier.forEach((list, tierId) => {
       // Sort by dueDate ascending
-      list.sort((a, b) => dateFromAny(a.payment.dueDate) - dateFromAny(b.payment.dueDate));
+      list.sort((a, b) => (toDateSafe(a.payment.dueDate) || new Date()) - (toDateSafe(b.payment.dueDate) || new Date()));
       let lastDueDate = list[list.length - 1].payment.dueDate;
       const tierDetails = list[list.length - 1].tier;
 

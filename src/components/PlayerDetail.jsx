@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, X, Copy, Edit } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { toDateSafe } from '../utils/formatters';
 
 export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, academy, activeTab: controlledTab, onTabChange, paymentPage, onPaymentPageChange }) {
   const [activeTab, setActiveTab] = useState(controlledTab || 'details');
@@ -16,24 +17,22 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
     onTabChange?.(tab);
   };
 
-  const toDate = (d) => (d?.seconds ? new Date(d.seconds * 1000) : new Date(d));
-
   const [showPaymentModalFor, setShowPaymentModalFor] = useState(null); // Holds the original index of the payment
 
   const allPaymentsWithOriginalIndex = player.oneTimeProducts?.map((p, index) => ({ ...p, originalIndex: index })) || [];
   const subscriptionPayments = allPaymentsWithOriginalIndex
     .filter(p => p.paymentFor === 'tier')
-    .sort((a, b) => toDate(b.dueDate) - toDate(a.dueDate)); // Most recent first
+    .sort((a, b) => toDateSafe(b.dueDate) - toDateSafe(a.dueDate)); // Most recent first
   const productPayments = allPaymentsWithOriginalIndex.filter(p => !p.paymentFor || p.paymentFor !== 'tier');
 
   const earliestSubscription = subscriptionPayments.length
-    ? [...subscriptionPayments].sort((a, b) => toDate(a.dueDate) - toDate(b.dueDate))[0]
+    ? [...subscriptionPayments].sort((a, b) => toDateSafe(a.dueDate) - toDateSafe(b.dueDate))[0]
     : null;
 
   const combinedPayments = [...subscriptionPayments, ...productPayments].sort((a, b) => {
     const da = a.dueDate || a.paidAt || (a.productDetails ? new Date() : null);
     const db = b.dueDate || b.paidAt || (b.productDetails ? new Date() : null);
-    return toDate(db) - toDate(da);
+    return toDateSafe(db) - toDateSafe(da);
   });
 
   const [currentPage, setCurrentPage] = useState(paymentPage || 1);
@@ -175,13 +174,15 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
 
   const formatDate = (date) => {
     if (!date) return 'N/A';
-    const dateObj = date.seconds ? new Date(date.seconds * 1000) : new Date(date);
+    const dateObj = toDateSafe(date);
+    if (!dateObj) return 'N/A';
     return dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   };
 
   const calculateAge = (birthday) => {
     if (!birthday) return 'N/A';
-    const birthDate = birthday.seconds ? new Date(birthday.seconds * 1000) : new Date(birthday);
+    const birthDate = toDateSafe(birthday);
+    if (!birthDate) return 'N/A';
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
@@ -192,7 +193,8 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
   };
 
   const addCycleToDate = (date, pricingModel) => {
-    const base = date.seconds ? new Date(date.seconds * 1000) : new Date(date);
+    const base = toDateSafe(date);
+    if (!base) return new Date();
     const result = new Date(base);
     switch (pricingModel) {
       case 'monthly':
@@ -225,7 +227,7 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
     }
 
     const now = new Date();
-    const target = expiryDate instanceof Date ? expiryDate : (expiryDate?.seconds ? new Date(expiryDate.seconds * 1000) : new Date(expiryDate));
+    const target = toDateSafe(expiryDate) || new Date();
     const diffDays = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
     let status = 'ok';
     if (diffDays < 0) {
@@ -452,7 +454,7 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
                     )}
                     {p.status === 'paid' && p.paidAt && (
                       <div className="flex items-center space-x-2 text-xs text-gray-500">
-                        <p>Paid on {new Date(p.paidAt.seconds * 1000).toLocaleDateString()} via {p.paymentMethod}</p>
+                        <p>Paid on {toDateSafe(p.paidAt)?.toLocaleDateString() || 'N/A'} via {p.paymentMethod}</p>
                         {p.receiptUrl && (
                           <a
                             href={p.receiptUrl}

@@ -4,6 +4,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { ArrowLeft } from 'lucide-react';
 import PlayerForm from '../components/PlayerForm.jsx';
 import LoadingBar from './LoadingBar.jsx';
+import { ROUTES } from '../config/routes';
 
 export default function EditPlayerPage({ user, academy, db, membership }) {
   const navigate = useNavigate();
@@ -56,7 +57,7 @@ export default function EditPlayerPage({ user, academy, db, membership }) {
   }, [user, db, playerId, academy, membership, studentLabelSingular]);
 
   const handleComplete = () => {
-    navigate('/students'); // Go back to the students list after editing
+    navigate(ROUTES.STUDENTS); // Go back to the students list after editing
   };
 
   if (loading) {

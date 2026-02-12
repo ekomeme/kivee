@@ -10,6 +10,7 @@ import { useAcademy } from '../contexts/AcademyContext';
 import { hasValidMembership } from '../utils/permissions';
 import { COLLECTIONS } from '../config/constants';
 import { getLocations, getFacilities } from '../services/firestore';
+import { ROUTES } from '../config/routes';
 
 export default function GroupsAndClassesSection({ user, db }) {
   const { academy, membership } = useAcademy();
@@ -532,7 +533,7 @@ export default function GroupsAndClassesSection({ user, db }) {
                         <tr
                           key={group.id}
                           className="hover:bg-gray-50 cursor-pointer table-row-hover"
-                          onClick={() => navigate(`/groups/${group.id}`)}
+                          onClick={() => navigate(ROUTES.GROUP_DETAIL(group.id))}
                         >
                           <td className="py-3 px-4 border-b font-medium table-cell">{group.name}</td>
                           <td className="py-3 px-4 border-b table-cell">{groupLocation?.name || 'N/A'}</td>
@@ -556,7 +557,7 @@ export default function GroupsAndClassesSection({ user, db }) {
                     <div
                       key={group.id}
                       className="bg-section border border-gray-200 rounded-lg p-4 shadow-sm relative"
-                      onClick={() => navigate(`/groups/${group.id}`)}
+                      onClick={() => navigate(ROUTES.GROUP_DETAIL(group.id))}
                     >
                       <button
                         onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(group); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }}
