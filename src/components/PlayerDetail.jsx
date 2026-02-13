@@ -60,7 +60,7 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
   const autoRenewEnabled = player.autoRenew !== undefined ? player.autoRenew : true; // Default to true for backward compatibility
 
   const renewalInfo = (() => {
-    if (!subscriptionPayments.length) return { date: null, label: 'Next renewal' };
+    if (!subscriptionPayments.length) return { date: null, label: 'Next Renewal' };
 
     if (autoRenewEnabled) {
       // AUTO-RENEWAL ENABLED: Show next renewal date
@@ -68,20 +68,20 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
       // If all are paid: show expiry date of most recent paid (when next payment will be generated)
       const mostRecentUnpaid = subscriptionPayments.find(p => p.status === 'unpaid');
       if (mostRecentUnpaid) {
-        return { date: calculateExpiryDate(mostRecentUnpaid), label: 'Next renewal' };
+        return { date: calculateExpiryDate(mostRecentUnpaid), label: 'Next Renewal' };
       }
 
       const mostRecentPaid = subscriptionPayments.find(p => p.status === 'paid');
       if (mostRecentPaid) {
-        return { date: calculateExpiryDate(mostRecentPaid), label: 'Next renewal' };
+        return { date: calculateExpiryDate(mostRecentPaid), label: 'Next Renewal' };
       }
 
-      return { date: null, label: 'Next renewal' };
+      return { date: null, label: 'Next Renewal' };
     } else {
       // AUTO-RENEWAL DISABLED: Show plan completion date (expiry of last payment)
       // Find the payment with the latest due date (most recent chronologically)
       const lastPayment = subscriptionPayments[0]; // Already sorted by most recent first
-      return { date: calculateExpiryDate(lastPayment), label: 'Plan ends' };
+      return { date: calculateExpiryDate(lastPayment), label: 'Plan Ends' };
     }
   })();
 
@@ -228,6 +228,19 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
 
   const formatValue = (value) => value || 'N/A';
 
+  const formatDocumentType = (documentType) => {
+    if (!documentType) return 'ID';
+
+    const documentTypeMap = {
+      'passport': 'Passport',
+      'nationalId': 'National ID',
+      'driversLicense': "Driver's License",
+      'other': 'Other'
+    };
+
+    return documentTypeMap[documentType] || documentType;
+  };
+
   const formatDate = (date) => {
     if (!date) return 'N/A';
     const dateObj = toDateSafe(date);
@@ -350,15 +363,15 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
               <p className="text-base font-medium text-gray-900">{formatDate(player.birthday)}</p>
             </div>
             <div className="card-info h-[72px]">
-              <p className="text-sm text-gray-500 mb-1">{player.documentType || 'ID'}</p>
+              <p className="text-sm text-gray-500 mb-1">{formatDocumentType(player.documentType)}</p>
               <p className="text-base font-medium text-gray-900">{formatValue(player.documentNumber || player.studentId)}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
             <div className="card-info relative h-[72px]">
-              <p className="text-sm text-gray-500 mb-1">Phone number</p>
-              <p className="text-base font-medium text-gray-900">{formatValue(player.contactPhone)}</p>
+              <p className="text-sm text-gray-500 mb-1">Phone Number</p>
+              <p className="text-base font-medium text-gray-900 truncate pr-8">{formatValue(player.contactPhone)}</p>
               {player.contactPhone && (
                 <button
                   onClick={() => {
@@ -373,7 +386,7 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
             </div>
             <div className="card-info relative h-[72px]">
               <p className="text-sm text-gray-500 mb-1">Email</p>
-              <p className="text-base font-medium text-gray-900">{formatValue(player.email)}</p>
+              <p className="text-base font-medium text-gray-900 truncate pr-8">{formatValue(player.email)}</p>
               {player.email && (
                 <button
                   onClick={() => {
@@ -393,9 +406,8 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
             {player.plan ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="bg-primary rounded-lg p-4 text-white h-[72px]">
-                  <div className="flex items-center justify-between h-full">
+                  <div className="flex items-center h-full">
                     <p className="text-xl font-bold">{player.planDetails?.name || 'Plan not found'}</p>
-                    <span className="px-3 py-1 bg-white bg-opacity-20 rounded-full text-sm font-medium">Active</span>
                   </div>
                 </div>
                 <div className="card-info h-[72px]">
@@ -423,7 +435,6 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
 
       {activeTab === 'tutor' && (
         <div className="p-6">
-          <h3 className="text-base font-semibold text-gray-900 mb-4">Tutor / Guardian</h3>
           {player.tutor ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="card-info h-[72px]">
@@ -432,7 +443,7 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
               </div>
               <div className="card-info relative h-[72px]">
                 <p className="text-sm text-gray-500 mb-1">Tutor Email</p>
-                <p className="text-base font-medium text-gray-900">{formatValue(player.tutor.email)}</p>
+                <p className="text-base font-medium text-gray-900 truncate pr-8">{formatValue(player.tutor.email)}</p>
                 {player.tutor.email && (
                   <button
                     onClick={() => {
@@ -447,7 +458,7 @@ export default function PlayerDetail({ player, onMarkAsPaid, onRemoveProduct, ac
               </div>
               <div className="card-info relative h-[72px]">
                 <p className="text-sm text-gray-500 mb-1">Tutor Phone</p>
-                <p className="text-base font-medium text-gray-900">{formatValue(player.tutor.contactPhone)}</p>
+                <p className="text-base font-medium text-gray-900 truncate pr-8">{formatValue(player.tutor.contactPhone)}</p>
                 {player.tutor.contactPhone && (
                   <button
                     onClick={() => {

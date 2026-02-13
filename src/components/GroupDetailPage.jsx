@@ -201,7 +201,7 @@ export default function GroupDetailPage({ user, db }) {
                   <span className={`badge text-sm px-3 py-1 ${
                     group.status === 'active' ? 'badge-success' : 'badge-error'
                   }`}>
-                    {group.status}
+                    {group.status.charAt(0).toUpperCase() + group.status.slice(1)}
                   </span>
                 </div>
               </div>

@@ -540,7 +540,7 @@ export default function GroupsAndClassesSection({ user, db }) {
                           <td className="py-3 px-4 border-b table-cell">{group.minAge}-{group.maxAge} years</td>
                           <td className="py-3 px-4 border-b table-cell">{group.coach}</td>
                           <td className="py-3 px-4 border-b table-cell">{group.maxCapacity || 'N/A'}</td>
-                          <td className="py-3 px-4 border-b table-cell"><span className={`badge ${group.status === 'active' ? 'badge-success' : 'badge-error'}`}>{group.status}</span></td>
+                          <td className="py-3 px-4 border-b table-cell"><span className={`badge ${group.status === 'active' ? 'badge-success' : 'badge-error'}`}>{group.status.charAt(0).toUpperCase() + group.status.slice(1)}</span></td>
                           <td className="py-3 px-4 border-b text-right table-cell">
                           <button onClick={(e) => { e.stopPropagation(); setActiveGroupMenu(group); setActionsMenuPosition({ x: e.currentTarget.getBoundingClientRect().right + window.scrollX, y: e.currentTarget.getBoundingClientRect().top + window.scrollY }); }} className="p-1 rounded-full hover:bg-gray-200 focus:outline-none" aria-label={`Actions for group ${group.name}`}><MoreVertical className="h-5 w-5 text-gray-500" /></button>
                           </td>

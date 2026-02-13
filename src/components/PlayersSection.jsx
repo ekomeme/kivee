@@ -1293,19 +1293,19 @@ export default function PlayersSection({ user, db }) {
                       <span className="table-cell-truncate">{player.locationName || 'N/A'}</span>
                     </td>
                     <td className="px-4 border-b table-cell">
-                      <span className={`table-cell-truncate ${player.paymentStatus === 'Overdue' ? 'status-overdue' : player.paymentStatus === 'Paid' ? 'status-paid' : ''}`}>
+                      <span className={`badge ${player.paymentStatus === 'Paid' ? 'badge-success' : player.paymentStatus === 'Overdue' ? 'badge-warning' : 'badge-neutral'}`}>
                         {player.paymentStatus || 'N/A'}
                       </span>
                     </td>
-                    <td className="px-4 border-b text-right table-cell" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-4 border-b text-right table-cell">
                       <div className="flex items-center justify-end gap-2">
                         {player.contactPhone && (
-                          <div className="w-9 h-9 flex items-center justify-center relative transition-colors duration-150">
+                          <div className="w-9 h-9 flex items-center justify-center relative transition-colors duration-150" onClick={(e) => e.stopPropagation()}>
                             <ContactIcon value={player.contactPhone} icon={Phone} />
                           </div>
                         )}
                         {player.email && (
-                          <div className="w-9 h-9 flex items-center justify-center relative transition-colors duration-150">
+                          <div className="w-9 h-9 flex items-center justify-center relative transition-colors duration-150" onClick={(e) => e.stopPropagation()}>
                             <ContactIcon value={player.email} icon={Mail} />
                           </div>
                         )}

@@ -1009,7 +1009,7 @@ export default function PlansOffersSection({ user, db }) {
                             </td>
                             <td className="py-3 px-4 border-b table-cell">
                               <span className={`badge ${tier.status === 'active' ? 'badge-success' : 'badge-error'}`}>
-                                {tier.status}
+                                {tier.status.charAt(0).toUpperCase() + tier.status.slice(1)}
                               </span>
                             </td>
                             <td className="py-3 px-4 border-b text-right table-cell">
